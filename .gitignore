@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Local tooling and browser profiles
+.npm-cache/
+.chrome-cdp-profile/
+.chrome-profile/
+.chrome-profile-2/
+.edge-profile/
+
+# Environment and editor files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+const root = process.cwd();
+const cssPath = path.resolve(root, 'src/styles.css');
+const fixPath = path.resolve(root, 'src/probation-fix.css');
+if (!cssPath.startsWith(root) || !fixPath.startsWith(root)) throw new Error('Path outside workspace');
+const css = fs.readFileSync(cssPath, 'utf8').replace(/\n@import '\.\/probation-fix\.css';\n?/g, '');
+const fix = fs.readFileSync(fixPath, 'utf8');
+fs.writeFileSync(cssPath, css + '\n' + fix, 'utf8');
+fs.unlinkSync(fixPath);
+console.log('Merged probation styles.');
