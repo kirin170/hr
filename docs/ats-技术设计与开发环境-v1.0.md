@@ -4,9 +4,10 @@
 |---|---|
 | 文档版本 | v1.0 |
 | 编写日期 | 2026-11-11 |
+| 最近修订 | 2026-11-11：本地开发改为 Windows 原生服务，不使用 Docker |
 | 配套文档 | `ats-功能需求文档-v1.2.md`、`ats-PRD-v1.0.md` |
 | 适用读者 | 研发、测试、运维、实施 |
-| 文档性质 | 开发基线；标记「待评审」的选型需在对应开发任务开始前冻结 |
+| 文档性质 | 开发基线；前后端技术栈已于 2026-11-11 确认冻结，后续变更需走技术决策记录 |
 
 ---
 
@@ -14,9 +15,11 @@
 
 ### 0.1 已确认事实
 
-- 当前代码根目录为 **`d:/hr`**；PRD 中的原型路径已同步修正为 `d:/hr/src`。
+- 当前代码根目录为 **`d:/hr`**，已确认为唯一开发目录（2026-11-11）；PRD 中的原型路径已同步修正为 `d:/hr/src`。
+- 历史路径 `e:/zhaopin` 已不存在，不再保留第二份代码副本；后续开发、构建与文档均以 `d:/hr` 为准。
 - 现有原型为 React 18 + Vite + TypeScript，数据保存在浏览器 `localStorage`，没有后端、数据库和真实鉴权。
 - 部署目标为阿里云、单租户；无租户维度。
+- 本地开发环境为 **Windows**，不使用 Docker；MySQL、Redis、Node.js 已安装并在本机运行。
 - 钉钉是唯一业务系统集成，包含组织身份、消息、日历、听记、OA 录用审批和 OA 招聘需求同步六类能力。
 - 新增 Chrome/Edge MV3 浏览器插件，支持 BOSS 直聘/猎聘的用户主动导入。
 - AI 解析、AI 评估、邮件、插件导入均存在异步处理与失败重试要求。
@@ -34,7 +37,7 @@
 | 外部能力 | AI、钉钉、招聘网站适配器全部接口化，开发期使用 Mock |
 | 部署形态 | 容器化部署到 ECS；首期不引入 Kubernetes、不拆微服务 |
 
-> 后端框架与 ORM 为本版建议选型。若团队已有统一 Java/Python 技术栈，可替换实现，但本文的模块边界、接口契约、异步与审计规则不变。
+> **决策状态**：前端 React 18 + Vite + TypeScript，后端 Node.js 22 + TypeScript + NestJS + Prisma，已于 2026-11-11 确认接受。后续如需更换框架，必须重新评估模块边界、接口契约、异步与审计规则。
 
 ---
 
@@ -95,7 +98,7 @@ Chrome/Edge MV3 扩展 ────────────┘
 
 ## 3. 技术选型
 
-| 层 | 建议选型 | 用途 |
+| 层 | 已确认选型 | 用途 |
 |---|---|---|
 | 运行时 | Node.js 22 LTS、npm | 与现有前端工具链统一 |
 | 语言 | TypeScript，开启 `strict` | 前后端共享契约 |
@@ -132,8 +135,8 @@ d:/hr/
 │  ├─ migrations/
 │  └─ seed.ts
 ├─ deploy/
-│  ├─ docker-compose.yml   # 本地依赖
-│  └─ nginx/               # Web 托管与 API 反向代理
+│  ├─ docker-compose.prod.yml  # 测试/生产可选容器编排，本地不使用
+│  └─ nginx/                   # Web 托管与 API 反向代理
 ├─ fixtures/
 │  ├─ resumes/             # 脱敏简历样本
 │  └─ extension/           # 脱敏平台 HTML/附件样本
@@ -324,13 +327,15 @@ Service Worker
 
 | 项 | local | dev/test | production |
 |---|---|---|---|
+| 操作系统 | Windows 10/11 + PowerShell | Linux 容器 | Linux ECS |
 | 前端 | Vite `4173` | 测试域名 | 正式域名 HTTPS |
-| API | `localhost:3000` | 测试 API 域名 | 正式 API 域名 |
-| 数据库 | Docker MySQL 8 | 独立 RDS 测试库 | 独立 RDS 生产库 |
-| Redis | Docker Redis 7 | 测试实例 | 生产实例 |
+| API | `127.0.0.1:3000` | 测试 API 域名 | 正式 API 域名 |
+| 数据库 | **本机 MySQL 8 服务** `127.0.0.1:3306` | 独立 RDS 测试库 | 独立 RDS 生产库 |
+| Redis | **本机 Redis 7 服务** `127.0.0.1:6379` | 测试实例 | 生产实例 |
 | 文件 | 本地磁盘 | OSS 测试 Bucket | OSS 生产 Bucket |
 | AI | Mock | 专用测试账号/低配额 | 正式账号与配额 |
 | 钉钉 | Mock | 测试企业/测试应用 | 正式企业应用 |
+| 邮件 | Mock | 测试邮箱 | 正式接收邮箱 |
 | 招聘平台 | 脱敏夹具 + Mock | 受控人工验证 | 灰度适配器 |
 | 日志 | 控制台 | SLS 测试项目 | SLS 生产项目 |
 
@@ -338,16 +343,71 @@ Service Worker
 
 ### 9.2 本地前置条件
 
-- Node.js 22 LTS、npm、Git
-- Docker Desktop（MySQL、Redis、Mailpit）
+- Windows 10/11，PowerShell 5.1 或 PowerShell 7+
+- Node.js 22 LTS、npm、Git（已安装）
+- MySQL 8（已安装，本地服务运行）
+- Redis 7（已安装，本地服务运行）
 - Chrome 或 Edge 最新稳定版
 - 可选：钉钉测试企业、AI 测试密钥、OSS 测试 Bucket
 
-> Docker、钉钉测试应用和云资源是否已具备尚未检查，属于开发准备项，不影响先建立脚手架。
+本地**不使用 Docker**。MySQL、Redis 直接使用 Windows 已安装的服务；如需本地邮件调试，可运行独立 SMTP 工具，否则使用 `MAIL_PROVIDER=mock`。
 
-### 9.3 环境变量
+**2026-11-11 实测环境**：
 
-仓库只提交 `.env.example`，真实密钥放入本地未跟踪文件或部署环境密钥管理。
+| 项 | 结果 |
+|---|---|
+| Node.js | v22.20.0 |
+| npm | 10.9.3 |
+| MySQL 服务 | `MySQL80` 运行中 |
+| Redis 服务 | `Redis` 运行中，`redis-cli ping` 返回 `PONG` |
+| MySQL 客户端 | `mysql` 未加入 PATH；完整路径 `C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe` |
+
+MySQL 客户端未入 PATH 不影响 Prisma 连接，但执行建库/排查时需使用完整路径，或将 `C:\Program Files\MySQL\MySQL Server 8.0\bin` 加入系统 PATH。
+
+### 9.3 本地服务自检
+
+在 PowerShell 中执行：
+
+```powershell
+node -v
+npm -v
+mysql --version
+redis-cli --version
+```
+
+检查服务是否运行（服务名以本机实际安装为准）：
+
+```powershell
+Get-Service | Where-Object { $_.Name -match 'mysql|redis' } | Select-Object Name, Status
+```
+
+若服务未启动：
+
+```powershell
+Start-Service -Name "<本机 MySQL 服务名>"
+Start-Service -Name "<本机 Redis 服务名>"
+```
+
+连接验证：
+
+```powershell
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "SELECT VERSION();"
+redis-cli -h 127.0.0.1 -p 6379 ping
+```
+
+`mysql` 当前不在 PATH，使用上述完整路径；`redis-cli` 已在 PATH。Redis 返回 `PONG`、MySQL 返回版本号即视为本地依赖就绪。
+
+创建本地数据库（库名可按实际调整）：
+
+```powershell
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS talentflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+> Windows 下统一使用 `127.0.0.1`，避免 `localhost` 被解析为 IPv6 导致 MySQL/Redis 连接失败。
+
+### 9.4 环境变量
+
+仓库只提交 `.env.example`，真实密钥放入未跟踪的 `.env.local` 或部署环境密钥管理。
 
 | 分组 | 主要变量 |
 |---|---|
@@ -357,26 +417,65 @@ Service Worker
 | 文件 | `STORAGE_DRIVER`、`LOCAL_STORAGE_DIR`、`OSS_BUCKET`、`OSS_REGION` |
 | AI | `AI_PROVIDER`、`AI_MODEL`、`AI_API_KEY`、`AI_TIMEOUT_MS` |
 | 钉钉 | `DINGTALK_PROVIDER`、`DINGTALK_APP_KEY`、`DINGTALK_APP_SECRET`、`DINGTALK_CALLBACK_URL` |
+| 邮件 | `MAIL_PROVIDER`、`MAIL_INBOX_HOST`、`MAIL_INBOX_USER`、`MAIL_INBOX_PASSWORD` |
 | 插件 | `EXTENSION_ALLOWED_ORIGINS`、`EXTENSION_TOKEN_TTL` |
 | 限制 | `RESUME_MAX_MB`、`QUEUE_CONCURRENCY`、`SIGNED_URL_TTL_SECONDS` |
 
+本地 `.env.local` 最小示例（密码替换为本机实际值）：
+
+```dotenv
+APP_ENV=local
+APP_PORT=3000
+DATABASE_URL="mysql://root:你的密码@127.0.0.1:3306/talentflow"
+REDIS_URL="redis://127.0.0.1:6379"
+STORAGE_DRIVER=local
+AI_PROVIDER=mock
+DINGTALK_PROVIDER=mock
+MAIL_PROVIDER=mock
+```
+
 `.env.local`、配对码、Access Token、第三方 Cookie 均不得提交 Git。
 
-### 9.4 目标启动命令
+### 9.5 目标启动命令
 
-以下为脚手架完成后的目标命令，并非当前原型已经具备：
+以下为脚手架完成后的目标命令，并非当前原型已经具备。**执行前先确认 MySQL 与 Redis 服务已启动。**
 
-```bash
+```powershell
+cd d:/hr
 npm ci
-docker compose up -d mysql redis mailpit
+npm run db:generate
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-`npm run dev` 并行启动 Web、API、Worker；插件通过 `npm run dev:extension` 构建后在浏览器开发者模式加载。
+`npm run dev` 通过 `concurrently` 并行启动 Web、API、Worker。也可分开启动，便于查看各自日志：
 
-种子数据只包含：管理员、演示部门/角色、职位、原因选项、脱敏候选人和 Mock 外部账号。
+```powershell
+npm run dev:web
+npm run dev:api
+npm run dev:worker
+```
+
+插件单独构建，在 Chrome/Edge 开发者模式加载 `apps/extension/dist`：
+
+```powershell
+npm run dev:extension
+```
+
+脚本约定：
+
+| 命令 | 作用 |
+|---|---|
+| `npm run db:generate` | 生成 Prisma Client |
+| `npm run db:migrate` | 执行开发迁移 |
+| `npm run db:seed` | 写入种子数据 |
+| `npm run dev:web` | 启动 Vite |
+| `npm run dev:api` | 启动 NestJS API |
+| `npm run dev:worker` | 启动 BullMQ Worker |
+| `npm run dev:extension` | 构建浏览器插件 |
+
+种子数据只包含：管理员、演示部门/角色、职位、招聘需求、原因选项、脱敏候选人和 Mock 外部账号。
 
 ---
 
@@ -418,6 +517,8 @@ npm run dev
 状态机与权限判断要求覆盖所有分支；外部平台不得作为自动化测试的稳定依赖。
 
 ### 11.2 提交与合并门禁
+
+CI 平台：**GitHub Actions**，工作流见 `.github/workflows/ci.yml`。合并到 `master` 前必须全部通过。
 
 1. TypeScript 类型检查。
 2. ESLint / 格式检查。
@@ -505,14 +606,14 @@ Worker ECS（可独立扩缩容）
 
 ---
 
-## 15. 待评审与不阻塞项
+## 15. 开发准备与不阻塞项
 
 ### 15.1 脚手架前确认
 
-- [ ] 后端 NestJS + Prisma 选型是否接受；如不接受，确定替代框架。
-- [ ] Git 仓库地址、默认分支、代码评审和 CI 平台。
-- [ ] `d:/hr` 是否作为唯一开发目录，历史 `e:/zhaopin` 是否废弃。
-- [ ] 本地 Docker 环境与开发机权限是否具备。
+- [x] 前后端技术栈：React 18 + Vite + TypeScript / Node.js 22 + NestJS + Prisma（2026-11-11 确认）
+- [x] Git 仓库地址、默认分支、代码评审和 CI 平台（2026-11-11 确认，见 15.3）
+- [x] `d:/hr` 作为唯一开发目录（2026-11-11 确认）；`e:/zhaopin` 不存在，已废弃。
+- [x] 本地 MySQL、Redis 服务已启动（2026-11-11 实测）；Redis `127.0.0.1` 返回 `PONG`，MySQL 服务 `Running`，连接待凭据验证
 
 ### 15.2 不阻塞主开发线
 
@@ -523,16 +624,34 @@ Worker ECS（可独立扩缩容）
 - 数据保留具体期限：先配置化。
 - 报表最终口径、Offer 中文状态名、原因选项初值：不影响核心模型。
 
+### 15.3 仓库与 CI 基线（2026-11-11 确认）
+
+| 项 | 约定 |
+|---|---|
+| 仓库 | `https://github.com/kirin170/hr.git` |
+| 唯一开发目录 | `d:/hr` |
+| 默认分支 | `master`（保持现状，不强制改名） |
+| 功能分支 | `feature/<模块>-<简述>`；缺陷分支 `fix/<简述>` |
+| 合并方式 | Pull Request → `master`；至少 1 人评审；CI 通过后合并 |
+| 直接推送 | 禁止直接推送 `master`；初始化脚手架的首个提交除外 |
+| CI 平台 | **GitHub Actions**（仓库托管于 GitHub） |
+| CI 必跑 | 类型检查、Lint、单元/接口测试、前后端与插件构建、Prisma migration 校验、密钥扫描 |
+| 版本标签 | 发布使用 `v<主>.<次>.<修订>` 标签，与文档版本区分 |
+
+CI 工作流文件位置：`.github/workflows/ci.yml`。分支保护规则在 GitHub 仓库设置中启用，要求状态检查通过后方可合并。
+
 ---
 
 ## 16. 开发启动检查清单
 
 完成以下项目即可开始第一阶段编码：
 
-- [ ] 仓库与目录唯一，PRD 历史路径已清理。
-- [ ] Node.js 22 与依赖安装方式统一。
+- [x] 前后端技术栈已确认并冻结。
+- [x] 仓库与目录唯一：`d:/hr` 为唯一开发目录，PRD 历史路径已清理。
+- [x] Node.js 22 与依赖安装方式统一（v22.20.0 / npm 10.9.3）。
 - [ ] API、Worker、Web 的目录和启动方式确定。
-- [ ] MySQL/Redis 本地依赖可启动。
+- [x] 本机 MySQL/Redis 服务已启动；Redis 连接验证通过，MySQL 待凭据连接验证。
+- [ ] GitHub Actions 工作流与分支保护规则已配置。
 - [ ] Prisma 初版 Schema 覆盖 PRD 核心实体。
 - [ ] 状态机、权限、审计的归属模块明确。
 - [ ] AI、钉钉、招聘平台均有 Mock 接口。
