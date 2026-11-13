@@ -1,0 +1,21 @@
+{
+  "work_item_key": "ATS-003",
+  "external_key": "ats003-intake-mock-chain-v2",
+  "evidence_type": "verification_report",
+  "summary": "简历入场与异步解析 Mock 链路：三种入场方式、SHA-256 与手机号/邮箱查重、BullMQ 异步解析（Mock 成功/失败、指数退避重试）、失败降级人工、职位分配与草稿确认均已本地实测通过。",
+  "locator": "docs/verification/ats003-report.json",
+  "level": "locally_verified",
+  "sha256": "2b3b58fbdc5454ef7349c5437365286b4d8fcf8afbe4179c645704affc711f62",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "command": "npm run build --prefix backend && npm test --prefix backend && node dist/main.js + curl smoke (upload/manual/email/retry/assign/confirm)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/src/intake/",
+    "backend/src/ai/",
+    "backend/src/storage/",
+    "backend/src/prisma/",
+    "backend/src/timeline/",
+    "backend/.env.example"
+  ],
+  "verified_at": 1794473058650
+}

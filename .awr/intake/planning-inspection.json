@@ -1,0 +1,2207 @@
+{
+  "blocked_count": 24,
+  "branch_id": null,
+  "counts": {
+    "completed": 3,
+    "in_progress": 2,
+    "planned": 23
+  },
+  "current": [
+    {
+      "archived": false,
+      "blocker": null,
+      "external_key": "INTAKE-002",
+      "freshness": "fresh",
+      "id": "01M79WB9X6MXKEY7G8T1220481",
+      "milestone": null,
+      "next_action": "等待用户阅读项目路线图并分配具体工作项、负责人和优先顺序；在收到明确分配前不执行业务任务。ATS-002 对账、ATS-004/006 基础与 ATS-007 需求闭环仅为建议起点。",
+      "ordinary_completion": null,
+      "ordinary_work_policy": null,
+      "owner": null,
+      "priority": "P0",
+      "raw_status": "in_progress",
+      "revision": 2,
+      "source_ref": {
+        "end_line": null,
+        "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+        "pointer": "/work_items/4",
+        "section_fingerprint": "sha256:77f568aff2a7cdb5ccd989688df5551da5a5bfd341ab8bafe74dcfcdc7f80a69",
+        "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+        "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+        "source_revision": 14,
+        "start_line": null
+      },
+      "source_revision": 14,
+      "status": "in_progress",
+      "summary": "2026-11-13 用户要求 AWR 接管，并补充要求规划整个项目、规划后由用户分配任务，不自动执行。 已核对三份需求/技术文档、README、源代码与 AWR status/source list/intake inspect/work show/session list/proposal show/recovery inspect。 ATS-001/003 在各自报告记录的 source_sha=8c318105dc34ac8688ac2cd8fcfabb321a73…",
+      "title": "AWR 项目接管与全项目目标规划"
+    },
+    {
+      "archived": false,
+      "blocker": null,
+      "external_key": "ATS-002",
+      "freshness": "fresh",
+      "id": "01M76Y2T5YZNSJTDJFZC06SJEV",
+      "milestone": null,
+      "next_action": "等待用户分配后，核对 ats002-candidate-api-v1 报告与已批准但未应用的完成提案，按最新台账绑定重新准备收口；有差异再补测。本次规划不自动接续。",
+      "ordinary_completion": null,
+      "ordinary_work_policy": null,
+      "owner": null,
+      "priority": "P1",
+      "raw_status": "in_progress",
+      "revision": 5,
+      "source_ref": {
+        "end_line": null,
+        "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+        "pointer": "/work_items/2",
+        "section_fingerprint": "sha256:f4fad10fbe92b8e58eb9c45fbebd7f0a41751717c45ddf1fd8c13f290c2776a7",
+        "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+        "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+        "source_revision": 14,
+        "start_line": null
+      },
+      "source_revision": 14,
+      "status": "in_progress",
+      "summary": "在 ATS-001 基础上，为现有 React 原型提供真实 API（候选人列表、详情、阶段推进），替换 localStorage 数据源；依据 README 现状与 PRD §4 阶段定义。",
+      "title": "打通前端到后端的候选人/职位最小 API 链路"
+    }
+  ],
+  "current_total": 2,
+  "freshness_basis": "source_refresh",
+  "next_action": "等待用户分配后，核对 ats002-candidate-api-v1 报告与已批准但未应用的完成提案，按最新台账绑定重新准备收口；有差异再补测。本次规划不自动接续。",
+  "ok": true,
+  "organization": {
+    "actions": [
+      {
+        "done_when": "At least one non-intake task has a resolved goal, nonempty acceptance and a concrete next action. Add plans/milestones only for actual coordination needs.",
+        "id": "work",
+        "instruction": "Compare README, existing code, development history and the goal. Turn the next concrete delivery into work items; link each task using goal/goals, add acceptance and next_action, and preserve known progress with evidence. A generic intake task is organization work; replace/split proposals into concrete business tasks before execution.",
+        "required_fields": [
+          "id",
+          "title",
+          "status",
+          "goal or goals",
+          "acceptance",
+          "next_action"
+        ]
+      },
+      {
+        "done_when": "The selected work has no unresolved required prerequisite or active blocker.",
+        "id": "dependencies",
+        "instruction": "Inspect cited required dependencies and blockers. Repair missing links/cycles and declare actual prerequisites; do not mark prerequisites completed just to unlock work.",
+        "required_fields": [
+          "depends_on",
+          "blocker",
+          "next_action"
+        ]
+      },
+      {
+        "done_when": "Each criterion is covered by a current, hash-verified report at the required evidence level; no business or release gate is inferred.",
+        "id": "evidence",
+        "instruction": "Review the original completion claim and its actual reports. Bind every acceptance criterion to a passing report for the intended source SHA; source status and evidence level alone do not prove completion. Recheck with an explicit source SHA.",
+        "required_fields": [
+          "work_item",
+          "source_sha",
+          "command",
+          "scope",
+          "verified_at",
+          "checks[].criteria",
+          "report digest"
+        ]
+      },
+      {
+        "done_when": "The fresh diagnosis resolves the selected work's structural gaps. Semantic uncertainties are resolved or explicitly deferred to unaffected work.",
+        "id": "recheck",
+        "instruction": "Run awr intake inspect --json after source edits. Follow remaining actions until the intended work appears in executable_work; review its context before claiming it. Do not treat draft generation as completion.",
+        "required_fields": []
+      }
+    ],
+    "business_checked_completed": 0,
+    "business_execution_ready": true,
+    "completion_basis": "Only verified_completed counts hash-verified passing reports covering all current task acceptance for the explicit source SHA. Source-declared completion remains separate. This does not certify release or real-client business acceptance.",
+    "completion_check_blocked": 0,
+    "completion_not_checked": 0,
+    "completion_verification_failed": 1,
+    "context_profile": "minimal",
+    "executable_work": [
+      "ATS-002",
+      "ATS-006"
+    ],
+    "executable_work_total": 2,
+    "gap_total": 142,
+    "gaps": [
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/5",
+            "section_fingerprint": "sha256:621745ce80438364c5d90d97b25d86399d9c402ad98844a599c35fbf5a5f8eb0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-004"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/6",
+            "section_fingerprint": "sha256:a06bbe0d351c0b8a444e13cf8d2866edb03c8b281197933f0a47569bbd80c45c",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-005"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/6",
+            "section_fingerprint": "sha256:a06bbe0d351c0b8a444e13cf8d2866edb03c8b281197933f0a47569bbd80c45c",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-005"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/8",
+            "section_fingerprint": "sha256:14be11aa9f29553f7c032272a16db8acd13605cab148309a5e4686993982e827",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-007"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/8",
+            "section_fingerprint": "sha256:14be11aa9f29553f7c032272a16db8acd13605cab148309a5e4686993982e827",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-007"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/9",
+            "section_fingerprint": "sha256:e1905c0cc6a36cf195861f9f749808234cbb9277f13f3d0d4c4c9ff2cddc1908",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-008"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/9",
+            "section_fingerprint": "sha256:e1905c0cc6a36cf195861f9f749808234cbb9277f13f3d0d4c4c9ff2cddc1908",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-008"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/9",
+            "section_fingerprint": "sha256:e1905c0cc6a36cf195861f9f749808234cbb9277f13f3d0d4c4c9ff2cddc1908",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-008"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/9",
+            "section_fingerprint": "sha256:e1905c0cc6a36cf195861f9f749808234cbb9277f13f3d0d4c4c9ff2cddc1908",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-008"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/10",
+            "section_fingerprint": "sha256:749b7be5b94ae846c992069b498ffc1e211d6a885b77d6e7bea9ba0203680632",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-009"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/10",
+            "section_fingerprint": "sha256:749b7be5b94ae846c992069b498ffc1e211d6a885b77d6e7bea9ba0203680632",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-009"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/10",
+            "section_fingerprint": "sha256:749b7be5b94ae846c992069b498ffc1e211d6a885b77d6e7bea9ba0203680632",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-009"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/10",
+            "section_fingerprint": "sha256:749b7be5b94ae846c992069b498ffc1e211d6a885b77d6e7bea9ba0203680632",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-009"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/10",
+            "section_fingerprint": "sha256:749b7be5b94ae846c992069b498ffc1e211d6a885b77d6e7bea9ba0203680632",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-009"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/11",
+            "section_fingerprint": "sha256:eeec245575be937b3d013365e9845e8bc322fc19001384486c8f21b365e277cb",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-010"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/11",
+            "section_fingerprint": "sha256:eeec245575be937b3d013365e9845e8bc322fc19001384486c8f21b365e277cb",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-010"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/11",
+            "section_fingerprint": "sha256:eeec245575be937b3d013365e9845e8bc322fc19001384486c8f21b365e277cb",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-010"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/11",
+            "section_fingerprint": "sha256:eeec245575be937b3d013365e9845e8bc322fc19001384486c8f21b365e277cb",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-010"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/11",
+            "section_fingerprint": "sha256:eeec245575be937b3d013365e9845e8bc322fc19001384486c8f21b365e277cb",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-010"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/12",
+            "section_fingerprint": "sha256:8669c98eed2e14d8b8b38af02c3e8419c966f9b7529cb54d5057a6cb9df5b384",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-011"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/13",
+            "section_fingerprint": "sha256:53941b4062ad25d082269a0442a416b1f2773b71c9315042f6e49ba85392b100",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-012"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/13",
+            "section_fingerprint": "sha256:53941b4062ad25d082269a0442a416b1f2773b71c9315042f6e49ba85392b100",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-012"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/13",
+            "section_fingerprint": "sha256:53941b4062ad25d082269a0442a416b1f2773b71c9315042f6e49ba85392b100",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-012"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/13",
+            "section_fingerprint": "sha256:53941b4062ad25d082269a0442a416b1f2773b71c9315042f6e49ba85392b100",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-012"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/13",
+            "section_fingerprint": "sha256:53941b4062ad25d082269a0442a416b1f2773b71c9315042f6e49ba85392b100",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-012"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/14",
+            "section_fingerprint": "sha256:b084e62ec14b42b0e6f468d77d70d084770d2b8ce7cdfaafc937d9c9a3ac14a0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-013"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/15",
+            "section_fingerprint": "sha256:58510c247aba54a7cb960694180ba39d9611b4aadd13bae0412434a743f1a6d0",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-014"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/16",
+            "section_fingerprint": "sha256:8374cfeb80c6e52f6950accba72e652ecd0a651bdc3cd830a20c28b85851ead1",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-015"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/17",
+            "section_fingerprint": "sha256:ce58401fc083be1cbf5781cb9ac4147e0b36c6be05157625cb1ea834f78f216d",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-016"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/18",
+            "section_fingerprint": "sha256:2793ae3eee39c6f21ffb7f555ab424ba327fb4cb65fc5faaf01dd3ef6e2aaa9f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-017"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/18",
+            "section_fingerprint": "sha256:2793ae3eee39c6f21ffb7f555ab424ba327fb4cb65fc5faaf01dd3ef6e2aaa9f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-017"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/19",
+            "section_fingerprint": "sha256:bf3b781e8717f36c83174a1d82c4ffda524bdf7232915bae12af0aef8ba984f3",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-018"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/20",
+            "section_fingerprint": "sha256:125bf484d5fcbbf16f18728219f423984122aebcda164ccf8a86a678fc6a4ea5",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-019"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/21",
+            "section_fingerprint": "sha256:f64e93cffcddba43d34b5853bca94d28121683995c356e2ed8b45b143dee8292",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-020"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/22",
+            "section_fingerprint": "sha256:f96f28d7fcd4e7a4b87192eccceb44ee62c4bc169bd69c6f0a0bc1a0245b422f",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-021"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status in_progress",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/23",
+            "section_fingerprint": "sha256:c2c515db532aa762d0bf872384bbf15f2b7cf118d3fc408613770bdb60f2b118",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-022"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/23",
+            "section_fingerprint": "sha256:c2c515db532aa762d0bf872384bbf15f2b7cf118d3fc408613770bdb60f2b118",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-022"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/23",
+            "section_fingerprint": "sha256:c2c515db532aa762d0bf872384bbf15f2b7cf118d3fc408613770bdb60f2b118",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-022"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/23",
+            "section_fingerprint": "sha256:c2c515db532aa762d0bf872384bbf15f2b7cf118d3fc408613770bdb60f2b118",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-022"
+      },
+      {
+        "action": "dependencies",
+        "code": "dependency_not_completed",
+        "detail": "required dependency has source status planned",
+        "source_refs": [
+          {
+            "end_line": null,
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "pointer": "/work_items/23",
+            "section_fingerprint": "sha256:c2c515db532aa762d0bf872384bbf15f2b7cf118d3fc408613770bdb60f2b118",
+            "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "source_revision": 14,
+            "start_line": null
+          }
+        ],
+        "target": "ATS-022"
+      }
+    ],
+    "goal_total": 9,
+    "goals": [
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-candidate-flow",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/4",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "实现九阶段候选人主链和人才复用"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-delivery",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/0",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "交付覆盖招聘全流程、可审计且可运维的 TalentFlow ATS"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-foundation",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/1",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "建立可持续开发与受控访问的工程基础"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-intake",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/3",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "统一各类简历入口并形成可确认的候选人档案"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-integrations",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/7",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "将接口化 Mock 演进为可用的正式集成"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-interview",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/5",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "完成面试协同、评价和日历联动"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-offer-onboarding",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/6",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "闭环 Offer、背调、待入职与试用期"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-operations",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/8",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "交付可度量、可配置、可运维的上线系统"
+      },
+      {
+        "confirmation_basis": "source assertion; semantic judgment belongs to the Agent/user",
+        "key": "ats-requisition",
+        "source_declared": true,
+        "source_ref": {
+          "end_line": null,
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "pointer": "/goals/2",
+          "section_fingerprint": null,
+          "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "source_revision": 14,
+          "start_line": null
+        },
+        "status": "active",
+        "title": "打通职位、招聘需求和招聘周期管理"
+      }
+    ],
+    "historical_gap_total": 1,
+    "minimal_structure": "Reuse authoritative material. A small project needs one source-declared goal and work items with id, title, status, goal, acceptance and next_action. Goals and work_items may share one YAML ledger. Add plans/milestones only when needed; do not create separate plan/rule files just to satisfy intake.",
+    "next_action": "Select an executable_work item, inspect its work context and claim ownership before execution. Findings on other items remain open.",
+    "ordinary_work_policies": [],
+    "project_revision": 108,
+    "recheck": [
+      "awr",
+      "intake",
+      "inspect",
+      "--json",
+      "--branch",
+      "main",
+      "--source-sha",
+      "8c318105dc34ac8688ac2cd8fcfabb321a733b69"
+    ],
+    "schema_version": 1,
+    "semantic_review": "AWR checks declared structure, references and evidence bindings. The Coding Agent must compare user intent, README, implementation and development history, record its reasoning and sources, and keep uncertain goals as draft/candidate/needs_confirmation. Ask the user only for intent that cannot be established. An active/confirmed goal is a source assertion, not proof that AWR understood or approved the business intent.",
+    "source_archived": 0,
+    "source_cancelled": 0,
+    "source_completed": 3,
+    "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+    "sources": [
+      {
+        "domain": "ledger",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+        "revision": 14,
+        "role": "primary"
+      },
+      {
+        "domain": "plan",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/README.md",
+        "revision": 1,
+        "role": "supporting"
+      },
+      {
+        "domain": "plan",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/docs/ats-%E5%8A%9F%E8%83%BD%E9%9C%80%E6%B1%82%E6%96%87%E6%A1%A3-v1.2.md",
+        "revision": 1,
+        "role": "supporting"
+      },
+      {
+        "domain": "plan",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/docs/ats-%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83-v1.0.md",
+        "revision": 1,
+        "role": "supporting"
+      },
+      {
+        "domain": "plan",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md",
+        "revision": 1,
+        "role": "supporting"
+      },
+      {
+        "domain": "plan",
+        "freshness": "fresh",
+        "locator": "file:///D:/hr/docs/ats-PRD-v1.0.md",
+        "revision": 1,
+        "role": "supporting"
+      }
+    ],
+    "state": "ready",
+    "truncated": true,
+    "user_confirmed_completed": 0,
+    "verified_completed": 2
+  },
+  "project": "hr",
+  "project_id": "01M76XVS293R2FGAKRRXAPFD0J",
+  "project_revision": 108,
+  "read_only": false,
+  "ready_count": 1,
+  "snapshot": {
+    "coherent": true,
+    "project_revision": 108,
+    "source_currentness_verified": true,
+    "source_refresh_revision": 108,
+    "source_state_fingerprint": "sha256:a1af09505b57c3065d0465d4dea2dc37361c088169933055c55b116c54750188",
+    "storage": "private_memory",
+    "version": 1
+  },
+  "source_issues": [],
+  "source_refresh_performed": true,
+  "source_warnings": 0,
+  "suggested_work": {
+    "archived": false,
+    "blocker": null,
+    "external_key": "ATS-002",
+    "freshness": "fresh",
+    "id": "01M76Y2T5YZNSJTDJFZC06SJEV",
+    "milestone": null,
+    "next_action": "等待用户分配后，核对 ats002-candidate-api-v1 报告与已批准但未应用的完成提案，按最新台账绑定重新准备收口；有差异再补测。本次规划不自动接续。",
+    "ordinary_completion": null,
+    "ordinary_work_policy": null,
+    "owner": null,
+    "priority": "P1",
+    "raw_status": "in_progress",
+    "revision": 5,
+    "source_ref": {
+      "end_line": null,
+      "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+      "pointer": "/work_items/2",
+      "section_fingerprint": "sha256:f4fad10fbe92b8e58eb9c45fbebd7f0a41751717c45ddf1fd8c13f290c2776a7",
+      "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+      "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+      "source_revision": 14,
+      "start_line": null
+    },
+    "source_revision": 14,
+    "status": "in_progress",
+    "summary": "在 ATS-001 基础上，为现有 React 原型提供真实 API（候选人列表、详情、阶段推进），替换 localStorage 数据源；依据 README 现状与 PRD §4 阶段定义。",
+    "title": "打通前端到后端的候选人/职位最小 API 链路"
+  },
+  "total": 28
+}

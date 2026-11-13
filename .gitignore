@@ -26,3 +26,22 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# AWR local runtime state
+.awr/state.db
+.awr/state.db-*
+.awr/artifacts/
+.awr/mutations/
+.awr/cache/
+.awr/clients/
+.awr/executions/
+
+backend/.env.local
+
+# Local dev file storage
+.storage/
+backend/.storage/
+
+.awr-native/
+.awr-native.tgz
+.awr-review-draft.json

@@ -110,7 +110,7 @@ export const seedActivities = [
 ]
 
 export const initialData: AppData = {
-  candidates: seedCandidates,
+  candidates: [],
   interviews: seedInterviews,
   probation: seedProbation,
   approvals: seedApprovals,
@@ -120,3 +120,35 @@ export const initialData: AppData = {
 export const getJob = (id: string) => jobs.find((job) => job.id === id)
 export const getDepartment = (id: string) => departments.find((department) => department.id === id)
 export const getCandidate = (data: AppData, id: string) => data.candidates.find((candidate) => candidate.id === id)
+
+export const getCandidateJob = (candidate: Candidate): Job | undefined => {
+  const job = getJob(candidate.jobId)
+  if (job) return job
+  if (!candidate.jobTitle) return undefined
+  return {
+    id: candidate.jobId,
+    title: candidate.jobTitle,
+    departmentId: candidate.departmentId,
+    location: candidate.jobLocation || '待补充',
+    owner: candidate.owner,
+    headcount: 0,
+    hired: 0,
+    status: 'active',
+    priority: 'normal',
+    createdAt: candidate.appliedAt,
+  }
+}
+
+export const getCandidateDepartment = (candidate: Candidate): Department | undefined => {
+  const department = getDepartment(candidate.departmentId)
+  if (department) return department
+  if (!candidate.departmentName && !candidate.departmentId) return undefined
+  return {
+    id: candidate.departmentId,
+    name: candidate.departmentName || '部门待补充',
+    short: (candidate.departmentName || '待补充').slice(0, 2),
+    color: candidate.departmentColor || '#8390A5',
+    lead: '待分配',
+    openRoles: 0,
+  }
+}

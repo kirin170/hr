@@ -1,0 +1,421 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Job {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  title          String
+  departmentId   String
+  location       String?
+  recruiterId    String?
+  requirements   String?  @db.Text
+  headcount      Int      @default(0)
+  hiredCount     Int      @default(0)
+  status         JobStatus @default(ACTIVE)
+  interviewPlanId String?
+  sources        String?
+  isVirtual      Boolean  @default(false)
+  requisitionId  String?  @unique
+  requisition    JobRequisition? @relation(fields: [requisitionId], references: [id])
+  candidates     Candidate[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("jobs")
+}
+
+model JobRequisition {
+  id                   String   @id @default(cuid())
+  oaApprovalId         String   @unique
+  title                String
+  departmentId         String
+  jobLevel             String?
+  headcount            Int
+  source               String   @default("DINGTALK_OA")
+  status               RequisitionStatus @default(ACTIVE)
+  submittedAt          DateTime
+  recruitmentStartDate DateTime @map("recruitment_start_date")
+  closedAt             DateTime?
+  cycleDays            Int?
+  version              Int      @default(1)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  jobs                 Job[]
+
+  @@map("job_requisitions")
+}
+
+enum JobStatus {
+  ACTIVE
+  CLOSED
+
+  @@map("job_status")
+}
+
+enum RequisitionStatus {
+  ACTIVE
+  CLOSED
+
+  @@map("requisition_status")
+}
+
+model Candidate {
+  id              String   @id @default(cuid())
+  name            String
+  phone           String?
+  email           String?
+  jobId           String?
+  poolType        PoolType @default(NONE)
+  stage           CandidateStage @default(UNASSIGNED)
+  source          String?
+  entryMode       String?
+  browserImportTaskId String?
+  intentId        String?
+  tags            String?
+  rating          Int?
+  experience      String?
+  education       String?
+  school          String?
+  currentCompany  String?
+  currentTitle    String?
+  summary         String?  @db.Text
+  resumeName      String?
+  workHistory     Json?
+  note            String?  @db.Text
+  archiveReasonId String?
+  lockedState     LockedState @default(NONE)
+  parsedProfileId String?
+  appliedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  job             Job? @relation(fields: [jobId], references: [id])
+
+  @@map("candidates")
+}
+
+enum PoolType {
+  NONE
+  UNASSIGNED
+  VIRTUAL
+
+  @@map("pool_type")
+}
+
+enum CandidateStage {
+  UNASSIGNED
+  VIRTUAL_POOL
+  RECOMMENDED
+  HR_SCREENING
+  DEPT_SCREENING
+  INTERVIEWING
+  OFFERING
+  PENDING_ONBOARD
+  ONBOARDED
+  PROBATION
+  ENDED
+  ARCHIVED
+
+  @@map("candidate_stage")
+}
+
+enum LockedState {
+  NONE
+  OPERABLE
+  INOPERABLE
+
+  @@map("locked_state")
+}
+
+model Interview {
+  id              String   @id @default(cuid())
+  candidateId     String
+  jobId           String
+  round           Int      @default(1)
+  mode            InterviewMode
+  time            DateTime
+  location        String?
+  interviewerIds  String?
+  status          InterviewStatus @default(TO_SCHEDULE)
+  calendarEventId String?
+  cancelReason    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("interviews")
+}
+
+enum InterviewMode {
+  ONSITE
+  VIDEO
+  PHONE
+
+  @@map("interview_mode")
+}
+
+enum InterviewStatus {
+  TO_SCHEDULE
+  FEEDBACK_PENDING
+  COMPLETED
+  CANCELLED
+
+  @@map("interview_status")
+}
+
+model InterviewFeedback {
+  id              String   @id @default(cuid())
+  interviewId     String
+  interviewerId   String
+  filledById      String
+  filledByMode    String   @default("SELF")
+  proxyName       String?
+  proxyAt         DateTime?
+  content         String   @db.Text
+  aiSuggestionRunId String?
+  visibleToInterviewers Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("interview_feedback")
+}
+
+model OfferRecord {
+  id              String   @id @default(cuid())
+  candidateId     String   @unique
+  jobId           String
+  stage           OfferStage @default(MATERIAL_PENDING)
+  oaApprovalId    String?
+  oralResult      OralResult?
+  rejectReasonId  String?
+  backgroundCheckStatus BgStatus @default(PENDING)
+  materials       String?
+  onboardDate     DateTime?
+  offerSentAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("offer_records")
+}
+
+enum OfferStage {
+  MATERIAL_PENDING
+  OA_PENDING
+  SALARY_RETURNED
+  NEGOTIATING
+  ORAL_ACCEPTED
+  ORAL_REJECTED
+  BG_IN_PROGRESS
+  BG_CONFIRMED
+  BG_FAILED
+  OFFER_TO_SEND
+  OFFER_SENT
+
+  @@map("offer_stage")
+}
+
+enum OralResult {
+  ACCEPTED
+  REJECTED
+
+  @@map("oral_result")
+}
+
+enum BgStatus {
+  PENDING
+  CONFIRMED_OK
+  CONFIRMED_FAILED
+
+  @@map("bg_status")
+}
+
+model ProbationRecord {
+  id          String   @id @default(cuid())
+  candidateId String   @unique
+  converted   Boolean  @default(false)
+  convertedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("probation_records")
+}
+
+model TalentPoolEntry {
+  id                String   @id @default(cuid())
+  candidateId       String
+  archivedAt        DateTime
+  sourceStage       String
+  reasonId          String?
+  reactivatedJobId  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("talent_pool_entries")
+}
+
+model ReasonOption {
+  id     String @id @default(cuid())
+  type   ReasonType
+  label  String
+  active Boolean @default(true)
+
+  @@map("reason_options")
+}
+
+enum ReasonType {
+  ARCHIVE
+  OFFER_REJECT
+  ONBOARD_ABANDON
+
+  @@map("reason_type")
+}
+
+model AIRun {
+  id          String   @id @default(cuid())
+  type        AiRunType
+  inputRefs   String?
+  output      String?  @db.Text
+  status      AiRunStatus @default(PENDING)
+  isDraft     Boolean  @default(true)
+  confirmedBy String?
+  confirmedAt DateTime?
+  confidence  Json?
+  attempts    Int      @default(0)
+  errorCode   String?
+  errorMessage String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ai_runs")
+}
+
+enum AiRunType {
+  RESUME_PARSE
+  RESUME_EVAL
+  INTERVIEW_EVAL
+
+  @@map("ai_run_type")
+}
+
+enum AiRunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+
+  @@map("ai_run_status")
+}
+
+model BrowserImportTask {
+  id                String   @id @default(cuid())
+  requestId         String   @unique
+  operatorId        String
+  sourceSite        String
+  sourceCandidateId String?
+  sourcePageUrl     String?
+  targetJobId       String?
+  pagePayload       Json?
+  resumeFileId      String?
+  fileHash          String?
+  status            BrowserImportStatus @default(RECEIVED)
+  candidateId       String?
+  errorCode         String?
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+  completedAt       DateTime?
+
+  @@map("browser_import_tasks")
+}
+
+enum BrowserImportStatus {
+  RECEIVED
+  PARSING
+  SUCCESS
+  DUPLICATE
+  FAILED
+
+  @@map("browser_import_status")
+}
+
+model TimelineEvent {
+  id          String   @id @default(cuid())
+  entityType  String
+  entityId    String
+  actorId     String?
+  action      String
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  @@map("timeline_events")
+}
+
+/// 简历附件：按内容 SHA-256 去重，相同文件不重复占用存储（PRD §6.4）
+model ResumeFile {
+  id         String   @id @default(cuid())
+  sha256     String   @unique
+  fileName   String
+  mimeType   String
+  size       Int
+  storageKey String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  intakes    ResumeIntake[]
+
+  @@map("resume_files")
+}
+
+/// 入场记录：一次入场动作一条，承载来源/进入方式/查重/解析状态
+model ResumeIntake {
+  id                     String       @id @default(cuid())
+  source                 String
+  entryMode              String
+  status                 IntakeStatus @default(RECEIVED)
+  candidateId            String?
+  jobId                  String?
+  intentId               String?
+  resumeFileId           String?
+  airRunId               String?
+  duplicateOfCandidateId String?
+  mailFrom               String?
+  mailSubject            String?
+  receivedAt             DateTime?
+  attempts               Int          @default(0)
+  errorCode              String?
+  errorMessage           String?
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+  resumeFile             ResumeFile?  @relation(fields: [resumeFileId], references: [id])
+
+  @@index([status])
+  @@index([entryMode])
+  @@index([candidateId])
+  @@map("resume_intakes")
+}
+
+enum IntakeStatus {
+  RECEIVED
+  PARSING
+  PARSED
+  DUPLICATE
+  NEEDS_MANUAL
+  FAILED
+
+  @@map("intake_status")
+}
+
+/// 接收简历邮箱配置；本期邮件能力为 Mock，配置仅用于记录与自检
+model MailInboxConfig {
+  id           String    @id @default(cuid())
+  address      String    @unique
+  provider     String    @default("MOCK")
+  active       Boolean   @default(true)
+  lastPolledAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("mail_inbox_configs")
+}

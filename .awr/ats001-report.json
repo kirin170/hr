@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "work_item": "ATS-001",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "summary": "NestJS 后端骨架与 Prisma schema 建立完成；构建通过；MySQL talentflow 库已创建，db push 完成，12 张核心表落库；健康检查接口 200。",
+  "command": "npm run build --prefix backend && prisma db push && mysql show tables && health check",
+  "scope": ["backend/","backend/prisma/schema.prisma","MySQL talentflow"],
+  "verified_at": 1794468939390,
+  "checks": [
+    {"name": "build", "passed": true, "criteria": ["backend/ 目录可本地启动，健康检查接口可访问。"], "details": "npm run build 通过；GET http://127.0.0.1:3000/ -> 200 Hello World!"},
+    {"name": "db_push", "passed": true, "criteria": ["Prisma schema 覆盖 PRD §3.1/§3.2 核心实体核心字段，可生成 Client 并同步到本地 MySQL。"], "details": "12 张核心表已在 talentflow 库创建；Prisma Client v6.19.3 已生成。"},
+    {"name": "structure", "passed": true, "criteria": ["模块目录与 NestJS 结构符合技术设计 §2 总体架构。"], "details": "backend/ 目录按 NestJS 默认模块结构组织，符合模块化单体 API 骨架。"}
+  ]
+}

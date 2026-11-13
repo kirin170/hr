@@ -1,0 +1,85 @@
+{
+  "completion": {
+    "acceptance": [
+      {
+        "criterion": "项目目标、阶段性交付边界与权威来源已核对并记录，旧原型描述已标为历史基线。",
+        "evidence": [
+          "intake002-project-plan-v1"
+        ]
+      },
+      {
+        "criterion": "已有任务、历史证据校验结果和 ATS-002 待应用提案已对账，不将历史报告当作当前重测。",
+        "evidence": [
+          "intake002-project-plan-v1"
+        ]
+      },
+      {
+        "criterion": "全项目目标和阶段路线图覆盖现有需求，新增任务均记录目标归属、来源、依赖、验收条件及下一步。",
+        "evidence": [
+          "intake002-project-plan-v1"
+        ]
+      },
+      {
+        "criterion": "新增开发任务全部保持待分配且无负责人，本次规划不自动领取、接续或执行开发任务。",
+        "evidence": [
+          "intake002-project-plan-v1"
+        ]
+      },
+      {
+        "criterion": "台账和路线图已通过 AWR 刷新与 intake inspect 复核，并保存本次规划核对报告。",
+        "evidence": [
+          "intake002-project-plan-v1"
+        ]
+      }
+    ],
+    "minimum_level": "locally_verified",
+    "required_evidence": [],
+    "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+    "version": 1
+  },
+  "completion_claimed": false,
+  "evidence": {
+    "branch_id": null,
+    "command": "Read local requirements and implementation; awr status/source list/intake inspect/work show/proposal show/session list/recovery inspect; validate planning assignments and dependency graph",
+    "evidence_type": "verification_report",
+    "external_key": "intake002-project-plan-v1",
+    "level": "locally_verified",
+    "locator": "docs/verification/intake002-project-plan-report.json",
+    "scope": [
+      ".awr/project.toml",
+      ".awr/intake/work-ledger.yaml",
+      "docs/ats-项目目标与实施路线图-v1.0.md",
+      "docs/ats-功能需求文档-v1.2.md",
+      "docs/ats-PRD-v1.0.md",
+      "docs/ats-技术设计与开发环境-v1.0.md"
+    ],
+    "sha256": "1d1186f51a675d4d38f728e64712a7ce99c4e2270abfbbf5dac0197d592c231a",
+    "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+    "summary": "Completion report for INTAKE-002",
+    "verified_at": 1794557625746,
+    "work_item_key": "INTAKE-002"
+  },
+  "freshness_basis": "source_refresh",
+  "level_basis": "caller_assertion",
+  "next_action": "record_evidence_then_complete_with_current_revision_and_owned_session",
+  "ok": true,
+  "project_revision": 108,
+  "read_only": false,
+  "report_sha256": "1d1186f51a675d4d38f728e64712a7ce99c4e2270abfbbf5dac0197d592c231a",
+  "snapshot": {
+    "coherent": true,
+    "project_revision": 108,
+    "source_currentness_verified": true,
+    "source_refresh_revision": 108,
+    "source_state_fingerprint": "sha256:a1af09505b57c3065d0465d4dea2dc37361c088169933055c55b116c54750188",
+    "storage": "private_memory",
+    "version": 1
+  },
+  "source_issues": [],
+  "source_refresh_performed": true,
+  "source_warnings": 0,
+  "stage": "report_validated",
+  "verification_executed": false,
+  "version": 1,
+  "warning": null
+}

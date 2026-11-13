@@ -1,26 +1,45 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { AppData } from './types'
+import type { ApiJob } from './types'
 import { initialData } from './data'
+import { listCandidates, listJobs } from './api'
 
-const STORAGE_KEY = 'talentflow-demo-v1'
+const sessionInitialData: AppData = { ...initialData, candidates: [] }
 
 export function useAppData() {
-  const [data, setData] = useState<AppData>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY)
-      return stored ? JSON.parse(stored) as AppData : initialData
-    } catch {
-      return initialData
-    }
-  })
+  const [data, setData] = useState<AppData>(sessionInitialData)
+  const [candidatesLoading, setCandidatesLoading] = useState(true)
+  const [candidatesError, setCandidatesError] = useState<string | null>(null)
+  const [apiJobs, setApiJobs] = useState<ApiJob[]>([])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  }, [data])
-
-  const resetData = useCallback(() => {
-    setData(initialData)
+    let active = true
+    listCandidates().then((candidates) => {
+      if (!active) return
+      setData((current) => ({ ...current, candidates }))
+      setCandidatesError(null)
+    }).catch((error: unknown) => {
+      if (!active) return
+      setCandidatesError(error instanceof Error ? error.message : '候选人加载失败')
+    }).finally(() => {
+      if (active) setCandidatesLoading(false)
+    })
+    return () => { active = false }
   }, [])
 
-  return { data, setData, resetData }
+  useEffect(() => {
+    let active = true
+    listJobs().then((jobs) => {
+      if (active) setApiJobs(jobs)
+    }).catch(() => {
+      if (active) setApiJobs([])
+    })
+    return () => { active = false }
+  }, [])
+
+  const resetData = useCallback(() => {
+    setData((current) => ({ ...initialData, candidates: current.candidates }))
+  }, [])
+
+  return { data, setData, resetData, candidatesLoading, candidatesError, apiJobs }
 }

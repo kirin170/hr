@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "work_item": "ATS-003",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "summary": "简历入场与异步解析 Mock 链路已实现：上传/邮箱/手工三种入场方式、SHA-256 与手机号/邮箱查重、BullMQ 异步解析 Worker（Mock 成功/失败、指数退避重试）、失败降级人工录入、职位分配与草稿确认。构建、单元测试与本地接口实测均通过。",
+  "command": "npm run build --prefix backend && npm test --prefix backend && node dist/main.js + curl smoke (upload/manual/email/retry/assign/confirm)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/src/intake/",
+    "backend/src/ai/",
+    "backend/src/storage/",
+    "backend/src/prisma/",
+    "backend/src/timeline/",
+    "backend/.env.example"
+  ],
+  "verified_at": 1794473058650,
+  "checks": [
+    {
+      "name": "entry_modes",
+      "passed": true,
+      "criteria": ["三种入场方式均可产生候选人或待分配池记录。"],
+      "details": "手工录入生成 candidate(UNASSIGNED, MANUAL)；单文件上传生成 candidate(UNASSIGNED, SINGLE_UPLOAD) + AIRun；邮箱 Mock 生成 candidate(UNASSIGNED, EMAIL_AUTO) 并在传入 jobId 时直接进入 RECOMMENDED。三类入口均返回 intakeId 与 candidateId。"
+    },
+    {
+      "name": "async_parse_retry_dedup",
+      "passed": true,
+      "criteria": ["AIRun 异步任务可 Mock 成功/失败并支持重试，无重复候选人。"],
+      "details": "成功：上传后 4s 内 intake=PARSED、AIRun=SUCCESS、attempts=1。失败：文件名含 fail 时经 3 次指数退避重试后 intake=NEEDS_MANUAL、AIRun=FAILED、errorCode=PARSE_FAILED。重试：POST /api/v1/intake/:id/retry {mockOutcome:SUCCESS} 后同一 intake 转为 PARSED，candidateId 未变。重复：同一 SHA-256 文件再次上传返回 status=DUPLICATE 且不新建候选人。"
+    },
+    {
+      "name": "source_entry_fields",
+      "passed": true,
+      "criteria": ["入场来源与进入方式字段记录正确。"],
+      "details": "GET /api/v1/intake 返回 source/entryMode 组合：MANUAL/MANUAL、UPLOAD/SINGLE_UPLOAD、EMAIL/EMAIL_AUTO，与 PRD §3.2 稳定 key 一致；duplicate 记录 duplicateOfCandidateId 指向命中候选人。"
+    }
+  ]
+}

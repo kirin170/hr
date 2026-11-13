@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "basis": "Planning source snapshot, not a Git commit or implementation test",
+  "files": [
+    {
+      "path": ".awr/project.toml",
+      "sha256": "cbf75512fef9b9028d02e2bc55ddab76ece43c0905bc9cb94170598405ad1efd"
+    },
+    {
+      "path": ".awr/intake/work-ledger.yaml",
+      "sha256": "6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da"
+    },
+    {
+      "path": "docs/ats-项目目标与实施路线图-v1.0.md",
+      "sha256": "0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8"
+    },
+    {
+      "path": "docs/ats-功能需求文档-v1.2.md",
+      "sha256": "f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb"
+    },
+    {
+      "path": "docs/ats-PRD-v1.0.md",
+      "sha256": "a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e"
+    },
+    {
+      "path": "docs/ats-技术设计与开发环境-v1.0.md",
+      "sha256": "0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9"
+    }
+  ]
+}

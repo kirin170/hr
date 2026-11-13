@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Filter, MoreHorizontal, Plus, Search, Users, X } from 'lucide-react'
-import { departments, getDepartment, getJob, jobs } from '../data'
+import { departments, getCandidateDepartment, getCandidateJob, getDepartment, getJob, jobs } from '../data'
 import { useApp } from '../context'
 import type { CandidateStage } from '../types'
 import { cn, stageMeta } from '../utils'
@@ -17,13 +17,27 @@ const columns: { key: CandidateStage; title: string; color: string }[] = [
 ]
 
 export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
-  const { data, updateCandidate, toast } = useApp()
+  const { data, updateCandidate, toast, apiJobs } = useApp()
   const [department, setDepartment] = useState('all')
   const [job, setJob] = useState('all')
   const [search, setSearch] = useState('')
   const [dragged, setDragged] = useState<string | null>(null)
   const [dragOver, setDragOver] = useState<CandidateStage | null>(null)
   const [view, setView] = useState<'kanban' | 'table'>('kanban')
+
+  const departmentFilters = Array.from(new Set([
+    ...departments.map(item => item.id),
+    ...apiJobs.map(item => item.departmentId),
+    ...data.candidates.map(item => item.departmentId),
+  ].filter(Boolean))).map(value => ({
+    value,
+    label: getDepartment(value)?.name || data.candidates.find(item => item.departmentId === value)?.departmentName || value,
+  }))
+  const jobFilters = Array.from(new Map([
+    ...jobs.map(item => [item.id, item.title] as const),
+    ...apiJobs.map(item => [item.id, item.title] as const),
+    ...data.candidates.filter(item => item.jobId).map(item => [item.jobId, item.jobTitle || item.jobId] as const),
+  ]).entries()).map(([value, label]) => ({ value, label }))
 
   const filtered = useMemo(() => data.candidates.filter(candidate => {
     if (candidate.stage === 'rejected') return false
@@ -33,12 +47,16 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
     return true
   }), [data.candidates, department, job, search])
 
-  const drop = (stage: CandidateStage) => {
+  const drop = async (stage: CandidateStage) => {
     if (!dragged) return
     const candidate = data.candidates.find(c => c.id === dragged)
     if (candidate && candidate.stage !== stage) {
-      updateCandidate(dragged, { stage, lastActivity: '刚刚' })
-      toast(`${candidate.name} 已移动到「${stageMeta[stage].label}」`)
+      try {
+        await updateCandidate(dragged, { stage })
+        toast(`${candidate.name} 已移动到「${stageMeta[stage].label}」`)
+      } catch (error) {
+        toast(error instanceof Error ? error.message : '阶段更新失败', 'info')
+      }
     }
     setDragged(null)
     setDragOver(null)
@@ -50,7 +68,7 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
       <div className="page-title-actions"><button className="button button-secondary"><Users size={16} />邀请协作</button><button className="button button-primary" onClick={onAddCandidate}><Plus size={17} />添加候选人</button></div>
     </div>
     <div className="pipeline-toolbar panel">
-      <div className="pipeline-filters"><FilterSelectMini value={department} onChange={setDepartment} options={[{value:'all',label:'全部部门'}, ...departments.map(d=>({value:d.id,label:d.name}))]} /><FilterSelectMini value={job} onChange={setJob} options={[{value:'all',label:'全部职位'}, ...jobs.map(j=>({value:j.id,label:j.title}))]} /><label className="small-search"><Search size={15} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索候选人" />{search && <button onClick={() => setSearch('')}><X size={13} /></button>}</label></div>
+      <div className="pipeline-filters"><FilterSelectMini value={department} onChange={setDepartment} options={[{value:'all',label:'全部部门'}, ...departmentFilters]} /><FilterSelectMini value={job} onChange={setJob} options={[{value:'all',label:'全部职位'}, ...jobFilters]} /><label className="small-search"><Search size={15} /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索候选人" />{search && <button onClick={() => setSearch('')}><X size={13} /></button>}</label></div>
       <div className="pipeline-toolbar-right"><div className="view-switch"><button className={cn(view === 'kanban' && 'active')} onClick={() => setView('kanban')}>看板</button><button className={cn(view === 'table' && 'active')} onClick={() => setView('table')}>列表</button></div><span className="result-count">{filtered.length} 位候选人</span></div>
     </div>
     {view === 'kanban' ? <div className="kanban-board">
@@ -60,8 +78,8 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
           <header className="kanban-header"><div><i style={{background: column.color}} /><strong>{column.title}</strong><span>{items.length}</span></div><div><button className="icon-button icon-button-small"><MoreHorizontal size={16} /></button><button className="icon-button icon-button-small"><Plus size={16} /></button></div></header>
           <div className="kanban-list">
             {items.map(candidate => {
-              const job = getJob(candidate.jobId)
-              const department = getDepartment(candidate.departmentId)
+              const job = getCandidateJob(candidate)
+              const department = getCandidateDepartment(candidate)
               return <button className="kanban-card" draggable key={candidate.id} onDragStart={() => setDragged(candidate.id)} onDragEnd={() => { setDragged(null); setDragOver(null) }} onClick={() => onOpenCandidate(candidate.id)}>
                 <div className="kanban-card-top"><span className="avatar avatar-sm" style={{background: `${candidate.avatarColor}18`, color: candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span className="kanban-name">{candidate.name}</span><span className="kanban-salary">{candidate.experience}</span></div>
                 <p>{candidate.currentTitle} · {candidate.currentCompany}</p>
@@ -74,7 +92,7 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
           </div>
         </section>
       })}
-    </div> : <div className="panel pipeline-table-panel"><table className="candidate-table"><thead><tr><th>候选人</th><th>应聘职位</th><th>当前阶段</th><th>负责人</th><th>最近动态</th></tr></thead><tbody>{filtered.map(candidate => { const job = getJob(candidate.jobId); return <tr key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}><td><span className="candidate-cell"><span className="avatar avatar-sm" style={{background:`${candidate.avatarColor}18`,color:candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany}</small></span></span></td><td>{job?.title}</td><td><StageBadge stage={candidate.stage} /></td><td>{candidate.owner}</td><td>{candidate.lastActivity}</td></tr> })}</tbody></table></div>}
+    </div> : <div className="panel pipeline-table-panel"><table className="candidate-table"><thead><tr><th>候选人</th><th>应聘职位</th><th>当前阶段</th><th>负责人</th><th>最近动态</th></tr></thead><tbody>{filtered.map(candidate => { const job = getCandidateJob(candidate); return <tr key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}><td><span className="candidate-cell"><span className="avatar avatar-sm" style={{background:`${candidate.avatarColor}18`,color:candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany}</small></span></span></td><td>{job?.title || '待分配'}</td><td><StageBadge stage={candidate.stage} /></td><td>{candidate.owner}</td><td>{candidate.lastActivity}</td></tr> })}</tbody></table></div>}
   </div>
 }
 

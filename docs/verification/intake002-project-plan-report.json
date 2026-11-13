@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "work_item": "INTAKE-002",
+  "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+  "summary": "全项目目标规划与AWR登记核对通过；只验收规划产物，不证明业务实现完成或当前代码测试通过。",
+  "command": "Read local requirements and implementation; awr status/source list/intake inspect/work show/proposal show/session list/recovery inspect; validate planning assignments and dependency graph",
+  "scope": [
+    ".awr/project.toml",
+    ".awr/intake/work-ledger.yaml",
+    "docs/ats-项目目标与实施路线图-v1.0.md",
+    "docs/ats-功能需求文档-v1.2.md",
+    "docs/ats-PRD-v1.0.md",
+    "docs/ats-技术设计与开发环境-v1.0.md"
+  ],
+  "verified_at": 1794557625746,
+  "checks": [
+    {
+      "name": "goals_and_provenance",
+      "passed": true,
+      "criteria": [
+        "项目目标、阶段性交付边界与权威来源已核对并记录，旧原型描述已标为历史基线。"
+      ],
+      "details": "已对照三份需求/技术文档、README及实现；总目标覆盖全项目，Mock为阶段交付；已注明PRD正文版本与历史基线。"
+    },
+    {
+      "name": "historical_accounting",
+      "passed": true,
+      "criteria": [
+        "已有任务、历史证据校验结果和 ATS-002 待应用提案已对账，不将历史报告当作当前重测。"
+      ],
+      "details": "按原报告source_sha校验，ATS-001/003通过；INTAKE-001历史证据缺口保留；ATS-002的approved未应用提案仅登记，未执行。"
+    },
+    {
+      "name": "whole_project_plan",
+      "passed": true,
+      "criteria": [
+        "全项目目标和阶段路线图覆盖现有需求，新增任务均记录目标归属、来源、依赖、验收条件及下一步。"
+      ],
+      "details": "AWR识别1个总目标+8个领域目标；路线图8阶段；ATS-004～026共23项均有目标/来源/依赖/验收/下一步；依赖图经引用及循环检查，无缺失和循环。"
+    },
+    {
+      "name": "assignment_boundary",
+      "passed": true,
+      "criteria": [
+        "新增开发任务全部保持待分配且无负责人，本次规划不自动领取、接续或执行开发任务。"
+      ],
+      "details": "检查实际台账23项新增任务全部status=planned、owner=null；仅INTAKE-002本次规划持有会话，未领取业务开发任务。未运行构建、测试、数据库或企业系统调用。"
+    },
+    {
+      "name": "awr_refresh",
+      "passed": true,
+      "criteria": [
+        "台账和路线图已通过 AWR 刷新与 intake inspect 复核，并保存本次规划核对报告。"
+      ],
+      "details": "AWR刷新成功，6个来源fresh，source_issues为空；9个目标；所余为未来任务未完成依赖、本次intake及已知INTAKE-001历史证据缺口。原始诊断保存在.awr/intake/planning-inspection.json。"
+    }
+  ],
+  "source_snapshot": [
+    {
+      "path": ".awr/project.toml",
+      "sha256": "cbf75512fef9b9028d02e2bc55ddab76ece43c0905bc9cb94170598405ad1efd"
+    },
+    {
+      "path": ".awr/intake/work-ledger.yaml",
+      "sha256": "6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da"
+    },
+    {
+      "path": "docs/ats-项目目标与实施路线图-v1.0.md",
+      "sha256": "0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8"
+    },
+    {
+      "path": "docs/ats-功能需求文档-v1.2.md",
+      "sha256": "f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb"
+    },
+    {
+      "path": "docs/ats-PRD-v1.0.md",
+      "sha256": "a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e"
+    },
+    {
+      "path": "docs/ats-技术设计与开发环境-v1.0.md",
+      "sha256": "0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9"
+    }
+  ],
+  "limitations": [
+    "历史报告仅对原记录版本校验，INTAKE-001历史证据不足。",
+    "开发任务由用户分配，未启动任何新增业务任务，未接续ATS-002。",
+    "工期、负责人、验收人与性能/恢复阈值尚待用户安排。"
+  ]
+}

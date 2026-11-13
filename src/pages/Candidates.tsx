@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, BriefcaseBusiness, Check, ChevronDown, ChevronLeft, ChevronRight, Download, Filter, ListFilter, Mail, MapPin, MoreHorizontal, Phone, Plus, Search, SlidersHorizontal, Star, Upload, Users, X } from 'lucide-react'
-import { departments, getDepartment, getJob, jobs } from '../data'
+import { departments, getCandidateDepartment, getCandidateJob, getDepartment, getJob, jobs } from '../data'
 import { useApp } from '../context'
 import type { Candidate, CandidateStage } from '../types'
 import { cn, stageMeta } from '../utils'
@@ -11,7 +11,7 @@ const stageOrder: CandidateStage[] = ['new', 'screening', 'interview', 'offer', 
 const PAGE_SIZE = 7
 
 export function Candidates({ search, onOpenCandidate, onAddCandidate }: CandidatesProps) {
-  const { data } = useApp()
+  const { data, candidatesLoading, candidatesError, apiJobs } = useApp()
   const [stage, setStage] = useState<CandidateStage | 'all'>('all')
   const [department, setDepartment] = useState('all')
   const [job, setJob] = useState('all')
@@ -24,6 +24,20 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
   const [quickSearch, setQuickSearch] = useState('')
 
   const sources = Array.from(new Set(data.candidates.map(c => c.source)))
+  const jobFilters = Array.from(new Map([
+    ...jobs.map(item => [item.id, item.title] as const),
+    ...apiJobs.map(item => [item.id, item.title] as const),
+    ...data.candidates.filter(item => item.jobId).map(item => [item.jobId, item.jobTitle || item.jobId] as const),
+  ]).entries()).map(([value, label]) => ({ value, label }))
+  const departmentIds = Array.from(new Set([
+    ...departments.map(item => item.id),
+    ...apiJobs.map(item => item.departmentId),
+    ...data.candidates.map(item => item.departmentId),
+  ].filter(Boolean)))
+  const departmentFilters = departmentIds.map((value) => ({
+    value,
+    label: getDepartment(value)?.name || data.candidates.find(item => item.departmentId === value)?.departmentName || value,
+  }))
   const filtered = useMemo(() => {
     const q = `${search} ${quickSearch}`.trim().toLowerCase()
     return data.candidates.filter((candidate) => {
@@ -47,7 +61,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
   return (
     <div className="page-stack candidates-page">
       <div className="page-title-row">
-        <div><div className="eyebrow">人才库 <span className="eyebrow-separator">·</span> {data.candidates.length + 126} 位候选人</div><h2>简历库</h2><p>集中管理人才信息，让每一份简历都进入清晰的招聘流程。</p></div>
+        <div><div className="eyebrow">人才库 <span className="eyebrow-separator">·</span> {data.candidates.length} 位候选人</div><h2>简历库</h2><p>集中管理人才信息，让每一份简历都进入清晰的招聘流程。</p></div>
         <div className="page-title-actions">
           <button className="button button-secondary"><Upload size={16} />批量导入</button>
           <button className="button button-primary" onClick={onAddCandidate}><Plus size={17} />添加候选人</button>
@@ -55,9 +69,12 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
       </div>
 
       <div className="stage-tabs">
-        <button className={cn('stage-tab', stage === 'all' && 'active')} onClick={() => { setStage('all'); setPage(1) }}>全部候选人 <span>{data.candidates.length + 126}</span></button>
-        {stageOrder.map((key) => <button key={key} className={cn('stage-tab', stage === key && 'active')} onClick={() => { setStage(key); setPage(1) }}>{stageMeta[key].label}<span>{data.candidates.filter(c => c.stage === key).length + (key === 'new' ? 36 : key === 'screening' ? 48 : key === 'interview' ? 21 : key === 'offer' ? 8 : key === 'hired' ? 14 : 18)}</span></button>)}
+        <button className={cn('stage-tab', stage === 'all' && 'active')} onClick={() => { setStage('all'); setPage(1) }}>全部候选人 <span>{data.candidates.length}</span></button>
+        {stageOrder.map((key) => <button key={key} className={cn('stage-tab', stage === key && 'active')} onClick={() => { setStage(key); setPage(1) }}>{stageMeta[key].label}<span>{data.candidates.filter(c => c.stage === key).length}</span></button>)}
       </div>
+
+      {candidatesLoading && <div className="panel empty-inline">正在从 ATS 加载候选人…</div>}
+      {candidatesError && <div className="panel empty-inline">候选人加载失败：{candidatesError} 刷新页面后重试。</div>}
 
       <div className="panel candidates-panel">
         <div className="candidate-toolbar">
@@ -72,8 +89,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
         </div>
 
         {filtersOpen && <div className="filter-panel">
-          <FilterSelect label="所属部门" value={department} onChange={value => { setDepartment(value); setPage(1) }} options={[{ value: 'all', label: '全部部门' }, ...departments.map(d => ({ value: d.id, label: d.name }))]} />
-          <FilterSelect label="应聘职位" value={job} onChange={value => { setJob(value); setPage(1) }} options={[{ value: 'all', label: '全部职位' }, ...jobs.map(j => ({ value: j.id, label: j.title }))]} />
+          <FilterSelect label="所属部门" value={department} onChange={value => { setDepartment(value); setPage(1) }} options={[{ value: 'all', label: '全部部门' }, ...departmentFilters]} />
+          <FilterSelect label="应聘职位" value={job} onChange={value => { setJob(value); setPage(1) }} options={[{ value: 'all', label: '全部职位' }, ...jobFilters]} />
           <FilterSelect label="简历来源" value={source} onChange={value => { setSource(value); setPage(1) }} options={[{ value: 'all', label: '全部来源' }, ...sources.map(s => ({ value: s, label: s }))]} />
           <button className="reset-filter" onClick={resetFilters}>重置条件</button>
         </div>}
@@ -88,12 +105,12 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
             </tr></thead>
             <tbody>
               {visible.map(candidate => {
-                const department = getDepartment(candidate.departmentId)
-                const job = getJob(candidate.jobId)
+                const department = getCandidateDepartment(candidate)
+                const job = getCandidateJob(candidate)
                 return <tr key={candidate.id}>
                   <td className="check-column"><input type="checkbox" checked={selected.includes(candidate.id)} onChange={() => toggleSelect(candidate.id)} onClick={e => e.stopPropagation()} /></td>
                   <td><button className="candidate-cell" onClick={() => onOpenCandidate(candidate.id)}><span className="avatar avatar-md" style={{ background: `${candidate.avatarColor}18`, color: candidate.avatarColor }}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany} · {candidate.currentTitle}</small></span></button></td>
-                  <td><button className="job-cell" onClick={() => onOpenCandidate(candidate.id)}><strong>{job?.title}</strong><small><span className="department-dot" style={{ background: department?.color }} />{department?.name} · {job?.location.split(' · ')[0]}</small></button></td>
+                  <td><button className="job-cell" onClick={() => onOpenCandidate(candidate.id)}><strong>{job?.title || '待分配职位'}</strong><small><span className="department-dot" style={{ background: department?.color }} />{department?.name || '部门待补充'} · {job?.location?.split(' · ')[0] || '地点待补充'}</small></button></td>
                   <td><StageBadge stage={candidate.stage} /></td>
                   <td><span className="source-cell">{candidate.source}</span></td>
                   <td><span className="rating-cell"><Star size={14} fill="#EEA23E" stroke="#EEA23E" />{candidate.rating}.0</span></td>
@@ -104,11 +121,11 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate }: Candidat
               })}
             </tbody>
           </table>
-          {visible.length === 0 && <EmptyState onReset={resetFilters} />}
+          {visible.length === 0 && !candidatesLoading && !candidatesError && <EmptyState onReset={resetFilters} />}
         </div> : <div className="candidate-card-grid">
           {visible.map(candidate => {
-            const job = getJob(candidate.jobId)
-            const department = getDepartment(candidate.departmentId)
+            const job = getCandidateJob(candidate)
+            const department = getCandidateDepartment(candidate)
             return <button className="candidate-card" key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}>
               <div className="candidate-card-top"><span className="avatar avatar-lg" style={{ background: `${candidate.avatarColor}18`, color: candidate.avatarColor }}>{candidate.name.slice(-2)}</span><StageBadge stage={candidate.stage} /></div>
               <h4>{candidate.name}</h4><p>{candidate.currentTitle} · {candidate.currentCompany}</p>

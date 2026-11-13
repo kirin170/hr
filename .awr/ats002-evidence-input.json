@@ -1,0 +1,25 @@
+{
+  "work_item_key": "ATS-002",
+  "external_key": "ats002-candidate-api-v1",
+  "evidence_type": "verification_report",
+  "summary": "候选人及职位 API 已接入并通过构建和本地 API 冒烟验收；阶段持久化与时间线记录已用临时记录验证并清理。",
+  "locator": "docs/verification/ats002-report.json",
+  "level": "locally_verified",
+  "sha256": "1dda5c85286b3b49de43c11aa5dad3d4de1dc3221c8f28fd8097f2a5d4be0f1a",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "command": "npm run build (frontend); npm run build (backend); npm exec prisma generate; prisma db push --skip-generate; local HTTP API and Vite proxy smoke checks",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/src/candidates/",
+    "src/api.ts",
+    "src/store.ts",
+    "src/context.tsx",
+    "src/components/AddCandidateModal.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/pages/Candidates.tsx",
+    "src/pages/Pipeline.tsx",
+    "vite.config.ts"
+  ],
+  "verified_at": 1794531364571,
+  "branch_id": null
+}

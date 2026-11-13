@@ -28,7 +28,7 @@ const pageMeta: Record<Exclude<PageKey, 'settings'>, { title: string; subtitle: 
 }
 
 export default function App() {
-  const { data, setData, resetData } = useAppData()
+  const { data, setData, resetData, candidatesLoading, candidatesError, apiJobs } = useAppData()
   const [page, setPage] = useState<PageKey>('dashboard')
   const [search, setSearch] = useState('')
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
@@ -70,7 +70,7 @@ export default function App() {
 
   const meta = page === 'settings' ? pageMeta.dashboard : pageMeta[page]
 
-  return <AppProvider {...{ data, setData, resetData, selectedCandidateId, openCandidate, addToast, toasts, dismissToast }}>
+  return <AppProvider {...{ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, addToast, toasts, dismissToast }}>
     <div className="app-shell">
       <Sidebar page={page} onNavigate={navigate} onSettings={() => setShowSettings(true)} />
       <div className="app-main">

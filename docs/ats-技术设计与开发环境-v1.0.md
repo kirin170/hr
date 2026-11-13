@@ -234,7 +234,7 @@ d:/hr/
 
 - 内部用户优先通过钉钉 OAuth 登录，后端使用授权码换取身份。
 - `dingtalkUserId ↔ systemUserId` 一对一映射。
-- Access Token：JWT，有效期 15 分钟，保存在前端内存。
+- Access Token：JWT，有效期 15 分钟，保存在前端内存（令牌值通过 ${ACCESS_TOKEN} 引用，不写入文档）。
 - Refresh Token：旋转式、HttpOnly + Secure + SameSite=Lax Cookie，数据库只存哈希。
 - 首次管理员通过一次性初始化流程创建，完成后关闭初始化接口。
 
@@ -426,7 +426,7 @@ redis-cli -h 127.0.0.1 -p 6379 ping
 ```dotenv
 APP_ENV=local
 APP_PORT=3000
-DATABASE_URL="mysql://root:你的密码@127.0.0.1:3306/talentflow"
+DATABASE_URL=${DATABASE_URL}
 REDIS_URL="redis://127.0.0.1:6379"
 STORAGE_DRIVER=local
 AI_PROVIDER=mock

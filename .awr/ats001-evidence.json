@@ -1,0 +1,13 @@
+{
+  "work_item_key": "ATS-001",
+  "external_key": "ats001-build-db-health",
+  "evidence_type": "verification_report",
+  "summary": "NestJS 后端骨架与 Prisma schema 建立完成；构建通过；MySQL talentflow 库已创建，db push 完成，12 张核心表落库；健康检查接口 200。",
+  "locator": "D:\\hr\\.awr\\ats001-report.json",
+  "level": "locally_verified",
+  "sha256": "37aacf210227f02de758563f6816454469569ae49301063434dfe0b734744649",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "command": "npm run build --prefix backend && prisma db push && mysql show tables && health check",
+  "scope": ["backend/","backend/prisma/schema.prisma","MySQL talentflow"],
+  "verified_at": 1794468939390
+}

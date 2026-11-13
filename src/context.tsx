@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react'
-import type { AppData, Candidate, Interview } from './types'
+import type { ApiJob, AppData, Candidate, Interview } from './types'
+import { createCandidate as createCandidateRequest, listCandidates, updateCandidateStage } from './api'
 
 export type Toast = { id: number; message: string; type?: 'success' | 'info' }
 
@@ -7,13 +8,16 @@ type AppContextValue = {
   data: AppData
   setData: React.Dispatch<React.SetStateAction<AppData>>
   resetData: () => void
+  candidatesLoading: boolean
+  candidatesError: string | null
+  apiJobs: ApiJob[]
   toast: (message: string, type?: Toast['type']) => void
   toasts: Toast[]
   dismissToast: (id: number) => void
   selectedCandidateId: string | null
   openCandidate: (id: string | null) => void
-  addCandidate: (candidate: Candidate) => void
-  updateCandidate: (id: string, patch: Partial<Candidate>) => void
+  addCandidate: (candidate: Candidate) => Promise<Candidate>
+  updateCandidate: (id: string, patch: Partial<Candidate>) => Promise<Candidate | null>
   addInterview: (interview: Interview) => void
   updateInterview: (id: string, patch: Partial<Interview>) => void
 }
@@ -22,6 +26,9 @@ type AppProviderProps = {
   data: AppData
   setData: React.Dispatch<React.SetStateAction<AppData>>
   resetData: () => void
+  candidatesLoading: boolean
+  candidatesError: string | null
+  apiJobs: ApiJob[]
   selectedCandidateId: string | null
   openCandidate: (id: string | null) => void
   addToast: (message: string, type?: Toast['type']) => void
@@ -32,17 +39,22 @@ type AppProviderProps = {
 
 const AppContext = createContext<AppContextValue | null>(null)
 
-export function AppProvider({ data, setData, resetData, selectedCandidateId, openCandidate, addToast, toasts, dismissToast, children }: AppProviderProps) {
-  const addCandidate = (candidate: Candidate) => {
+export function AppProvider({ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, addToast, toasts, dismissToast, children }: AppProviderProps) {
+  const addCandidate = async (candidate: Candidate) => {
+    const created = await createCandidateRequest(candidate)
     setData((prev) => ({
       ...prev,
-      candidates: [candidate, ...prev.candidates],
-      activities: [{ id: `ac-${Date.now()}`, actor: '我', action: '新建了候选人', target: candidate.name, time: '刚刚', color: '#6675E8', icon: 'user' as const }, ...prev.activities],
+      candidates: [created, ...prev.candidates.filter((item) => item.id !== created.id)],
+      activities: [{ id: `ac-${Date.now()}`, actor: '我', action: '新建了候选人', target: created.name, time: '刚刚', color: '#6675E8', icon: 'user' as const }, ...prev.activities],
     }))
+    return created
   }
 
-  const updateCandidate = (id: string, patch: Partial<Candidate>) => {
-    setData((prev) => ({ ...prev, candidates: prev.candidates.map((candidate) => candidate.id === id ? { ...candidate, ...patch } : candidate) }))
+  const updateCandidate = async (id: string, patch: Partial<Candidate>) => {
+    if (patch.stage === undefined) return null
+    const updated = await updateCandidateStage(id, patch.stage)
+    setData((prev) => ({ ...prev, candidates: prev.candidates.map((candidate) => candidate.id === id ? { ...candidate, ...updated } : candidate) }))
+    return updated
   }
 
   const addInterview = (interview: Interview) => {
@@ -57,7 +69,7 @@ export function AppProvider({ data, setData, resetData, selectedCandidateId, ope
     setData((prev) => ({ ...prev, interviews: prev.interviews.map((interview) => interview.id === id ? { ...interview, ...patch } : interview) }))
   }
 
-  return <AppContext.Provider value={{ data, setData, resetData, selectedCandidateId, openCandidate, toasts, dismissToast, toast: addToast, addCandidate, updateCandidate, addInterview, updateInterview }}>{children}</AppContext.Provider>
+  return <AppContext.Provider value={{ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, toasts, dismissToast, toast: addToast, addCandidate, updateCandidate, addInterview, updateInterview }}>{children}</AppContext.Provider>
 }
 
 export function useApp() {

@@ -1,0 +1,1 @@
+{"version":1,"source_sha":"8c318105dc34ac8688ac2cd8fcfabb321a733b69","acceptance":[{"criterion":"三种入场方式均可产生候选人或待分配池记录。","evidence":["ats003-intake-mock-chain-v2"]},{"criterion":"AIRun 异步任务可 Mock 成功/失败并支持重试，无重复候选人。","evidence":["ats003-intake-mock-chain-v2"]},{"criterion":"入场来源与进入方式字段记录正确。","evidence":["ats003-intake-mock-chain-v2"]}]}

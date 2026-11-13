@@ -1,0 +1,44 @@
+{
+  "project_root": "\\\\?\\D:\\hr",
+  "version": 1,
+  "assessment": {
+    "version": 1,
+    "policy_version": 10,
+    "locator": "file:///D:/hr/docs/ats-%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83-v1.0.md",
+    "source_sha256": "0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9",
+    "findings": [
+      {
+        "id": "8a464e7350b8cfd05200061cb7de3123ed785d7b415049aa596017c7d9d8d529",
+        "category": "labelled_value",
+        "signature": "e948d53eb965fd4a45f12905bdfdb77cc56ca0677cc725c5041ad2d79f17920d",
+        "reviewable": true,
+        "line": 237,
+        "column": 3,
+        "structured_path": null,
+        "decoded_format": null
+      },
+      {
+        "id": "9e5488f4de3f440a623a0f0f283b96cd000aa7044e050d3c71101b8855f0a434",
+        "category": "labelled_value",
+        "signature": "95db4e7e5532a16564112a0d8c7036bab781815e3f58205e0474768b68e0dd50",
+        "reviewable": true,
+        "line": 238,
+        "column": 3,
+        "structured_path": null,
+        "decoded_format": null
+      }
+    ]
+  },
+  "reviewer": "codex",
+  "reviewed_at": 1794455194438,
+  "decisions": [
+    {
+      "finding_id": "8a464e7350b8cfd05200061cb7de3123ed785d7b415049aa596017c7d9d8d529",
+      "reason": "Public interface documentation only; no real credential values present."
+    },
+    {
+      "finding_id": "9e5488f4de3f440a623a0f0f283b96cd000aa7044e050d3c71101b8855f0a434",
+      "reason": "Public interface documentation only; no real credential values present."
+    }
+  ]
+}

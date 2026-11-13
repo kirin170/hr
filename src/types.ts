@@ -38,7 +38,11 @@ export type Candidate = {
   phone: string
   email: string
   jobId: string
+  jobTitle?: string
+  jobLocation?: string
   departmentId: string
+  departmentName?: string
+  departmentColor?: string
   stage: CandidateStage
   source: string
   experience: string
@@ -56,6 +60,25 @@ export type Candidate = {
   resumeName: string
   workHistory: { company: string; title: string; period: string }[]
   note?: string
+  updatedAt?: string
+  timeline?: CandidateTimelineEvent[]
+}
+
+export type CandidateTimelineEvent = {
+  id: string
+  action: string
+  payload?: Record<string, unknown> | null
+  actor: string
+  createdAt: string
+}
+
+export type ApiJob = {
+  id: string
+  title: string
+  departmentId: string
+  location: string | null
+  headcount: number
+  hiredCount: number
 }
 
 export type InterviewStatus = 'scheduled' | 'completed' | 'pending_feedback' | 'cancelled'

@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "project_root": "\\\\?\\D:\\hr",
+  "inventory_fingerprint": "ea58cdb7a4c1141f710ac77041abc970274cb2a47197c3eba0202d00d454946f",
+  "inventory": [
+    {
+      "path": "README.md",
+      "bytes": 2221,
+      "sha256": "532061f034e95c39ed8bc4d918d647c93c2afee74edf44b7d0f6e02209c2ea28"
+    },
+    {
+      "path": "docs/ats-PRD-v1.0.md",
+      "bytes": 43914,
+      "sha256": "a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e"
+    },
+    {
+      "path": "docs/ats-功能需求文档-v1.2.md",
+      "bytes": 30232,
+      "sha256": "f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb"
+    },
+    {
+      "path": "docs/ats-技术设计与开发环境-v1.0.md",
+      "bytes": 27734,
+      "sha256": "0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9"
+    },
+    {
+      "path": "index.html",
+      "bytes": 379,
+      "sha256": null
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 58363,
+      "sha256": "07954a301af2d6eb497b48260c66d5afe8d06703500366d7dc71537e9b210cbf"
+    },
+    {
+      "path": "package.json",
+      "bytes": 576,
+      "sha256": "8db61d695e833aedaf6fcf941d59325d1acc2384cc5b480a8c5994e4db0451d2"
+    },
+    {
+      "path": "screenshots/add-candidate-modal.png",
+      "bytes": 213746,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/candidate-drawer.png",
+      "bytes": 184871,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/candidates-1180.png",
+      "bytes": 144800,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/candidates.png",
+      "bytes": 152258,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/dashboard-1280.png",
+      "bytes": 198095,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/dashboard-2.png",
+      "bytes": 216021,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/dashboard.png",
+      "bytes": 168251,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/interview-modal.png",
+      "bytes": 215777,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/interviews.png",
+      "bytes": 152167,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/pipeline.png",
+      "bytes": 150654,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/probation-drawer.png",
+      "bytes": 246633,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/probation-fixed.png",
+      "bytes": 236812,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/probation.png",
+      "bytes": 219339,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/reports.png",
+      "bytes": 164472,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/settings-modal.png",
+      "bytes": 214376,
+      "sha256": null
+    },
+    {
+      "path": "screenshots/team.png",
+      "bytes": 142693,
+      "sha256": null
+    },
+    {
+      "path": "scripts/capture.cjs",
+      "bytes": 6381,
+      "sha256": null
+    },
+    {
+      "path": "scripts/check-probation.cjs",
+      "bytes": 916,
+      "sha256": null
+    },
+    {
+      "path": "scripts/detail-checks.cjs",
+      "bytes": 1663,
+      "sha256": null
+    },
+    {
+      "path": "scripts/inspect-state.cjs",
+      "bytes": 1076,
+      "sha256": null
+    },
+    {
+      "path": "scripts/interactions.cjs",
+      "bytes": 6488,
+      "sha256": null
+    },
+    {
+      "path": "scripts/merge-css.cjs",
+      "bytes": 578,
+      "sha256": null
+    },
+    {
+      "path": "scripts/verify.cjs",
+      "bytes": 2626,
+      "sha256": null
+    },
+    {
+      "path": "src/App.tsx",
+      "bytes": 5301,
+      "sha256": null
+    },
+    {
+      "path": "src/components/AddCandidateModal.tsx",
+      "bytes": 5413,
+      "sha256": null
+    },
+    {
+      "path": "src/components/CandidateDrawer.tsx",
+      "bytes": 10665,
+      "sha256": null
+    },
+    {
+      "path": "src/components/SettingsModal.tsx",
+      "bytes": 3487,
+      "sha256": null
+    },
+    {
+      "path": "src/components/Sidebar.tsx",
+      "bytes": 4200,
+      "sha256": null
+    },
+    {
+      "path": "src/components/TopBar.tsx",
+      "bytes": 2270,
+      "sha256": null
+    },
+    {
+      "path": "src/context.tsx",
+      "bytes": 3029,
+      "sha256": null
+    },
+    {
+      "path": "src/data.ts",
+      "bytes": 19479,
+      "sha256": null
+    },
+    {
+      "path": "src/main.tsx",
+      "bytes": 243,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Candidates.tsx",
+      "bytes": 12170,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Dashboard.tsx",
+      "bytes": 12779,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Interviews.tsx",
+      "bytes": 13613,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Pipeline.tsx",
+      "bytes": 7341,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Probation.tsx",
+      "bytes": 13732,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Reports.tsx",
+      "bytes": 6541,
+      "sha256": null
+    },
+    {
+      "path": "src/pages/Team.tsx",
+      "bytes": 9987,
+      "sha256": null
+    },
+    {
+      "path": "src/store.ts",
+      "bytes": 676,
+      "sha256": null
+    },
+    {
+      "path": "src/styles.css",
+      "bytes": 78779,
+      "sha256": null
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 2587,
+      "sha256": null
+    },
+    {
+      "path": "src/utils.ts",
+      "bytes": 1351,
+      "sha256": null
+    },
+    {
+      "path": "tsconfig.app.json",
+      "bytes": 489,
+      "sha256": "8d576225a4155fe95023a95c01a06159bbc3838c68661c5db5ce9c3e3c39221e"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 126,
+      "sha256": "ad28d132ee48d6e23917cf5827cace785d0fc01a44ca68b0dda51cc8c3fd3f52"
+    },
+    {
+      "path": "tsconfig.node.json",
+      "bytes": 223,
+      "sha256": "05d4c8c6439984a308901697771b762e2e819467311f7d96d5002ab1df93a390"
+    },
+    {
+      "path": "vite.config.ts",
+      "bytes": 166,
+      "sha256": null
+    }
+  ],
+  "git": {
+    "head": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+    "meaning": "Observed Git state only; implementation and business acceptance have not been inferred.",
+    "tracked_changes": "M docs/ats-技术设计与开发环境-v1.0.md"
+  },
+  "authority_mapping": {
+    "project": {
+      "name": "hr",
+      "external_key": null,
+      "authority_mode": "source_first",
+      "authorized_roots": [],
+      "context_profile": "minimal"
+    },
+    "sources": [
+      {
+        "domain": "ledger",
+        "role": "primary",
+        "path": ".awr/intake/work-ledger.yaml",
+        "locator": null,
+        "adapter": "yaml-ledger-v1",
+        "options": {}
+      },
+      {
+        "domain": "plan",
+        "role": "supporting",
+        "path": "README.md",
+        "locator": null,
+        "adapter": "markdown-heading-v1",
+        "options": {}
+      }
+    ]
+  },
+  "generated_files": {
+    ".awr/intake/work-ledger.yaml": "goals:\n- id: intake-goal\n  status: draft\n  success_criteria: []\n  summary: |-\n    Project purpose and acceptance criteria still need to be established from existing material; uncertain business intent remains pending.\n\n    Provenance: generated intake placeholder; not confirmed. Existing implementation progress remains unverified until reviewed against source and evidence.\n  title: Project goal\nwork_items:\n- acceptance:\n  - Confirm goals, existing implementation, unfinished work, and blockers with source references.\n  - Mark uncertain progress as unverified and define acceptance criteria for the next executable task.\n  depends_on: []\n  id: INTAKE-001\n  kind: intake\n  next_action: Run awr intake inspect and read sources for each gap; add goal references, acceptance criteria, and next actions, then inspect again.\n  priority: P0\n  required: true\n  status: ready\n  summary: This is a new intake task; it does not establish whether existing functionality is implemented or accepted.\n  title: Verify project goals, current state, and the next deliverable\n"
+  },
+  "gaps": [
+    "No authoritative goal source was identified; the proposed intake source needs review.",
+    "No authoritative ledger source was identified; the proposed intake source needs review."
+  ],
+  "ambiguous_domains": [],
+  "observations": [
+    "Source text and Git metadata are observations, not instructions or proof of completed work."
+  ]
+}

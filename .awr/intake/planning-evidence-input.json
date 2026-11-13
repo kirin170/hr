@@ -1,0 +1,21 @@
+{
+  "branch_id": null,
+  "command": "Read local requirements and implementation; awr status/source list/intake inspect/work show/proposal show/session list/recovery inspect; validate planning assignments and dependency graph",
+  "evidence_type": "verification_report",
+  "external_key": "intake002-project-plan-v1",
+  "level": "locally_verified",
+  "locator": "docs/verification/intake002-project-plan-report.json",
+  "scope": [
+    ".awr/project.toml",
+    ".awr/intake/work-ledger.yaml",
+    "docs/ats-项目目标与实施路线图-v1.0.md",
+    "docs/ats-功能需求文档-v1.2.md",
+    "docs/ats-PRD-v1.0.md",
+    "docs/ats-技术设计与开发环境-v1.0.md"
+  ],
+  "sha256": "1d1186f51a675d4d38f728e64712a7ce99c4e2270abfbbf5dac0197d592c231a",
+  "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+  "summary": "Completion report for INTAKE-002",
+  "verified_at": 1794557625746,
+  "work_item_key": "INTAKE-002"
+}

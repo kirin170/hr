@@ -1,0 +1,38 @@
+{
+  "acceptance": [
+    {
+      "criterion": "项目目标、阶段性交付边界与权威来源已核对并记录，旧原型描述已标为历史基线。",
+      "evidence": [
+        "intake002-project-plan-v1"
+      ]
+    },
+    {
+      "criterion": "已有任务、历史证据校验结果和 ATS-002 待应用提案已对账，不将历史报告当作当前重测。",
+      "evidence": [
+        "intake002-project-plan-v1"
+      ]
+    },
+    {
+      "criterion": "全项目目标和阶段路线图覆盖现有需求，新增任务均记录目标归属、来源、依赖、验收条件及下一步。",
+      "evidence": [
+        "intake002-project-plan-v1"
+      ]
+    },
+    {
+      "criterion": "新增开发任务全部保持待分配且无负责人，本次规划不自动领取、接续或执行开发任务。",
+      "evidence": [
+        "intake002-project-plan-v1"
+      ]
+    },
+    {
+      "criterion": "台账和路线图已通过 AWR 刷新与 intake inspect 复核，并保存本次规划核对报告。",
+      "evidence": [
+        "intake002-project-plan-v1"
+      ]
+    }
+  ],
+  "minimum_level": "locally_verified",
+  "required_evidence": [],
+  "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+  "version": 1
+}

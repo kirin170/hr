@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "acceptance": [
+    {
+      "criterion": "候选人列表与详情页读取后端数据，前端不再依赖 localStorage。",
+      "evidence": ["ats002-candidate-api-v1"]
+    },
+    {
+      "criterion": "候选人阶段推进调用后端 API 并持久化。",
+      "evidence": ["ats002-candidate-api-v1"]
+    },
+    {
+      "criterion": "关键操作在时间线/审计表中可见。",
+      "evidence": ["ats002-candidate-api-v1"]
+    }
+  ]
+}

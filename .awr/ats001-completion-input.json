@@ -1,0 +1,1 @@
+{"version":1,"source_sha":"8c318105dc34ac8688ac2cd8fcfabb321a733b69","acceptance":[{"criterion":"backend/ 目录可本地启动，健康检查接口可访问。","evidence":["ats001-build-db-health"]},{"criterion":"Prisma schema 覆盖 PRD §3.1/§3.2 核心实体核心字段，可生成 Client 并同步到本地 MySQL。","evidence":["ats001-build-db-health"]},{"criterion":"模块目录与 NestJS 结构符合技术设计 §2 总体架构。","evidence":["ats001-build-db-health"]}]}

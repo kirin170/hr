@@ -1,25 +1,56 @@
 import { ArrowLeft, BriefcaseBusiness, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, Clock3, Download, ExternalLink, FileText, Mail, MapPin, MessageSquare, MoreHorizontal, Phone, Plus, Star, UserRound, X } from 'lucide-react'
-import { useState } from 'react'
-import { getCandidate, getDepartment, getJob } from '../data'
+import { useEffect, useState } from 'react'
+import { getCandidate, getCandidateDepartment, getCandidateJob } from '../data'
+import { getCandidateDetail, getCandidateTimeline } from '../api'
 import { useApp } from '../context'
-import type { Candidate, CandidateStage } from '../types'
+import type { Candidate, CandidateStage, CandidateTimelineEvent } from '../types'
 import { cn, stageMeta } from '../utils'
 import { StageBadge } from '../pages/Candidates'
 
 export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidateId: string; onClose: () => void; onSchedule: (candidate: Candidate) => void }) {
   const { data, updateCandidate, toast } = useApp()
-  const candidate = getCandidate(data, candidateId)
+  const candidateFromList = getCandidate(data, candidateId)
+  const [detailCandidate, setDetailCandidate] = useState<Candidate | null>(null)
+  const [timeline, setTimeline] = useState<CandidateTimelineEvent[]>([])
+  const [timelineLoading, setTimelineLoading] = useState(true)
   const [tab, setTab] = useState<'overview' | 'resume' | 'timeline'>('overview')
   const [showStageMenu, setShowStageMenu] = useState(false)
+  useEffect(() => {
+    let active = true
+    setDetailCandidate(null)
+    setTimeline([])
+    setTimelineLoading(true)
+    getCandidateDetail(candidateId).then((item) => {
+      if (active) setDetailCandidate(item)
+    }).catch((error: unknown) => {
+      if (active) toast(error instanceof Error ? error.message : '候选人详情加载失败', 'info')
+    })
+    getCandidateTimeline(candidateId).then((events) => {
+      if (active) setTimeline(events)
+    }).catch(() => {
+      if (active) setTimeline([])
+    }).finally(() => {
+      if (active) setTimelineLoading(false)
+    })
+    return () => { active = false }
+  }, [candidateId, toast])
+  const candidate = detailCandidate?.id === candidateId
+    ? { ...detailCandidate, ...candidateFromList }
+    : candidateFromList
   if (!candidate) return null
-  const job = getJob(candidate.jobId)
-  const department = getDepartment(candidate.departmentId)
+  const job = getCandidateJob(candidate)
+  const department = getCandidateDepartment(candidate)
   const interviews = data.interviews.filter(interview => interview.candidateId === candidate.id && interview.status !== 'cancelled')
 
-  const moveTo = (stage: CandidateStage) => {
-    updateCandidate(candidate.id, { stage, lastActivity: '刚刚' })
-    setShowStageMenu(false)
-    toast(`已推进至「${stageMeta[stage].label}」`)
+  const moveTo = async (stage: CandidateStage) => {
+    if (stage === candidate.stage) return
+    try {
+      await updateCandidate(candidate.id, { stage })
+      setShowStageMenu(false)
+      toast(`已推进至「${stageMeta[stage].label}」`)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : '阶段更新失败', 'info')
+    }
   }
 
   return <>
@@ -44,7 +75,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
       <div className="drawer-tabs">
         <button className={cn(tab === 'overview' && 'active')} onClick={() => setTab('overview')}>候选人概览</button>
         <button className={cn(tab === 'resume' && 'active')} onClick={() => setTab('resume')}>简历详情</button>
-        <button className={cn(tab === 'timeline' && 'active')} onClick={() => setTab('timeline')}>沟通记录 <span>3</span></button>
+        <button className={cn(tab === 'timeline' && 'active')} onClick={() => setTab('timeline')}>操作时间线 <span>{timeline.length}</span></button>
       </div>
       <div className="drawer-body">
         {tab === 'overview' && <>
@@ -82,7 +113,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
           <section className="drawer-note"><div className="drawer-section-title"><h3>招聘备注</h3><button className="text-button">编辑</button></div><p>{candidate.note || '暂无备注。记录候选人的沟通要点、期望与风险，让团队协作更顺畅。'}</p></section>
         </>}
         {tab === 'resume' && <ResumeTab candidate={candidate} />}
-        {tab === 'timeline' && <TimelineTab />}
+        {tab === 'timeline' && <TimelineTab entries={timeline} loading={timelineLoading} />}
       </div>
     </aside>
   </>
@@ -98,11 +129,23 @@ function ResumeTab({ candidate }: { candidate: Candidate }) {
   </div>
 }
 
-function TimelineTab() {
+function TimelineTab({ entries, loading }: { entries: CandidateTimelineEvent[]; loading: boolean }) {
+  const messageFor = (entry: CandidateTimelineEvent) => {
+    const payload = entry.payload || {}
+    if (entry.action === 'candidate.created') {
+      const stage = typeof payload.stage === 'string' ? stageMeta[payload.stage as CandidateStage]?.label : undefined
+      return stage ? `候选人已创建，当前阶段为「${stage}」。` : '候选人档案已创建。'
+    }
+    if (entry.action === 'candidate.stage_changed') {
+      const from = typeof payload.from === 'string' ? stageMeta[payload.from as CandidateStage]?.label : undefined
+      const to = typeof payload.to === 'string' ? stageMeta[payload.to as CandidateStage]?.label : undefined
+      return `阶段从「${from || '未知'}」更新为「${to || '未知'}」。`
+    }
+    return entry.action
+  }
   return <div className="comms-list">
-    <div className="comm-composer"><textarea placeholder="输入备注，或 @同事 协同处理…" /><div><button className="icon-button"><Plus size={17} /></button><span>支持输入 @ 提及同事</span><button className="button button-primary button-sm">发送</button></div></div>
-    <div className="comm-item"><span className="avatar avatar-sm avatar-warm">邓</span><div><div className="comm-head"><strong>邓文文</strong><span>今天 09:42</span></div><p>已与候选人电话沟通，目前在看机会，期望薪资 35K 左右，可接受一周内到岗。</p></div></div>
-    <div className="comm-item"><span className="avatar avatar-sm" style={{ background: '#6675E818', color: '#6675E8' }}>林夏</span><div><div className="comm-head"><strong>林夏</strong><span>昨天 16:18</span></div><p>技术初筛通过，基础扎实，项目复杂度符合岗位要求，建议安排技术二面。</p></div></div>
-    <div className="comm-item"><span className="system-log-icon"><Clock3 size={15} /></span><div><div className="comm-head"><strong>系统</strong><span>11月3日 10:20</span></div><p>候选人从「筛选中」进入「面试中」。</p></div></div>
+    {loading && <div className="empty-inline">正在加载操作时间线…</div>}
+    {!loading && entries.length === 0 && <div className="empty-inline">暂无操作记录</div>}
+    {entries.map((entry) => <div className="comm-item" key={entry.id}><span className="system-log-icon"><Clock3 size={15} /></span><div><div className="comm-head"><strong>{entry.actor}</strong><span>{new Date(entry.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}</span></div><p>{messageFor(entry)}</p></div></div>)}
   </div>
 }

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "work_item": "ATS-002",
+  "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+  "summary": "候选人/职位 API 与 React 集成已完成；前后端构建、数据库同步、列表/详情/时间线/职位读取，以及临时候选人阶段持久化冒烟均通过。自动化单元与 e2e 套件未运行。",
+  "command": "npm run build (frontend); npm run build (backend); npm exec prisma generate; prisma db push --skip-generate; local HTTP API and Vite proxy smoke checks",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/src/candidates/",
+    "src/api.ts",
+    "src/store.ts",
+    "src/context.tsx",
+    "src/components/AddCandidateModal.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/pages/Candidates.tsx",
+    "src/pages/Pipeline.tsx",
+    "vite.config.ts"
+  ],
+  "verified_at": 1794531364571,
+  "checks": [
+    {
+      "name": "candidate_api_reads",
+      "passed": true,
+      "criteria": ["候选人列表与详情页读取后端数据，前端不再依赖 localStorage。"],
+      "details": "GET /candidates、GET /candidates/:id、GET /candidates/:id/timeline 和 GET /jobs 均返回成功；本机数据库读取到 6 条候选人与 1 个有效职位，Vite /api 代理读取也成功。前端 src/ 下无 localStorage 调用，候选人初始状态为空，详情抽屉从 API 拉取详情和时间线。"
+    },
+    {
+      "name": "candidate_stage_persistence",
+      "passed": true,
+      "criteria": ["候选人阶段推进调用后端 API 并持久化。"],
+      "details": "唯一临时候选人通过 POST 创建，再以 PATCH 推进到 screening；返回 HTTP 200，随后 GET 详情读回 screening。前端阶段变更在请求成功后更新状态。原型六阶段映射到 Prisma CandidateStage，并拒绝阶段倒退。"
+    },
+    {
+      "name": "candidate_timeline_audit",
+      "passed": true,
+      "criteria": ["关键操作在时间线/审计表中可见。"],
+      "details": "临时记录的时间线包含 candidate.created 与 candidate.stage_changed，后者 payload.to 为 screening。创建与阶段更新分别在 Prisma 事务中同时写业务记录和 TimelineEvent；详情抽屉读取并展示时间线。临时候选人与其时间线事件已清理，现有候选人记录未修改。"
+    }
+  ]
+}

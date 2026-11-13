@@ -1,0 +1,336 @@
+{
+  "active_claims": [
+    {
+      "acquired_at": 1794554329328,
+      "agent_id": "codex",
+      "branch_id": null,
+      "expires_at": null,
+      "id": "01M79WBY7HMRF7DYDB2WZ69TEM",
+      "project_id": "01M76XVS293R2FGAKRRXAPFD0J",
+      "released_at": null,
+      "revision": 1,
+      "session_id": "01M79WBY7G031KPCR3D7TGDBAC",
+      "status": "active",
+      "work_item_id": "01M79WB9X6MXKEY7G8T1220481"
+    }
+  ],
+  "completion_claimed": false,
+  "context": {
+    "checkpoint_id": null,
+    "completeness": {
+      "acceptance_complete": true,
+      "assessment_scope": "Completeness of current required context facts and associations. Known unresolved dependencies and evidence gaps are retained; this does not certify task completion, verification execution or release readiness.",
+      "branch_context": {
+        "branch_id": null,
+        "branch_revision": null,
+        "creation_event_id": null,
+        "fork_project_revision": 0,
+        "git_binding": null,
+        "git_ref": null,
+        "name": "main",
+        "parent_branch_id": null,
+        "runtime_scope": "exact_branch; no parent or sibling runtime inheritance; delta never precedes fork",
+        "source_basis": "shared_current_sources; git_ref is a creation observation, not a frozen source snapshot"
+      },
+      "branch_id": null,
+      "complete": true,
+      "decision_context_complete": true,
+      "dependencies_complete": true,
+      "evidence_gaps": [],
+      "freshness_basis": "source_refresh_at_project_revision",
+      "goal_context_complete": true,
+      "issues": [],
+      "project_id": "01M76XVS293R2FGAKRRXAPFD0J",
+      "project_revision": 109,
+      "rules_complete": true,
+      "source_fresh": true,
+      "source_refresh_performed": true,
+      "source_versions": [
+        {
+          "fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+          "freshness": "fresh",
+          "id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+          "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+          "revision": 14
+        },
+        {
+          "fingerprint": "sha256:532061f034e95c39ed8bc4d918d647c93c2afee74edf44b7d0f6e02209c2ea28",
+          "freshness": "fresh",
+          "id": "01M76XVS2MM989B2MQST8RBFPR",
+          "locator": "file:///D:/hr/README.md",
+          "revision": 1
+        },
+        {
+          "fingerprint": "sha256:f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb",
+          "freshness": "fresh",
+          "id": "01M79ZF2KQH6XKAVWTM0J8YNRB",
+          "locator": "file:///D:/hr/docs/ats-%E5%8A%9F%E8%83%BD%E9%9C%80%E6%B1%82%E6%96%87%E6%A1%A3-v1.2.md",
+          "revision": 1
+        },
+        {
+          "fingerprint": "sha256:a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e",
+          "freshness": "fresh",
+          "id": "01M79ZF2NR13J52B4RR8NE916M",
+          "locator": "file:///D:/hr/docs/ats-PRD-v1.0.md",
+          "revision": 1
+        },
+        {
+          "fingerprint": "sha256:0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9",
+          "freshness": "fresh",
+          "id": "01M79ZF2S5BWVMVPSK7R4KARBM",
+          "locator": "file:///D:/hr/docs/ats-%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83-v1.0.md",
+          "revision": 1
+        },
+        {
+          "fingerprint": "sha256:0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8",
+          "freshness": "fresh",
+          "id": "01M79ZF2XCWEB80PBGED5ZXRYG",
+          "locator": "file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md",
+          "revision": 1
+        }
+      ],
+      "status": "CONTEXT COMPLETE",
+      "unresolved_required_dependencies": [],
+      "work_item_found": true,
+      "work_item_key": "INTAKE-002",
+      "work_state_complete": true
+    },
+    "delta_after_revision": 93,
+    "diagnostic_text": null,
+    "goal_selection_basis": "work_goal_links",
+    "level": "L1",
+    "omitted_refs": [
+      {
+        "count": 94,
+        "kind": "source_entity_changes",
+        "reason": "per-source delta detail limit; use immutable source events",
+        "reference": "01M76XVS2BNJ2N09NP5PE1ACFR"
+      },
+      {
+        "count": 11,
+        "kind": "source_entity_changes",
+        "reason": "per-source delta detail limit; use immutable source events",
+        "reference": "01M79ZF2KQH6XKAVWTM0J8YNRB"
+      },
+      {
+        "count": 19,
+        "kind": "source_entity_changes",
+        "reason": "per-source delta detail limit; use immutable source events",
+        "reference": "01M79ZF2NR13J52B4RR8NE916M"
+      },
+      {
+        "count": 25,
+        "kind": "source_entity_changes",
+        "reason": "per-source delta detail limit; use immutable source events",
+        "reference": "01M79ZF2S5BWVMVPSK7R4KARBM"
+      },
+      {
+        "count": 16,
+        "kind": "source_entity_changes",
+        "reason": "per-source delta detail limit; use immutable source events",
+        "reference": "01M79ZF2XCWEB80PBGED5ZXRYG"
+      }
+    ],
+    "selection_basis": "explicit_work",
+    "session_id": "01M79WBY7G031KPCR3D7TGDBAC",
+    "work_context": {
+      "context_hash": "b3a5dcdb23ef768ed45e85054622ed4c5965e988ff88c35852ec55b1d6a2c9cc",
+      "identity": {
+        "branch_id": null,
+        "project_id": "01M76XVS293R2FGAKRRXAPFD0J",
+        "project_key": "hr",
+        "project_revision": 109,
+        "source_versions": [
+          {
+            "fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+            "freshness": "fresh",
+            "id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+            "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+            "revision": 14
+          },
+          {
+            "fingerprint": "sha256:532061f034e95c39ed8bc4d918d647c93c2afee74edf44b7d0f6e02209c2ea28",
+            "freshness": "fresh",
+            "id": "01M76XVS2MM989B2MQST8RBFPR",
+            "locator": "file:///D:/hr/README.md",
+            "revision": 1
+          },
+          {
+            "fingerprint": "sha256:f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb",
+            "freshness": "fresh",
+            "id": "01M79ZF2KQH6XKAVWTM0J8YNRB",
+            "locator": "file:///D:/hr/docs/ats-%E5%8A%9F%E8%83%BD%E9%9C%80%E6%B1%82%E6%96%87%E6%A1%A3-v1.2.md",
+            "revision": 1
+          },
+          {
+            "fingerprint": "sha256:a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e",
+            "freshness": "fresh",
+            "id": "01M79ZF2NR13J52B4RR8NE916M",
+            "locator": "file:///D:/hr/docs/ats-PRD-v1.0.md",
+            "revision": 1
+          },
+          {
+            "fingerprint": "sha256:0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9",
+            "freshness": "fresh",
+            "id": "01M79ZF2S5BWVMVPSK7R4KARBM",
+            "locator": "file:///D:/hr/docs/ats-%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83-v1.0.md",
+            "revision": 1
+          },
+          {
+            "fingerprint": "sha256:0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8",
+            "freshness": "fresh",
+            "id": "01M79ZF2XCWEB80PBGED5ZXRYG",
+            "locator": "file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md",
+            "revision": 1
+          }
+        ],
+        "work_item_id": "01M79WB9X6MXKEY7G8T1220481",
+        "work_item_key": "INTAKE-002",
+        "work_item_revision": 2
+      },
+      "policy": "awr.whole_chunks.v1",
+      "rendered_context": "Project: hr [01M76XVS293R2FGAKRRXAPFD0J] r109\nWork: INTAKE-002 [01M79WB9X6MXKEY7G8T1220481] r2\nBranch: main\nSources:\n01M76XVS2BNJ2N09NP5PE1ACFR r14 sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da Fresh file:///D:/hr/.awr/intake/work-ledger.yaml\n01M76XVS2MM989B2MQST8RBFPR r1 sha256:532061f034e95c39ed8bc4d918d647c93c2afee74edf44b7d0f6e02209c2ea28 Fresh file:///D:/hr/README.md\n01M79ZF2KQH6XKAVWTM0J8YNRB r1 sha256:f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb Fresh file:///D:/hr/docs/ats-%E5%8A%9F%E8%83%BD%E9%9C%80%E6%B1%82%E6%96%87%E6%A1%A3-v1.2.md\n01M79ZF2NR13J52B4RR8NE916M r1 sha256:a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e Fresh file:///D:/hr/docs/ats-PRD-v1.0.md\n01M79ZF2S5BWVMVPSK7R4KARBM r1 sha256:0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9 Fresh file:///D:/hr/docs/ats-%E6%8A%80%E6%9C%AF%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%BC%80%E5%8F%91%E7%8E%AF%E5%A2%83-v1.0.md\n01M79ZF2XCWEB80PBGED5ZXRYG r1 sha256:0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8 Fresh file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md\n\n## Goal\n[goal-body:ats-delivery]\ngoal:01M76Y2T5Y375AXQ4WBK4EQ5DX@r3\n2026-11-13 按用户要求将原先“后端与 Mock 首版”目标扩展为全项目目标规划；Mock 首版是里程碑，不代表最终交付。\n权威需求：docs/ats-功能需求文档-v1.2.md；docs/ats-PRD-v1.0.md（文件名 v1.0，正文版本 v1.1）；技术设计冻结结论见 docs/ats-技术设计与开发环境-v1.0.md §0.2。\n全项目路线图：docs/ats-项目目标与实施路线图-v1.0.md。下列八个领域目标共同服务总目标，目标达成需关联任务证据，不能由实现存在或状态文本推断。\n用户明确指示：规划完成后不自动执行任务，由用户进行任务分配。新增任务均 planned、owner=null；不自动领取、启动、接续业务任务，不执行历史待应用完成提案。\n当前只授权本次规划与 AWR 登记；未来业务执行须有用户明确分配。规划顺序与依赖不构成执行授权，计划不含未经确认的工期与上线日期。\n历史基线曾为纯前端原型；目前 backend/ 和候选人/职位 API 已存在，ATS-001/003 有历史本地报告，ATS-002 尚未完成来源状态收口。\nREADME 的纯前端/localStorage 说明过期，已登记 ATS-026；历史 INTAKE-001 证据不足保留，不能补造旧验收。\n正式需求包括九阶段、权限与运维；原型六阶段、自建审批、试用期绩效并非最终业务范围。PRD §11/§11.1 的默认值不是最终业务决定。\n[goal:ats-delivery]\ngoal:01M76Y2T5Y375AXQ4WBK4EQ5DX@r3\n交付覆盖招聘全流程、可审计且可运维的 TalentFlow ATS\nStatus: active\nSuccess criteria:\n以职位和招聘需求为业务起点，覆盖简历入场、九阶段候选人主链、面试、Offer、入职、试用期与人才复用，并支持社招、校招和内推。\n基于 React 18/Vite/TypeScript、NestJS/Prisma/MySQL、Redis/BullMQ 的冻结技术栈，核心页面使用真实 API 和持久化数据。\n钉钉六类用途、邮箱、AI 三场景和浏览器插件按需求完成正式适配与授权环境验证；Mock 只作为阶段演示和测试手段。\n角色、部门数据范围、敏感字段与附件独立授权、审计、生命周期和访问日志符合 PRD §2/§8 的边界。\n工作台和报表指标来自权限内真实数据、可复算且可下钻，需求级招聘周期口径可追溯。\n必需功能与非功能需求有验收证据，类型、测试、构建、迁移、性能、备份恢复和发布回滚通过检查，并由指定业务验收人完成验收。\n\n## Current Work\n[INTAKE-002]\nwork_item:01M79WB9X6MXKEY7G8T1220481@r2\nStatus: \"in_progress\"\nRaw status: \"in_progress\"\nBlocker present: false\nBlocker:\n\nNext Action:\n等待用户阅读项目路线图并分配具体工作项、负责人和优先顺序；在收到明确分配前不执行业务任务。ATS-002 对账、ATS-004/006 基础与 ATS-007 需求闭环仅为建议起点。\n[work-summary]\nwork_item:01M79WB9X6MXKEY7G8T1220481@r2\n2026-11-13 用户要求 AWR 接管，并补充要求规划整个项目、规划后由用户分配任务，不自动执行。\n已核对三份需求/技术文档、README、源代码与 AWR status/source list/intake inspect/work show/session list/proposal show/recovery inspect。\nATS-001/003 在各自报告记录的 source_sha=8c318105dc34ac8688ac2cd8fcfabb321a733b69 上通过历史证据校验；不等于当前工作树重测或业务验收。\nINTAKE-001 标记完成但缺验收报告，保留历史状态及证据缺口。ATS-002 为 in_progress，报告已登记。\nATS-002 完成提案 01M796TNM7073NDQ469CC4VADW 为 approved 但未应用；本次登记改变台账指纹，后续须重核绑定，不自动套用旧提案。\n本次产出总目标、八个领域目标、八阶段路线图及 ATS-004～026 的来源、验收、依赖与下一步，新增任务全部 planned/owner=null。\n仅本次规划任务处于工作会话；完成后释放会话，不领取或执行业务任务。未执行构建、测试、数据库修改、企业系统调用或生产发布。\n\n## Acceptance\n[acceptance]\nwork_item:01M79WB9X6MXKEY7G8T1220481@r2\n1. 项目目标、阶段性交付边界与权威来源已核对并记录，旧原型描述已标为历史基线。\n2. 已有任务、历史证据校验结果和 ATS-002 待应用提案已对账，不将历史报告当作当前重测。\n3. 全项目目标和阶段路线图覆盖现有需求，新增任务均记录目标归属、来源、依赖、验收条件及下一步。\n4. 新增开发任务全部保持待分配且无负责人，本次规划不自动领取、接续或执行开发任务。\n5. 台账和路线图已通过 AWR 刷新与 intake inspect 复核，并保存本次规划核对报告。\n\n## Dependencies\n[dependency-summary]\nRequired dependencies: 0 unresolved, 0 resolved; 0 missing, 0 cycle members.\n\n## Recent Delta\n[change:01M79ZF2NR13J52B4RR8NE916M:01M79ZF2RQ0CP66PK59AH668ZK]\ndelta:plans:01M79ZF2RQ0CP66PK59AH668ZK@r1\nplans file:///D:/hr/docs/ats-PRD-v1.0.md#5-功能需求明细: added None -> Some(1), 1 changes; event 01M79ZF2S0MSYPXBX3Q6S8ST70\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z702QZS7E4596FYWA3]\ndelta:plans:01M79ZF2Z702QZS7E4596FYWA3@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#5-工作包验收与下一步: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z70GM7819K6KNK3GAX]\ndelta:plans:01M79ZF2Z70GM7819K6KNK3GAX@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-007-职位hc招聘需求与周期闭环: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z7122YRXPJE95S8CF7]\ndelta:plans:01M79ZF2Z7122YRXPJE95S8CF7@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-016-待入职确认入职与试用期闭环: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z73PXABJ88AZ4FBW4A]\ndelta:plans:01M79ZF2Z73PXABJ88AZ4FBW4A@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-006-工程运行约定数据库迁移与-ci-门禁: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z74WRCMWVXK5Z4SKEK]\ndelta:plans:01M79ZF2Z74WRCMWVXK5Z4SKEK@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-011-chromeedge-mv3-扩展与双平台适配: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z753M6KP15883Y7WMY]\ndelta:plans:01M79ZF2Z753M6KP15883Y7WMY@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#7-范围边界与待决策事项: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z78GWYD75GMFAF1CKX]\ndelta:plans:01M79ZF2Z78GWYD75GMFAF1CKX@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-004-身份鉴权与三维权限基础: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z7AG5GE44PKJF6YD7R]\ndelta:plans:01M79ZF2Z7AG5GE44PKJF6YD7R@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-005-附件私有存储上传防护与生命周期: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[change:01M79ZF2XCWEB80PBGED5ZXRYG:01M79ZF2Z7AVAMB2DJRC1K3VWY]\ndelta:plans:01M79ZF2Z7AVAMB2DJRC1K3VWY@r1\nplans file:///D:/hr/docs/ats-%E9%A1%B9%E7%9B%AE%E7%9B%AE%E6%A0%87%E4%B8%8E%E5%AE%9E%E6%96%BD%E8%B7%AF%E7%BA%BF%E5%9B%BE-v1.0.md#ats-008-补齐简历入场-ui批量导入与监控: added None -> Some(1), 1 changes; event 01M79ZF2ZFHYQNAG80MY9SN2G7\n[delta-baseline]\nAfter project revision 93 (session_start) through 109. Checkpoint: none. Important events: 0; omitted by event limit: 0.\n[source:01M76XVS2BNJ2N09NP5PE1ACFR]\n2 source events; latest source.projected. Before known: true\nBefore: r13 sha256:eed298758117ae8e912da593385fd8ab4fe413bcb61788a49d9098c6d92e325a Fresh active=true\nAfter: r14 sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da Fresh active=true\nChanged identities: 118; omitted identities: 94; legacy events without entity history: 0.\nHistory events: 01M79ZF2JHARQ198ZPV17SS6HQ .. 01M79ZF2KG1P08VYZSPPA2MJGB (r95..r96)\n[source:01M79ZF2KQH6XKAVWTM0J8YNRB]\n3 source events; latest source.projected. Before known: true\nBefore: unavailable/absent; see before_known\nAfter: r1 sha256:f1ce6b78ebd2c82e9d68cc5622616f701720605f11f20838d67d4aa46b873beb Fresh active=true\nChanged identities: 35; omitted identities: 11; legacy events without entity history: 0.\nHistory events: 01M79ZF2KQKM08DF906DE9FG4Q .. 01M79ZF2NK5X7KBZGPYR0N3JZY (r97..r99)\n[source:01M79ZF2NR13J52B4RR8NE916M]\n3 source events; latest source.projected. Before known: true\nBefore: unavailable/absent; see before_known\nAfter: r1 sha256:a995e6f6784e5f145f3c3fd426e069ee29e4bad9518a26d8d8862b40e0451e5e Fresh active=true\nChanged identities: 43; omitted identities: 19; legacy events without entity history: 0.\nHistory events: 01M79ZF2NRJVHH7FZTC04HVK37 .. 01M79ZF2S0MSYPXBX3Q6S8ST70 (r100..r102)\n[source:01M79ZF2S5BWVMVPSK7R4KARBM]\n3 source events; latest source.projected. Before known: true\nBefore: unavailable/absent; see before_known\nAfter: r1 sha256:0cac7969dc487408a4d7342873a445086eb506b9dcd2275f85c110b6e81c70f9 Fresh active=true\nChanged identities: 49; omitted identities: 25; legacy events without entity history: 0.\nHistory events: 01M79ZF2S5HQRJW2PRGGS9GJP5 .. 01M79ZF2X5NJPH9G8T5HMPMW5Y (r103..r105)\n[source:01M79ZF2XCWEB80PBGED5ZXRYG]\n3 source events; latest source.projected. Before known: true\nBefore: unavailable/absent; see before_known\nAfter: r1 sha256:0d758d70fd7ece154d6f641026b65edc716ab86d3f1b4f49b37bd5bb724a7ce8 Fresh active=true\nChanged identities: 40; omitted identities: 16; legacy events without entity history: 0.\nHistory events: 01M79ZF2XCNHFSNBHQK1A45XZD .. 01M79ZF2ZFHYQNAG80MY9SN2G7 (r106..r108)\n\n## Evidence\n[evidence-gaps]\nNo metadata evidence gaps found; verification commands were not executed by compilation.\n\n## Metadata\n[branch-context]\nWork branch: main | revision: None | fork: 0 | parent: main\nGit ref at creation: unbound; recorded commit: unverified\nSource basis: shared_current_sources; git_ref is a creation observation, not a frozen source snapshot\nRuntime scope: exact_branch; no parent or sibling runtime inheritance; delta never precedes fork\n[completeness]\nCONTEXT COMPLETE\n\nCompleteness of current required context facts and associations. Known unresolved dependencies and evidence gaps are retained; this does not certify task completion, verification execution or release readiness.\n[context-profile]\nContext profile: minimal. Separate plan/rule sources are optional; every configured hard rule still applies. Check project organization before business execution.\n[identity]\nIntent: work\nSelection: explicit_work\nSession: 01M79WBY7G031KPCR3D7TGDBAC\nPhase: unknown\nTitle: AWR 项目接管与全项目目标规划\n\nOptional chunks omitted: 112. Full details remain available through explicit queries.\n",
+      "required_tokens": 2429,
+      "token_budget": 5000,
+      "token_count_scope": "Exact o200k_base ordinary-text token count of rendered_context, including headings, references and omission footer. JSON transport/envelope, tool framing and surrounding conversation are excluded. Counts for other model tokenizers may differ; no cross-tokenizer error bound is claimed.",
+      "token_estimate": 4966,
+      "tokenizer": "o200k_base"
+    }
+  },
+  "context_consumed": false,
+  "continuity": {
+    "state": "available",
+    "waits": []
+  },
+  "diagnostics": [
+    {
+      "code": "active_claim",
+      "detail": "claimed by codex in session 01M79WBY7G031KPCR3D7TGDBAC",
+      "work_item_key": "INTAKE-002"
+    },
+    {
+      "code": "status_not_selectable",
+      "detail": "source status is in_progress",
+      "work_item_key": "INTAKE-002"
+    }
+  ],
+  "freshness_basis": "source_refresh",
+  "management": {
+    "admission_gaps": [],
+    "branch_id": null,
+    "contract_fingerprint": "sha256:6746ca6b1c10e187d189ec946e25b71b50f1b91a1c639e543c056088ba4bf7d3",
+    "decision": {
+      "completion_policy": "unchanged_source_policy",
+      "execution_admission": "not_granted_by_management_classification",
+      "mode": "undetermined",
+      "optional_maintenance": [
+        "separate_goal_document_when_explicit_inheritance_suffices",
+        "per_tool_checkpoints",
+        "task_graph_without_dependencies",
+        "duplicate_summaries_or_evidence_bodies"
+      ],
+      "reasons": [],
+      "reevaluation_signals": [],
+      "required_actions": [
+        "preserve_identity_intent_scope_and_current_state",
+        "consume_required_context_and_hard_rules",
+        "retain_completion_basis_and_actual_outcome",
+        "check_source_versions_permissions_claims_and_request_identity",
+        "assess_unknown_management_facts"
+      ],
+      "unknown_observations": [
+        "single_outcome",
+        "bounded_scope",
+        "single_executor",
+        "no_deferred_wait",
+        "plan_valid",
+        "outcome_known",
+        "independently_schedulable_units"
+      ],
+      "version": 1
+    },
+    "goal_binding_upgrade_required": false,
+    "next_action": "record_current_assessment_with_explicit_host_observations",
+    "observation": null,
+    "observation_basis": "host_assertion_not_independently_verified",
+    "observation_event": null,
+    "observer": null,
+    "previous_record": null,
+    "record_required": true,
+    "scope": "Management requirements only. Readiness, required goals/rules, authorization and completion remain enforced by their existing operations.",
+    "source_ref": {
+      "end_line": null,
+      "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+      "pointer": "/work_items/4",
+      "section_fingerprint": "sha256:77f568aff2a7cdb5ccd989688df5551da5a5bfd341ab8bafe74dcfcdc7f80a69",
+      "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+      "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+      "source_revision": 14,
+      "start_line": null
+    },
+    "version": 1,
+    "work": "INTAKE-002",
+    "work_id": "01M79WB9X6MXKEY7G8T1220481",
+    "work_revision": 2
+  },
+  "next_action": "inspect_readiness_and_current_claim",
+  "ok": true,
+  "project_revision": 109,
+  "read_only": false,
+  "ready": false,
+  "response_view": {
+    "detail_counts": {
+      "context.work_context.omitted_chunks": 112
+    },
+    "detail_note": "Optional chunks were omitted by whole-chunk budget selection; required context is complete. Use full_result only when investigating context selection.",
+    "full_result": {
+      "basis": "fresh query; compare project_revision and context_hash",
+      "branch": null,
+      "budget": null,
+      "command": "work prepare",
+      "goals": [],
+      "response_view": "full",
+      "session": "01M79WBY7G031KPCR3D7TGDBAC",
+      "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+      "work": "INTAKE-002"
+    },
+    "omitted_fields": [
+      "context.work_context.selected_chunks",
+      "context.work_context.selected_entities",
+      "context.work_context.omitted_chunks"
+    ],
+    "version": 1,
+    "view": "summary"
+  },
+  "snapshot": {
+    "coherent": true,
+    "project_revision": 109,
+    "source_currentness_verified": true,
+    "source_refresh_revision": 109,
+    "source_state_fingerprint": "sha256:a1af09505b57c3065d0465d4dea2dc37361c088169933055c55b116c54750188",
+    "storage": "private_memory",
+    "version": 1
+  },
+  "source_issues": [],
+  "source_refresh_performed": true,
+  "source_warnings": 0,
+  "stage": "prepared",
+  "version": 1,
+  "work": {
+    "external_key": "INTAKE-002",
+    "id": "01M79WB9X6MXKEY7G8T1220481",
+    "next_action": "等待用户阅读项目路线图并分配具体工作项、负责人和优先顺序；在收到明确分配前不执行业务任务。ATS-002 对账、ATS-004/006 基础与 ATS-007 需求闭环仅为建议起点。",
+    "revision": 2,
+    "source_ref": {
+      "end_line": null,
+      "locator": "file:///D:/hr/.awr/intake/work-ledger.yaml",
+      "pointer": "/work_items/4",
+      "section_fingerprint": "sha256:77f568aff2a7cdb5ccd989688df5551da5a5bfd341ab8bafe74dcfcdc7f80a69",
+      "source_fingerprint": "sha256:6e975f8909d5550d2e86a3ffb28ccc2cdcc8f5e4c1091e511b96bec3e949d4da",
+      "source_id": "01M76XVS2BNJ2N09NP5PE1ACFR",
+      "source_revision": 14,
+      "start_line": null
+    },
+    "status": "in_progress"
+  }
+}

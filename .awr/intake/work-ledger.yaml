@@ -1,0 +1,471 @@
+goals:
+- id: ats-delivery
+  status: active
+  title: 交付覆盖招聘全流程、可审计且可运维的 TalentFlow ATS
+  success_criteria:
+  - 以职位和招聘需求为业务起点，覆盖简历入场、九阶段候选人主链、面试、Offer、入职、试用期与人才复用，并支持社招、校招和内推。
+  - 基于 React 18/Vite/TypeScript、NestJS/Prisma/MySQL、Redis/BullMQ 的冻结技术栈，核心页面使用真实 API 和持久化数据。
+  - 钉钉六类用途、邮箱、AI 三场景和浏览器插件按需求完成正式适配与授权环境验证；Mock 只作为阶段演示和测试手段。
+  - 角色、部门数据范围、敏感字段与附件独立授权、审计、生命周期和访问日志符合 PRD §2/§8 的边界。
+  - 工作台和报表指标来自权限内真实数据、可复算且可下钻，需求级招聘周期口径可追溯。
+  - 必需功能与非功能需求有验收证据，类型、测试、构建、迁移、性能、备份恢复和发布回滚通过检查，并由指定业务验收人完成验收。
+  summary: |-
+    2026-11-13 按用户要求将原先“后端与 Mock 首版”目标扩展为全项目目标规划；Mock 首版是里程碑，不代表最终交付。
+    权威需求：docs/ats-功能需求文档-v1.2.md；docs/ats-PRD-v1.0.md（文件名 v1.0，正文版本 v1.1）；技术设计冻结结论见 docs/ats-技术设计与开发环境-v1.0.md §0.2。
+    全项目路线图：docs/ats-项目目标与实施路线图-v1.0.md。下列八个领域目标共同服务总目标，目标达成需关联任务证据，不能由实现存在或状态文本推断。
+    用户明确指示：规划完成后不自动执行任务，由用户进行任务分配。新增任务均 planned、owner=null；不自动领取、启动、接续业务任务，不执行历史待应用完成提案。
+    当前只授权本次规划与 AWR 登记；未来业务执行须有用户明确分配。规划顺序与依赖不构成执行授权，计划不含未经确认的工期与上线日期。
+    历史基线曾为纯前端原型；目前 backend/ 和候选人/职位 API 已存在，ATS-001～003 有历史本地报告；ATS-002 已于 2026-11-13 按用户确认及原验收报告同步为 completed。
+    README 的纯前端/localStorage 说明过期，已登记 ATS-026；历史 INTAKE-001 证据不足保留，不能补造旧验收。
+    正式需求包括九阶段、权限与运维；原型六阶段、自建审批、试用期绩效并非最终业务范围。PRD §11/§11.1 的默认值不是最终业务决定。
+- id: ats-foundation
+  status: active
+  title: "建立可持续开发与受控访问的工程基础"
+  success_criteria:
+  - "真实数据持久化、候选人/职位 API 与审计链可验证，工程启动文档与实现一致。"
+  - "身份、角色、部门范围及敏感字段权限在服务端校验；文件私有访问、生命周期与 CI 门禁具备证据。"
+  summary: "归属总目标 ats-delivery；依据 PRD §2/§3/§8；技术设计 §2/§9/§11/§13。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-requisition
+  status: active
+  title: "打通职位、招聘需求和招聘周期管理"
+  success_criteria:
+  - "职位管理与 HC 分离，OA 需求同步幂等；开始、关闭、回退和周期计算遵守 REQ-0～4。"
+  - "周期按招聘需求计算且可追溯、可筛选，职位变动不改变已计算周期。"
+  summary: "归属总目标 ats-delivery；依据 PRD §4.4/§5.2/§5.2.1；FR-JOB、FR-REQ。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-intake
+  status: active
+  title: "统一各类简历入口并形成可确认的候选人档案"
+  success_criteria:
+  - "邮箱、上传、手工、Excel、内推/校招门户及浏览器插件均接入统一查重、分配与时间线规则。"
+  - "解析为可人工确认草稿；失败可降级重试，重复请求不产生重复候选人；个人意愿不被职位分配覆盖。"
+  summary: "归属总目标 ats-delivery；依据 PRD §3.5/§5.1/§5.8/§5.12/§6.4。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-candidate-flow
+  status: active
+  title: "实现九阶段候选人主链和人才复用"
+  success_criteria:
+  - "待分配、九阶段、归档的列表与详情使用真实 API，状态流转受条件校验并可撤销、可审计。"
+  - "用人部门任一 PASS 按规则推进；归档入池、激活回流、万级分页与 1w+ 展示符合需求。"
+  summary: "归属总目标 ats-delivery；依据 PRD §4.1/§4.3/§5.3/§5.7。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-interview
+  status: active
+  title: "完成面试协同、评价和日历联动"
+  success_criteria:
+  - "多轮多人排期、改期、取消、登记表、代填标识、评价互看与分轮听记均可追溯。"
+  - "日历邀请与接受占用区分明确；冲突仅提示，拒绝可改期，评价结论不自动推进候选人。"
+  summary: "归属总目标 ats-delivery；依据 PRD §5.4/§7；FR-INT、DT-3/DT-4。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-offer-onboarding
+  status: active
+  title: "闭环 Offer、背调、待入职与试用期"
+  success_criteria:
+  - "Offer 子状态机、OA 材料、谈薪结果、背调判定与书面 Offer 已发送节点可跟踪，不保存薪资明细。"
+  - "待入职双条件、确认/放弃入职、HC 回写与是否转正可验证；保温只提醒内部人事。"
+  summary: "归属总目标 ats-delivery；依据 PRD §4.2/§5.5/§5.6；SEC-F1～4。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-integrations
+  status: active
+  title: "将接口化 Mock 演进为可用的正式集成"
+  success_criteria:
+  - "钉钉六类用途、邮箱附件获取与 AI 三场景在授权环境验证，契约、幂等、失败重试和人工兜底有证据。"
+  - "AI 只输出人工复核草稿，不作审批结论、不自动流转；第三方失败不阻断人工主流程。"
+  summary: "归属总目标 ats-delivery；依据 PRD §5.9/§6/§7；AI-1～8、DT-1～6。对应任务见项目路线图；仅规划，执行由用户分配。"
+- id: ats-operations
+  status: active
+  title: "交付可度量、可配置、可运维的上线系统"
+  success_criteria:
+  - "工作台与报表使用受权限约束的真实数据，指标可下钻；招聘周期按需求级汇总且排除未关闭需求。"
+  - "配置项、万级性能、日志审计、备份恢复、数据生命周期、发布回滚及业务验收均具备记录。"
+  summary: "归属总目标 ats-delivery；依据 PRD §5.10/§5.11/§8/§9；技术设计 §11～§16。对应任务见项目路线图；仅规划，执行由用户分配。"
+work_items:
+- id: INTAKE-001
+  kind: intake
+  status: completed
+  goal: ats-delivery
+  priority: P0
+  title: Verify project goals, current state, and the next deliverable
+  summary: 已核对 docs 三份文档、README、src 目录与 git 历史；结论：原型已有，后端未开始；本任务作为组织基线关闭。
+  acceptance:
+  - 项目目标已依据 docs 目录文档确认并记录于 ats-delivery。
+  - 现状已核对：前端原型存在、后端未实现。
+  - 下一步任务已拆分为可执行交付项。
+  depends_on: []
+  next_action: 无；已由 INTAKE-002 接替。
+- id: ATS-001
+  kind: delivery
+  status: completed
+  goal: ats-delivery
+  priority: P0
+  title: 搭建 NestJS 后端骨架与 MySQL/Prisma 数据模型
+  summary: 依据 PRD §3 数据模型与技术设计 §0.2 冻结技术栈，建立模块化单体后端骨架、Prisma schema 与基础模块划分，为后续简历入场、候选人状态机和接口开发打基线。
+  acceptance:
+  - backend/ 目录可本地启动，健康检查接口可访问。
+  - Prisma schema 覆盖 PRD §3.1/§3.2 核心实体核心字段，可生成 Client 并同步到本地 MySQL。
+  - 模块目录与 NestJS 结构符合技术设计 §2 总体架构。
+  depends_on: []
+  next_action: 在 backend/ 初始化 NestJS + TypeScript + Prisma，并按 PRD §3.1 建立首个数据模型草案。
+- id: ATS-002
+  kind: delivery
+  status: completed
+  goal: ats-delivery
+  priority: P1
+  title: 打通前端到后端的候选人/职位最小 API 链路
+  summary: 候选人/职位最小 API、前端列表与详情读取、阶段持久化及时间线已完成。2026-11-13 用户明确确认开发完成，本次据此同步来源状态；AWR 已核验原报告 docs/verification/ats002-report.json 的哈希及三条验收绑定，证据 ats002-candidate-api-v1。沿用报告记录的 source_sha，不代表本次重新执行开发测试。
+  acceptance:
+  - 候选人列表与详情页读取后端数据，前端不再依赖 localStorage。
+  - 候选人阶段推进调用后端 API 并持久化。
+  - 关键操作在时间线/审计表中可见。
+  verification:
+    evidence_level: locally_verified
+  depends_on: [ATS-001]
+  next_action: 无；已按用户确认及验收证据同步为 completed。后续新增任务继续等待用户分配。
+- id: ATS-003
+  kind: delivery
+  status: completed
+  goal: ats-delivery
+  priority: P1
+  title: 实现简历入场与异步解析 Mock 链路
+  summary: 依据功能需求 v1.2 §3.1 与 PRD §3.1，实现邮箱/上传/手工入场入口与 AIRun 异步解析 Mock、失败重试与去重规则，输出到候选人/待分配池。
+  acceptance:
+  - 三种入场方式均可产生候选人或待分配池记录。
+  - AIRun 异步任务可 Mock 成功/失败并支持重试，无重复候选人。
+  - 入场来源与进入方式字段记录正确。
+  depends_on: [ATS-001]
+  next_action: 无；已本地验收通过，证据 ats003-intake-mock-chain-v2。
+- id: INTAKE-002
+  kind: intake
+  status: completed
+  goal: ats-delivery
+  priority: P0
+  title: AWR 项目接管与全项目目标规划
+  summary: |-
+    2026-11-13 用户要求 AWR 接管，并补充要求规划整个项目、规划后由用户分配任务，不自动执行。
+    已核对三份需求/技术文档、README、源代码与 AWR status/source list/intake inspect/work show/session list/proposal show/recovery inspect。
+    ATS-001/003 在各自报告记录的 source_sha=8c318105dc34ac8688ac2cd8fcfabb321a733b69 上通过历史证据校验；不等于当前工作树重测或业务验收。
+    INTAKE-001 标记完成但缺验收报告，保留历史状态及证据缺口。规划核对时 ATS-002 为 in_progress、报告已登记；2026-11-13 后续按用户明确确认及原验收证据已同步为 completed。
+    规划核对时 ATS-002 完成提案 01M796TNM7073NDQ469CC4VADW 为 approved 但未应用；后续来源状态已同步，旧绑定提案由本次状态校正取代，不能重复应用。
+    本次产出总目标、八个领域目标、八阶段路线图及 ATS-004～026 的来源、验收、依赖与下一步，新增任务全部 planned/owner=null。
+    仅本次规划任务处于工作会话；完成后释放会话，不领取或执行业务任务。未执行构建、测试、数据库修改、企业系统调用或生产发布。
+  acceptance:
+  - 项目目标、阶段性交付边界与权威来源已核对并记录，旧原型描述已标为历史基线。
+  - 已有任务、历史证据校验结果和 ATS-002 待应用提案已对账，不将历史报告当作当前重测。
+  - 全项目目标和阶段路线图覆盖现有需求，新增任务均记录目标归属、来源、依赖、验收条件及下一步。
+  - 新增开发任务全部保持待分配且无负责人，本次规划不自动领取、接续或执行开发任务。
+  - 台账和路线图已通过 AWR 刷新与 intake inspect 复核，并保存本次规划核对报告。
+  evidence: [docs/verification/intake002-project-plan-report.json]
+  verification:
+    evidence_level: locally_verified
+  depends_on: []
+  next_action: 等待用户阅读项目路线图并分配具体工作项、负责人和优先顺序；在收到明确分配前不执行业务任务。ATS-002 已完成，ATS-004/006 基础与 ATS-007 需求闭环仅为建议起点。
+- id: ATS-004
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-foundation
+  priority: P0
+  title: "身份鉴权与三维权限基础"
+  summary: "仅规划，待用户分配后执行。依据：PRD §2、SEC-F1～4、NFR-3/4/8。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "建立用户/角色/用户组及部门数据范围，服务端拒绝越权访问并覆盖允许/拒绝分支。"
+  - "联系方式、背调和流水实施字段或附件独立授权，访问与操作日志可追溯且可导出。"
+  depends_on: [ATS-002]
+  next_action: "等待用户分配；用户分配后先梳理角色与 API 权限矩阵，明确本地身份适配和钉钉身份映射接口。"
+- id: ATS-005
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-foundation
+  priority: P0
+  title: "附件私有存储、上传防护与生命周期"
+  summary: "仅规划，待用户分配后执行。依据：PRD NFR-1～5/11；技术设计 §8/§13。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "统一上传校验类型、大小和内容；OSS 私有读及短期签名链接校验有效期和访问权限。"
+  - "敏感材料访问留痕，到期清理覆盖文件与结构化记录；保留期限配置化并在上线前确认。"
+  depends_on: [ATS-004]
+  next_action: "等待用户分配；用户分配后定义存储接口与私有访问契约，使用脱敏附件验证上传、访问和清理。"
+- id: ATS-006
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-foundation
+  priority: P0
+  title: "工程运行约定、数据库迁移与 CI 门禁"
+  summary: "仅规划，待用户分配后执行。依据：技术设计 §9/§11/§15.3/§16。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "API/Worker/Web 启动约定、无真实密钥的环境示例和可重复初始化/迁移文档可用。"
+  - "GitHub Actions 执行类型、Lint、单元/API 测试、各交付端构建、migration 校验和密钥检查；已有迁移不被覆盖。"
+  depends_on: [ATS-001]
+  next_action: "等待用户分配；用户分配后核对实际包脚本、迁移目录与现有 CI，再补齐缺失门禁；涉及仓库设置时单独落实权限。"
+- id: ATS-007
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-requisition
+  priority: P0
+  title: "职位、HC、招聘需求与周期闭环"
+  summary: "仅规划，待用户分配后执行。依据：FR-JOB-1～6、FR-REQ-1～9、REQ-0～4；PRD §11.1 Q1/Q4～8/Q12。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "职位 CRUD、双 Tab、MJ 编号、负责人招聘要求和虚拟职位生效；满 HC 仅提示，职位关闭不影响流程中候选人。"
+  - "Mock OA 审批通过按 oaApprovalId 幂等生成需求，开始时间必填、提报时间只读；重复和并发回调不重复落库。"
+  - "手动关闭计算需求级自然日周期；非法日期拒绝，回退清空当前周期并保留历史；列表排序/筛选及未关闭展示可验证。"
+  depends_on: [ATS-002, ATS-004]
+  next_action: "等待用户分配；用户分配后先确认招聘需求字段和周期案例，依据 PRD 默认口径实现 Mock 审批契约；待确认口径在验收前落定。"
+- id: ATS-008
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-intake
+  priority: P0
+  title: "补齐简历入场 UI、批量导入与监控"
+  summary: "仅规划，待用户分配后执行。依据：FR-ENT-1/3～8/10；PRD §6.4、§11.1 Q3/Q11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "上传/手工/邮箱适配入口、批量文件和 Excel 模板/行校验/失败导出具备真实界面及 API；Excel 不进入 AI 解析管道。"
+  - "待分配/虚拟职位列表、选职位带出负责人、查重合并保留来源和附件、草稿人工确认可验证。"
+  - "监控页展示进入/未进入、渠道/邮箱/接收时间/时延/去向及失败归因；失败可重试和人工处理，不重复建档。"
+  depends_on: [ATS-002, ATS-003, ATS-004, ATS-005, ATS-007]
+  next_action: "等待用户分配；用户分配后以 ATS-003 已有 Mock 链为基础做差异清单，优先连通待分配、人工确认和监控页面。"
+- id: ATS-009
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-intake
+  priority: P1
+  title: "内推与校园招聘投递门户"
+  summary: "仅规划，待用户分配后执行。依据：FR-ENT-2/6、FR-REF-1～4；功能需求 §4.8/§4.9。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "内推职位同步、分享链接及候选人免登录投递生效；带职位投递直入 RECOMMENDED 并保存推荐人。"
+  - "校招个人意愿表、虚拟职位与批量分配保留原始意愿；推荐人查看脱敏进度，只记录结果不自动结算奖励。"
+  depends_on: [ATS-007, ATS-008]
+  next_action: "等待用户分配；用户分配后定义投递表单、推荐人可见字段与校招意愿数据契约。"
+- id: ATS-010
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-intake
+  priority: P1
+  title: "通用浏览器导入 API 与任务审计"
+  summary: "仅规划，待用户分配后执行。依据：FR-EXT-6/7/9、NFR-9～12；PRD §5.12 接口契约。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"
+  - "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"
+  - "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"
+  depends_on: [ATS-004, ATS-005, ATS-008]
+  next_action: "等待用户分配；用户分配后先冻结导入/查询契约和脱敏 fixtures，独立于第三方页面完成 API 验证。"
+- id: ATS-011
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-intake
+  priority: P1
+  title: "Chrome/Edge MV3 扩展与双平台适配"
+  summary: "仅规划，待用户分配后执行。依据：FR-EXT-1～11、NFR-9～12；功能需求 §7.1 遗留7/8。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "短期授权/刷新/撤销、最小域名权限和用户主动点击导入生效；页面打开不自动创建任务。"
+  - "先对单平台做灰度验证，再支持 BOSS/猎聘各自适配器；SPA/DOM 变化、附件失败、重复和登录失效有反馈。"
+  - "平台访问方式与使用约束先验证；适配器独立开关、版本、灰度和回滚，不影响邮箱与手工入口。"
+  depends_on: [ATS-010]
+  next_action: "等待用户分配；用户分配后先验证脱敏页面样本、附件访问及企业分发方案，再实施单平台适配；未通过验证的平台保持显式未交付。"
+- id: ATS-012
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-candidate-flow
+  priority: P0
+  title: "九阶段候选人主链与筛选状态机"
+  summary: "仅规划，待用户分配后执行。依据：FR-CAND-1～8、ST-0～6；PRD §3.4/§4.1/§4.3。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "前端六阶段原型迁移为待分配、九主链阶段和归档；职位树、权限内计数、筛选保存、分页、批量动作和锁定可用。"
+  - "初筛原因可空；部门筛选 PASS/HOLD/REJECT、任一 PASS 推进及结构化可约面时间符合规则。"
+  - "条件不满足和越权的流转被拒绝；显式动作、撤销、时间线完整，面试结论不自动进入 Offer。"
+  depends_on: [ATS-004, ATS-007, ATS-008]
+  next_action: "等待用户分配；用户分配后先制定九阶段迁移映射与状态转换矩阵，再实现服务端规则和前端阶段动作。"
+- id: ATS-013
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-candidate-flow
+  priority: P1
+  title: "人才库归档、激活与万级查询"
+  summary: "仅规划，待用户分配后执行。依据：FR-POOL-1～6、NFR-7/14；PRD §11.1 Q2/Q9/Q10。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "归档自动入池、标签/检索、选择职位激活至 RECOMMENDED 并保留全部历史。"
+  - "不设 10000 人容量阻断；列表筛选分页和索引支持万级数据，1w+ 仅影响展示且阈值配置化。"
+  - "归档原因含未填写档，人才库显示默认口径与报表统计区分，实测数据规模和查询结果可复核。"
+  depends_on: [ATS-012]
+  next_action: "等待用户分配；用户分配后先确认 1w+ 适用范围与万级数据场景，再实现归档/激活和查询验证。"
+- id: ATS-014
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-interview
+  priority: P1
+  title: "面试排期、登记表与评价协同"
+  summary: "仅规划，待用户分配后执行。依据：FR-INT-1～11、ST-2；PRD §4.3/§9。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "多轮多人排期预读可约面时间；改期/取消原因必填，列表三段分组、筛选和导出可用。"
+  - "登记表字段可配置；评价代填记录 PROXY/操作人/时间，同职位同候选人范围内互看，听记链接按轮次追加。"
+  - "日历/通知采用接口化 Mock 可演示接受/拒绝/冲突；评价不自动转阶段，实际钉钉验收由 ATS-018/020 承接。"
+  depends_on: [ATS-012]
+  next_action: "等待用户分配；用户分配后先统一 Interview/Feedback/Registration/Transcript 契约，再实现协同界面与规则。"
+- id: ATS-015
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-offer-onboarding
+  priority: P1
+  title: "Offer 状态、OA 材料和背调流程"
+  summary: "仅规划，待用户分配后执行。依据：FR-OFR-1～8、PRD §4.2、SEC-F1～4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "Offer 完整子状态机与拒绝原因、OA 单号和手工结果回填可用，每次变更留痕。"
+  - "OA 材料预览仅含简历信息/面试登记表/录用职级；AI 建议不作为审批结论，系统无薪资明细存储。"
+  - "背调材料私有访问、独立授权和判定生效；有问题归档，无问题可定入职时间并标记书面 Offer 已发送。"
+  depends_on: [ATS-012, ATS-014, ATS-005]
+  next_action: "等待用户分配；用户分配后从 Offer 状态矩阵、材料契约与敏感附件访问用例开始。"
+- id: ATS-016
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-offer-onboarding
+  priority: P1
+  title: "待入职、确认入职与试用期闭环"
+  summary: "仅规划，待用户分配后执行。依据：FR-ONB-1～6、ST-3～6；PRD §3.4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "仅入职时间和已发送标记均具备时可入待入职；确认入职回写 hiredCount，重复操作不重复累计。"
+  - "放弃入职原因必填并归档；保温基准随入职日期更新且仅提醒人事。"
+  - "试用期仅记录是否转正和时间，原型绩效/目标/自建审批能力按业务范围收敛；不采集入职花名册、薪资和社保档案。"
+  depends_on: [ATS-015]
+  next_action: "等待用户分配；用户分配后先定义入职显式动作、幂等与原型试用期数据迁移范围。"
+- id: ATS-017
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P0
+  title: "钉钉集成设计与组织身份正式接入"
+  summary: "仅规划，待用户分配后执行。依据：DT-2、PRD §7.1/§7.2；技术设计 §6。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "形成钉钉集成技术设计，记录六类用途所需权限、回调、限流、身份映射和错误策略；实际 API 以接入时官方文档核对。"
+  - "授权测试组织中 User/Department 增量同步、userId 一对一映射、离职/转岗权限变更及失败重试有测试记录。"
+  depends_on: [ATS-004]
+  next_action: "等待用户分配；用户分配后先核对测试企业、权限和身份字段，凭据通过环境注入；当前规划不连接企业系统。"
+- id: ATS-018
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P1
+  title: "钉钉日历与固定事件通知正式接入"
+  summary: "仅规划，待用户分配后执行。依据：DT-1/DT-3、FR-NTF-1～9、FR-INT-2～5、FR-ONB-2。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "日历创建/修改/取消、responseStatus 与忙闲查询实接；邀请不等于占用，拒绝提醒改期，冲突只提示。"
+  - "面试/评价/超时/保温固定事件通知可追踪、去重、重试；评价结束后30分钟提醒及用户低优先级开关生效。"
+  - "只触达需求指定内部人员，通知与 OA 原生待办边界明确；失败不阻断人工业务。"
+  depends_on: [ATS-017, ATS-014, ATS-016]
+  next_action: "等待用户分配；用户分配后按授权测试企业验证一个面试日程，再补全固定事件通知与失败路径。"
+- id: ATS-019
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P1
+  title: "钉钉 OA 需求同步与录用审批对接"
+  summary: "仅规划，待用户分配后执行。依据：DT-5/DT-6、FR-REQ-1、FR-OFR-2/3、NFR-13。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "招聘需求审批通过实接、签名/来源校验、唯一约束与事务保证重复并发回调不重复生成；支持人工触发同步。"
+  - "录用审批材料和两级审批对应正式 OA，结果手工回填兜底；录用结果自动回调仅为可选增强，不作为必交付门槛。"
+  - "系统不自建审批流、不反向更改 OA 原单，不引入薪资明细。"
+  depends_on: [ATS-017, ATS-007, ATS-015]
+  next_action: "等待用户分配；用户分配后确认两类 OA 表单字段映射和测试实例，再分别验证需求幂等与录用回填。"
+- id: ATS-020
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P1
+  title: "钉钉听记素材按权限读取"
+  summary: "仅规划，待用户分配后执行。依据：DT-4、FR-INT-8、AI-7；PRD §6.2/§7。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。"
+  - "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。"
+  depends_on: [ATS-017, ATS-014]
+  next_action: "等待用户分配；用户分配后用脱敏听记样本验证权限与能力，再接入素材读取和来源定位。"
+- id: ATS-021
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P1
+  title: "AI 三场景正式适配与人工复核"
+  summary: "仅规划，待用户分配后执行。依据：PRD §6、AI-1～8；功能需求 §7.1 遗留1/5。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "可替换 provider 支持 RESUME_PARSE/RESUME_EVAL/INTERVIEW_EVAL，三套输出符合 JSON Schema，记录依据、缺失项及字段置信度。"
+  - "草稿标记、人工确认/编辑、职位/系统开关和无招聘要求禁发评估生效；不自动转阶段、不进入 OA 审批结论。"
+  - "PDF/Word/图片、听记样本及失败/超时/重试/降级均有证据；模型成本、耗时和能力评估据实记录。"
+  depends_on: [ATS-008, ATS-012, ATS-014, ATS-020]
+  next_action: "等待用户分配；用户分配后先选择并验证 provider 和三类脱敏样本，按需分别交付三个场景；解析子项可先于听记接入分配。"
+- id: ATS-022
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-integrations
+  priority: P1
+  title: "真实邮箱轮询、附件获取与异常恢复"
+  summary: "仅规划，待用户分配后执行。依据：FR-ENT-1/10、PRD §3.5/§9/§11.1 Q3/Q11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "授权接收邮箱轮询保存附件并触发统一解析，断点恢复和重复邮件/附件不重复建档。"
+  - "白名单/抓取范围、无附件/格式不支持/解析失败有记录和人工处理；匹配未确认前进入待分配池而不自动挂职位。"
+  depends_on: [ATS-008, ATS-005]
+  next_action: "等待用户分配；用户分配后确认测试邮箱和抓取范围，使用脱敏邮件样本验证正常、重复及异常路径。"
+- id: ATS-023
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-operations
+  priority: P1
+  title: "工作台与可下钻招聘报表"
+  summary: "仅规划，待用户分配后执行。依据：FR-RPT-1～9、FR-DSH；功能需求 §1.3/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "工作台待办、今日指标、分类通知/全部已读和职位360均来自真实权限内数据。"
+  - "漏斗/渠道/三类原因/转正率与周期报表可下钻；周期按需求级自然日计算，汇总均值/中位数/最长/最短并排除未关闭需求。"
+  - "明确分母、时间口径、权限和未填写档；招聘周期等业务指标建立可复算基线，不虚设未确认改善百分比。"
+  depends_on: [ATS-007, ATS-013, ATS-014, ATS-016]
+  next_action: "等待用户分配；用户分配后先形成指标字典和可复算样本，再逐项交付报表、下钻与工作台。"
+- id: ATS-024
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-operations
+  priority: P1
+  title: "业务设置与配置审计"
+  summary: "仅规划，待用户分配后执行。依据：PRD §9；FR-NTF 固定规则、AI-3。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "组织/职位/需求/候选人/面试字段、登记表、三类原因、标签/渠道等配置实现所需可用入口。"
+  - "邮箱、插件、AI、通知与安全参数按需分阶段接入，默认可用与高级配置区分；管理员权限、校验和修改审计生效。"
+  - "不扩建可配置规则引擎；未确认口径保留配置位和决策记录，默认值不冒充最终业务结论。"
+  depends_on: [ATS-004, ATS-007, ATS-012]
+  next_action: "等待用户分配；用户分配后先列全配置项与所属模块，允许按模块拆子项分配，最终逐条核对 PRD §9。"
+- id: ATS-025
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-operations
+  priority: P0
+  title: "端到端验收、性能和发布运维准备"
+  summary: "仅规划，待用户分配后执行。依据：PRD §8；技术设计 §11～§16；全量需求追溯。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "类型/Lint/单元/API/Worker/契约/E2E、各端构建、迁移和密钥检查通过；状态机/权限覆盖分支，有失败降级与并发幂等用例。"
+  - "万级候选人/人才库查询、大附件、队列及适配器退化有测量；性能阈值在测试前确认，无实测不得宣称达标。"
+  - "测试环境验证 HTTPS/域名白名单、脱敏日志、告警、备份恢复与生命周期；发布、回滚、部署文档及演练证据完整。"
+  - "业务验收人和样本已确认，全部必需 FR/NFR 有验收证据，阻断缺陷关闭；排期、环境和生产发布须由用户另行安排。"
+  depends_on: [ATS-006, ATS-009, ATS-011, ATS-013, ATS-016, ATS-018, ATS-019, ATS-020, ATS-021, ATS-022, ATS-023, ATS-024, ATS-026]
+  next_action: "等待用户分配；用户分配后先建立需求到测试证据追溯矩阵与上线清单；最后汇总所有模块证据、执行业务验收和测试环境演练。"
+- id: ATS-026
+  kind: delivery
+  status: planned
+  owner: null
+  goal: ats-foundation
+  priority: P1
+  title: "README、运行手册与原型范围校正"
+  summary: "仅规划，待用户分配后执行。依据：README 现状；PRD §1/§3.4/§10；技术设计 §9/§15.3。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  acceptance:
+  - "README 正确区分真实 API、保留演示数据与未交付模块，启动、环境、数据初始化和验证步骤可复现。"
+  - "原型自建审批、试用期绩效等超范围入口有迁移/收敛说明；交付文档随各模块完成持续更新。"
+  depends_on: [ATS-002]
+  next_action: "等待用户分配；用户分配后先修订已过期的纯前端/localStorage 说明，再随模块交付更新手册。"

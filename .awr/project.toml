@@ -1,0 +1,50 @@
+[project]
+name = "hr"
+authority_mode = "source_first"
+authorized_roots = []
+context_profile = "minimal"
+
+[[sources]]
+domain = "ledger"
+role = "primary"
+path = ".awr/intake/work-ledger.yaml"
+adapter = "yaml-ledger-v1"
+
+[sources.options]
+
+[[sources]]
+domain = "plan"
+role = "supporting"
+path = "README.md"
+adapter = "markdown-heading-v1"
+
+[sources.options]
+
+[[sources]]
+domain = "plan"
+role = "supporting"
+path = "docs/ats-功能需求文档-v1.2.md"
+adapter = "markdown-heading-v1"
+
+[[sources]]
+domain = "plan"
+role = "supporting"
+path = "docs/ats-PRD-v1.0.md"
+adapter = "markdown-heading-v1"
+
+[[sources]]
+domain = "plan"
+role = "supporting"
+path = "docs/ats-技术设计与开发环境-v1.0.md"
+adapter = "markdown-heading-v1"
+
+[[sources]]
+domain = "plan"
+role = "supporting"
+path = "docs/ats-项目目标与实施路线图-v1.0.md"
+adapter = "markdown-heading-v1"
+
+
+
+
+
