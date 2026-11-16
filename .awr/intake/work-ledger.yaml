@@ -172,17 +172,20 @@ work_items:
   next_action: "无；ATS-004 代码和本地验收完成。部署数据库迁移前核对现有库结构；钉钉 OAuth 授权码接入由 ATS-017 承接。"
 - id: ATS-005
   kind: delivery
-  status: planned
-  owner: null
+  status: completed
+  owner: CodeBuddy
   goal: ats-foundation
   priority: P0
   title: "附件私有存储、上传防护与生命周期"
-  summary: "仅规划，待用户分配后执行。依据：PRD NFR-1～5/11；技术设计 §8/§13。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-16 用户明确分配后完成附件私有存储、上传防护与生命周期闭环：统一存储接口与本地/OSS 私有驱动、对象 key 为 resumes/<sha256><ext>、扩展名与声明 MIME 及文件头三者一致的上传校验与明确 errorCode、数据范围与敏感材料独立授权后的短期签名读链接（签发与下载均写审计）、可配置保留期限的到期清理（同时删除对象文件与结构化记录、解绑入场记录并写时间线/审计/清理批次）。后端 78 项单元测试（新增 23 项）、类型检查、Lint 与构建通过，并在临时 MySQL 库完成迁移与 23 项接口校验后删除临时库；未改动本地 talentflow 库。"
   acceptance:
   - "统一上传校验类型、大小和内容；OSS 私有读及短期签名链接校验有效期和访问权限。"
   - "敏感材料访问留痕，到期清理覆盖文件与结构化记录；保留期限配置化并在上线前确认。"
   depends_on: [ATS-004]
-  next_action: "等待用户分配；用户分配后定义存储接口与私有访问契约，使用脱敏附件验证上传、访问和清理。"
+  evidence: [docs/verification/ats005-attachment-storage-report.json]
+  verification:
+    evidence_level: locally_verified
+  next_action: "代码已提交（e59fea6）并完成本地验收；OSS 驱动需在测试环境用真实 Bucket 复核，保留期限默认值（简历 365 天、背调/流水 180 天）待业务确认；前端附件入口与预览由 ATS-008 承接。"
 - id: ATS-006
   kind: delivery
   status: completed
