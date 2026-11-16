@@ -49,11 +49,4 @@ export class CandidatesController {
   ) {
     return this.candidates.updateStage(id, body, actor);
   }
-
-  @Get('jobs')
-  @RequirePermission('job:read')
-  @AuditAction('job.list', 'Job')
-  listJobs(@CurrentUser() actor: AuthenticatedUser) {
-    return this.candidates.listJobs(actor);
-  }
 }

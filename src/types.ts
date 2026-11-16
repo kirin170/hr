@@ -1,5 +1,6 @@
 export type PageKey =
   | 'dashboard'
+  | 'positions'
   | 'candidates'
   | 'pipeline'
   | 'interviews'
@@ -79,6 +80,67 @@ export type ApiJob = {
   location: string | null
   headcount: number
   hiredCount: number
+}
+
+export type JobListItem = ApiJob & {
+  code: string
+  status: 'ACTIVE' | 'CLOSED'
+  recruiterId: string | null
+  requirements: string | null
+  channel: string | null
+  isVirtual: boolean
+  requisitionId: string | null
+  headcountFull: boolean
+  headcountHint: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export type ApiRequisition = {
+  id: string
+  oaApprovalId: string
+  oaApprovalTitle: string | null
+  title: string
+  departmentId: string
+  recruiterId: string | null
+  jobLevel: string | null
+  headcount: number
+  source: string
+  status: 'ACTIVE' | 'CLOSED'
+  submittedAt: string | null
+  recruitmentStartDate: string | null
+  closedAt: string | null
+  cycleDays: number | null
+  cycleEligible: boolean
+  inProgressDays: number | null
+  inProgressLabel: string | null
+  note: string | null
+  requirements: string | null
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type RequisitionList = {
+  items: ApiRequisition[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export type ApiDepartment = {
+  id: string
+  code: string
+  name: string
+  parentId: string | null
+}
+
+export type ApiUser = {
+  id: string
+  displayName: string
+  employeeNo?: string | null
+  email?: string | null
+  status?: string
 }
 
 export type InterviewStatus = 'scheduled' | 'completed' | 'pending_feedback' | 'cancelled'

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source_sha": "8bee985ef495eaab50ed42b44b332d7463f72114",
+  "acceptance": [
+    {
+      "criterion": "职位 CRUD、双 Tab、MJ 编号、负责人招聘要求和虚拟职位生效；满 HC 仅提示，职位关闭不影响流程中候选人。",
+      "evidence": ["ats007-requisition-cycle-v1"]
+    },
+    {
+      "criterion": "Mock OA 审批通过按 oaApprovalId 幂等生成需求，开始时间必填、提报时间只读；同步信息与人事修改保存在同一需求，保留 OA 单引用及操作人/时间/前后值，重复和并发回调不重复落库。",
+      "evidence": ["ats007-requisition-cycle-v1"]
+    },
+    {
+      "criterion": "手动关闭计算需求级自然日周期，同日计 1 天，多日按日期差；非法日期拒绝，开始时间仅关闭前可改并重算在招天数；回退清空当前周期、保留历次关闭/周期记录；已关闭存量本期不补录、不纳入周期统计；提供可按 N 排序的在招时长列表，不做超时预警。",
+      "evidence": ["ats007-requisition-cycle-v1"]
+    }
+  ]
+}

@@ -144,6 +144,39 @@ export class AuthorizationService {
     return clauses.length ? { OR: clauses } : { id: '__no_access__' };
   }
 
+  requisitionWhere(
+    actor: AuthenticatedUser,
+    permission: string,
+  ): Prisma.JobRequisitionWhereInput {
+    const scopes = this.scopesFor(actor, permission);
+    if (scopes.includes(DataScope.ALL)) return {};
+
+    const clauses: Prisma.JobRequisitionWhereInput[] = [];
+    for (const scope of scopes) {
+      switch (scope) {
+        case DataScope.SELF:
+        case DataScope.OWN_JOBS:
+        case DataScope.PARTICIPATING:
+          clauses.push({ recruiterId: actor.id });
+          break;
+        case DataScope.DEPARTMENT:
+          if (actor.departmentIds.length) {
+            clauses.push({ departmentId: { in: actor.departmentIds } });
+          }
+          break;
+        case DataScope.DEPARTMENT_AND_PARTICIPATING:
+          if (actor.departmentIds.length) {
+            clauses.push({ departmentId: { in: actor.departmentIds } });
+          }
+          clauses.push({ recruiterId: actor.id });
+          break;
+        case DataScope.ALL:
+          return {};
+      }
+    }
+    return clauses.length ? { OR: clauses } : { id: '__no_access__' };
+  }
+
   async canAccessCandidate(
     actor: AuthenticatedUser,
     permission: string,

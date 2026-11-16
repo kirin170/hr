@@ -128,26 +128,6 @@ export class CandidatesService {
     }));
   }
 
-  async listJobs(actor: AuthenticatedUser) {
-    return this.prisma.job.findMany({
-      where: {
-        AND: [
-          { status: 'ACTIVE' },
-          this.authorization.jobWhere(actor, 'job:read'),
-        ],
-      },
-      select: {
-        id: true,
-        title: true,
-        departmentId: true,
-        location: true,
-        headcount: true,
-        hiredCount: true,
-      },
-      orderBy: { title: 'asc' },
-    });
-  }
-
   async create(value: unknown, actor: AuthenticatedUser) {
     const input = this.asRecord<CandidateInput>(value);
     const name = this.requiredText(input.name, '候选人姓名不能为空');

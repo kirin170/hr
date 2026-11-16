@@ -8,6 +8,7 @@ import { CandidateDrawer } from './components/CandidateDrawer'
 import { AddCandidateModal } from './components/AddCandidateModal'
 import { SettingsModal } from './components/SettingsModal'
 import { Dashboard } from './pages/Dashboard'
+import { Positions } from './pages/Positions'
 import { Candidates } from './pages/Candidates'
 import { Pipeline } from './pages/Pipeline'
 import { Interviews, InterviewModal } from './pages/Interviews'
@@ -19,6 +20,7 @@ import type { Toast } from './context'
 
 const pageMeta: Record<Exclude<PageKey, 'settings'>, { title: string; subtitle: string }> = {
   dashboard: { title: '工作台', subtitle: '招聘进展一览' },
+  positions: { title: '职位与招聘需求', subtitle: 'HC、招聘要求与需求级周期' },
   candidates: { title: '简历库', subtitle: '人才档案与筛选' },
   pipeline: { title: '招聘流程', subtitle: '推进候选人阶段' },
   interviews: { title: '面试安排', subtitle: '协调面试与反馈' },
@@ -77,6 +79,7 @@ export default function App() {
         <TopBar title={meta.title} subtitle={meta.subtitle} onSearch={setSearch} onOpenSettings={() => setShowSettings(true)} />
         <main className="content">
           {page === 'dashboard' && <Dashboard onNavigate={navigate} onOpenCandidate={openCandidate} />}
+          {page === 'positions' && <Positions />}
           {page === 'candidates' && <Candidates search={search} onOpenCandidate={openCandidate} onAddCandidate={() => setShowAddCandidate(true)} />}
           {page === 'pipeline' && <Pipeline onOpenCandidate={openCandidate} onAddCandidate={() => setShowAddCandidate(true)} />}
           {page === 'interviews' && <Interviews onOpenCandidate={openCandidate} openNew={interviewOpenKey} />}

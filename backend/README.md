@@ -62,6 +62,29 @@ Set-Location ..
 
 未核对的已有数据库不要直接运行 `db:setup` 或 `db:migrate:deploy`，因为首个迁移会创建全部表。
 
+## 职位与招聘需求 API
+
+职位与 HC 分离：职位编号由服务端按 `MJ%06d` 生成，虚拟职位默认不进入普通职位列表；HC 满员只返回提示，不自动关闭。招聘需求由 OA 审批通过后生成，周期为需求级指标。
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| GET | `/jobs` | `job:read` | 职位列表与筛选（编号/部门/渠道/负责人/简历更新时间/状态） |
+| GET | `/jobs/virtual` | `job:read` | 虚拟职位（校招容器）列表 |
+| POST | `/jobs` | `job:create` | 新建职位，编号自动生成 |
+| PATCH | `/jobs/:id` | `job:update` | 编辑职位；招聘要求仅该职位招聘负责人或管理员可改 |
+| POST | `/jobs/:id/close` | `job:close` | 关闭职位，仅停止新简历进入，不改动流程中候选人 |
+| GET | `/requisitions` | `requisition:read` | 需求列表、周期区间筛选与排序 |
+| GET | `/requisitions/in-progress` | `requisition:read` | 在招时长列表（`sort=days_asc\|days_desc`） |
+| GET | `/requisitions/stats/cycle` | `requisition:read` | 周期汇总（排除未关闭与不补录的存量需求） |
+| POST | `/requisitions/oa-sync` | `requisition:sync` | OA 审批通过回调（本期 Mock 契约，按 `oaApprovalId` 幂等） |
+| POST | `/requisitions/sync-from-oa` | `requisition:sync` | 回调失败后的人工同步，同一幂等规则 |
+| PATCH | `/requisitions/:id` | `requisition:manage` | 人事优化内容，与同步信息同一条记录，留痕前后值 |
+| PATCH | `/requisitions/:id/start-date` | `requisition:manage` | 仅招聘中可改，重算在招天数 |
+| POST | `/requisitions/:id/close` | `requisition:manage` | 写入关闭时间并计算周期 |
+| POST | `/requisitions/:id/revert` | `requisition:manage` | 回退为招聘中，清空当前周期并保留时间线历史 |
+
+周期规则：`cycleDays = max(1, 关闭日期 - 开始招聘日期)`，同日计 1 天、多日按自然日差不累加首尾日；开始招聘时间必填且不可事后补录，已关闭需求需先回退才能修改；未关闭需求显示「进行中 · 已 N 天」且不计入周期汇总；本期不补录的已关闭存量需求 `cycleEligible=false`，不纳入统计。需求提报时间只读、不参与计算。
+
 ## 质量门禁
 
 ```powershell

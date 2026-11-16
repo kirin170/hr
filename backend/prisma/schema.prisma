@@ -27,27 +27,41 @@ model Job {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
+  @@index([departmentId, status])
+  @@index([recruiterId])
   @@map("jobs")
 }
 
+/// 招聘需求（HC）：OA 审批通过后生成，人事补充招聘要求与开始招聘时间；周期为需求级指标
 model JobRequisition {
   id                   String   @id @default(cuid())
   oaApprovalId         String   @unique
+  oaApprovalTitle      String?
   title                String
   departmentId         String
+  recruiterId          String?
   jobLevel             String?
   headcount            Int
   source               String   @default("DINGTALK_OA")
   status               RequisitionStatus @default(ACTIVE)
+  /// 需求提报时间：由 OA 同步带出，只读，不参与周期计算
   submittedAt          DateTime
-  recruitmentStartDate DateTime @map("recruitment_start_date")
+  /// 开始招聘时间：生成需求时必填，仅关闭前可改；存量已关闭需求可为空
+  recruitmentStartDate DateTime? @map("recruitment_start_date")
   closedAt             DateTime?
   cycleDays            Int?
+  /// 是否纳入周期统计；本期不补录的已关闭存量需求为 false
+  cycleEligible        Boolean  @default(true)
+  note                 String?  @db.Text
+  requirements         String?  @db.Text
   version              Int      @default(1)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   jobs                 Job[]
 
+  @@index([status, closedAt])
+  @@index([departmentId, status])
+  @@index([recruiterId])
   @@map("job_requisitions")
 }
 

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "work_item": "ATS-007",
+  "source_sha": "8bee985ef495eaab50ed42b44b332d7463f72114",
+  "working_tree_dirty": true,
+  "summary": "Implemented job/requisition separation with MJ%06d job numbering, virtual jobs excluded from the default job list, recruiter-only recruitment requirement editing, HC-full hints without auto-close, close-job that leaves in-process candidates untouched, idempotent Mock OA requisition sync, mandatory recruitment start date, requisition-level natural-day cycle calculation, close/revert with retained history, in-progress duration listing and cycle statistics that exclude legacy closed requisitions, plus a two-tab job/requisition page wired to the real API.",
+  "command": "npm run db:generate --prefix backend; npm run db:validate --prefix backend (placeholder DATABASE_URL); npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build --prefix backend; npm run build (web); npx prisma migrate deploy against a temporary MySQL database; node live API smoke script (22 checks); git diff --check",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261116020000_requisition_cycle/",
+    "backend/prisma/seed.mjs",
+    "backend/src/jobs/",
+    "backend/src/requisitions/",
+    "backend/src/auth/authorization.service.ts",
+    "backend/src/app.module.ts",
+    "backend/src/candidates/",
+    "backend/README.md",
+    "src/api.ts",
+    "src/types.ts",
+    "src/pages/Positions.tsx",
+    "src/components/Sidebar.tsx",
+    "src/App.tsx",
+    "src/styles.css",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "verified_at": 1794801477887,
+  "checks": [
+    {
+      "name": "job_crud_numbering_virtual_and_hc_rules",
+      "passed": true,
+      "criteria": [
+        "职位 CRUD、双 Tab、MJ 编号、负责人招聘要求和虚拟职位生效；满 HC 仅提示，职位关闭不影响流程中候选人。"
+      ],
+      "details": "JobsService and RequisitionsService provide the two tabs. Job codes are generated server-side as MJ%06d with a retry on unique conflicts; virtual jobs are excluded from the default job list and exposed at /jobs/virtual; recruitment requirements are editable only by the job's recruiter or an ADMIN; headcountFull/headcountHint only suggest closing; close writes only the job status and returns the unchanged in-process candidate count. Unit tests cover numbering, virtual filtering, requirement permission allow/deny, headcount floor and the close path. A live MySQL run returned MJ000001/MJ000002, kept virtual jobs out of the default list and closed a job with candidatesInProcess=0."
+    },
+    {
+      "name": "mock_oa_sync_idempotent_and_single_record",
+      "passed": true,
+      "criteria": [
+        "Mock OA 审批通过按 oaApprovalId 幂等生成需求，开始时间必填、提报时间只读；同步信息与人事修改保存在同一需求，保留 OA 单引用及操作人/时间/前后值，重复和并发回调不重复落库。"
+      ],
+      "details": "syncFromOa requires oaApprovalId, title, department, positive headcount, a valid submittedAt and a mandatory recruitmentStartDate; it returns the existing record with created=false on repeat, and after a P2002 unique violation it re-reads the committed record so concurrent callbacks do not insert twice. Manual sync reuses the same path. Updates keep the same requisition row, reject read-only fields (submittedAt/closedAt/cycleDays/status/version) and append a timeline event with per-field before/after values and the operator. Unit tests cover repeat and concurrent callbacks, missing start date and invalid dates. A live MySQL run produced created=true then created=false for the same id, and two parallel callbacks for one oaApprovalId returned the same id."
+    },
+    {
+      "name": "requisition_cycle_close_revert_and_statistics",
+      "passed": true,
+      "criteria": [
+        "手动关闭计算需求级自然日周期，同日计 1 天，多日按日期差；非法日期拒绝，开始时间仅关闭前可改并重算在招天数；回退清空当前周期、保留历次关闭/周期记录；已关闭存量本期不补录、不纳入周期统计；提供可按 N 排序的在招时长列表，不做超时预警。"
+      ],
+      "details": "Cycle rules live in requisition-cycle.ts: strict YYYY-MM-DD parsing rejects 2026-02-30, cycleDays = max(1, closedAt - recruitmentStartDate) on UTC day indexes, in-progress days = today - start. Close rejects closedAt earlier than the start date and requires a start date; revert clears closedAt/cycleDays and records previous values in the timeline; legacy closed requisitions carry cycleEligible=false and are rejected for revert and excluded from /requisitions/stats/cycle. In-progress listing orders by start date so N sorting is stable, and no timeout warning is emitted. A live MySQL run closed a requisition with 13 days, produced cycle stats count=1 average=13, reverted to ACTIVE with null cycle fields and returned the full five-event timeline."
+    },
+    {
+      "name": "static_validation_unit_tests_and_builds",
+      "passed": true,
+      "criteria": [],
+      "details": "Prisma Client generation, schema validation, backend typecheck, oxlint (0 warnings/0 errors), 55 unit tests across 9 files (38 new tests for jobs, requisitions and cycle rules), Nest build, web typecheck and Vite build all passed. git diff --check reported no whitespace errors."
+    },
+    {
+      "name": "live_mysql_migration_and_api_smoke",
+      "passed": true,
+      "criteria": [],
+      "details": "All three committed migrations applied cleanly to a temporary MySQL database (talentflow_ats007), the seed script created 19 permissions and 4 roles, and the compiled API served 22 checks covering bootstrap/login, department creation, job numbering, virtual job filtering, OA sync idempotency and concurrent callbacks, mandatory start date, requisition edit, start-date change, invalid close rejection, cycle calculation, cycle stats, revert, in-progress sorting, job close and timeline completeness. The temporary database and helper scripts were removed afterwards."
+    }
+  ],
+  "limitations": [
+    "The frontend still has no login flow (ATS-004 changed backend only), so the new two-tab page can only load data after an access token is written to localStorage; no browser walkthrough was performed.",
+    "The requisition cycle-range filter is placed in the requisition list per PRD §11.1 Q12 and still needs business confirmation.",
+    "The OA approval callback is a Mock contract without signature or source verification; formal integration remains with ATS-019.",
+    "No migration was applied to the local talentflow database, and no code was committed or pushed.",
+    "In-process candidate protection on job close is asserted structurally (no candidate writes) and by the candidate count; full state-machine verification remains with ATS-012."
+  ]
+}
