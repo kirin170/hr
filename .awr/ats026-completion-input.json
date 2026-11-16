@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source_sha": "dae54b98f090fcd53f2d3cf7730a19a3d7d9dc24",
+  "acceptance": [
+    {
+      "criterion": "README 正确区分真实 API、保留演示数据与未交付模块，启动、环境、数据初始化和验证步骤可复现。",
+      "evidence": ["ats026-readme-runbook-v1"]
+    },
+    {
+      "criterion": "原型自建审批、试用期绩效等超范围入口有迁移/收敛说明；交付文档随各模块完成持续更新。",
+      "evidence": ["ats026-readme-runbook-v1"]
+    }
+  ]
+}

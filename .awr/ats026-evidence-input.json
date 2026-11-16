@@ -1,0 +1,19 @@
+{
+  "work_item_key": "ATS-026",
+  "external_key": "ats026-readme-runbook-v1",
+  "evidence_type": "verification_report",
+  "summary": "Completion report for ATS-026",
+  "locator": "docs/verification/ats026-readme-runbook-report.json",
+  "level": "locally_verified",
+  "sha256": "05d5ac5a7ba22bd96229334c0a8bde0efe17da905655803d0ffadeb371415c7b",
+  "source_sha": "dae54b98f090fcd53f2d3cf7730a19a3d7d9dc24",
+  "command": "Static review of source, package scripts and documentation; git diff --check. No build, test, runtime, or database command was executed.",
+  "scope": [
+    "README.md",
+    "backend/README.md",
+    "docs/ats-本地开发运行手册.md",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "verified_at": 1794810690000,
+  "branch_id": null
+}
