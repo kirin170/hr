@@ -179,9 +179,9 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - API/Worker/Web 启动约定、无真实密钥的环境示例和可重复初始化/迁移文档可用。
 - GitHub Actions 执行类型、Lint、单元/API 测试、各交付端构建、migration 校验和密钥检查；已有迁移不被覆盖。
 
-实施记录（2026-11-16）：仓库内已补齐 API/Worker/Web 命令、环境示例、Prisma 初始迁移及后续 ATS-004 迁移、初始化说明和 GitHub Actions 门禁。当前本地 Prisma 校验、API/Worker 类型检查与构建、Lint 和 Web 构建通过；本次未运行测试套件，也未对本地数据库执行迁移。扩展工程尚未加入仓库，CI 暂无扩展构建项；GitHub Actions 尚未首次执行，分支保护仍需在仓库设置中单独启用。
+实施记录（2026-11-16）：仓库内已补齐 API/Worker/Web 命令、环境示例、Prisma 初始迁移及后续 ATS-004 迁移、初始化说明和 GitHub Actions 门禁。提交 `4b66861` 的 Actions 运行 `43799913740` 中 `quality` 与 `secret-scan` 均通过。当前本地 Prisma 校验、API/Worker 类型检查与构建、Lint 和 Web 构建通过；本次未运行本地测试套件，也未对本地数据库执行迁移。扩展工程尚未加入仓库，CI 暂无扩展构建项。GitHub API 对该私有仓库的分支保护接口返回 403，要求升级至 Pro 或将仓库改为公开；仓库可见性保持不变，因此目前无法读取或设置 `master` 分支保护及 required checks，ATS-006 保持进行中。
 
-分配后第一步：用户分配后核对实际包脚本、迁移目录与现有 CI，再补齐缺失门禁；涉及仓库设置时单独落实权限。
+下一步：启用支持私有仓库分支保护的 GitHub 计划后，为 `master` 配置并复核 required checks；仓库可见性不变更。
 
 ### ATS-007 职位、HC、招聘需求与周期闭环
 
