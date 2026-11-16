@@ -31,7 +31,7 @@ Mock 适配器是阶段性交付及测试手段，不是正式集成完成证明
 | `docs/ats-PRD-v1.0.md` | 开发落地依据：实体、状态机、FR/NFR、AI/钉钉契约和验收点。文件名 v1.0，正文版本标注 v1.1，采用当前正文。 |
 | `docs/ats-技术设计与开发环境-v1.0.md` | 2026-11-11 已冻结架构、环境、测试、部署与运维要求；Windows 本地开发不使用 Docker。 |
 | `.awr/intake/work-ledger.yaml` | AWR 唯一主台账，记录目标、来源状态、依赖、验收与下一步；本路线图是配套规划来源。 |
-| `README.md`、`src/`、`backend/`、Git | 用于核对实现与历史；README 仍有纯前端/localStorage 旧说明，修订登记 ATS-026，不能覆盖已冻结需求。 |
+| `README.md`、`src/`、`backend/`、Git | 用于核对实现与历史；原 README 的纯前端/localStorage 说明已由 ATS-026 按当前实现校正，不能覆盖已冻结需求。 |
 | `.awr/ats001-report.json`、`docs/verification/ats002-report.json`、`docs/verification/ats003-report.json` | 已有本地报告，按各自记录版本与哈希核对；不能代表当前工作树重测、全项目完成或业务验收。 |
 
 | 既有工作 | 当前来源状态 | 核对结果与保留事项 |
@@ -148,7 +148,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | ATS-023 | 工作台与可下钻招聘报表 | ats-operations | P1 | ATS-007、ATS-013、ATS-014、ATS-016 | 待分配 / 未指定 |
 | ATS-024 | 业务设置与配置审计 | ats-operations | P1 | ATS-004、ATS-007、ATS-012 | 待分配 / 未指定 |
 | ATS-025 | 端到端验收、性能和发布运维准备 | ats-operations | P0 | ATS-006、ATS-009、ATS-011、ATS-013、ATS-016、ATS-018、ATS-019、ATS-020、ATS-021、ATS-022、ATS-023、ATS-024、ATS-026 | 待分配 / 未指定 |
-| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 待分配 / 未指定 |
+| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 本次用户分配，文档已交付；验收报告见 `docs/verification/ats026-readme-runbook-report.json` |
 
 既有 ATS-002 已完成，验收条件为：候选人列表/详情使用后端；阶段推进后端持久化；关键操作写入时间线/审计。本次仅同步状态，未重新运行开发测试；后续新增任务仍由用户明确分配。
 
@@ -382,7 +382,9 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - README 正确区分真实 API、保留演示数据与未交付模块，启动、环境、数据初始化和验证步骤可复现。
 - 原型自建审批、试用期绩效等超范围入口有迁移/收敛说明；交付文档随各模块完成持续更新。
 
-分配后第一步：用户分配后先修订已过期的纯前端/localStorage 说明，再随模块交付更新手册。
+实施记录（2026-11-16）：按用户明确分配修订根 README，新增 Windows 本地运行手册，并从 backend README 链接到该手册。文档区分候选人/职位需求真实 API、内存演示数据和未交付集成；补充空库初始化、一次性管理员创建、本地登录令牌和三进程启动步骤；说明原型自建审批和试用期绩效不属于已交付范围。静态核对报告见 `docs/verification/ats026-readme-runbook-report.json`。本次未运行构建、测试或数据库命令。
+
+验收结果：文档验收项已完成；静态核对报告见 `docs/verification/ats026-readme-runbook-report.json`。AWR 证据登记与完成操作由本次授权会话按正式流程记录。报告明确本次未运行构建、测试或数据库命令；更大范围的应用验证由 ATS-025 负责。
 
 任务是可分配工作包，规模较大的模块可由用户再拆分给不同执行人。AI 解析、简历评估可先行分配为子项；听记面试评估仍依赖 ATS-020。设置与手册按模块持续维护，ATS-025 最终汇总验收。拆分时保留原验收和来源，避免遗漏跨模块交接。
 

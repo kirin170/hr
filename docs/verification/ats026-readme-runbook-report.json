@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "work_item": "ATS-026",
+  "date": "2026-11-16",
+  "verified_at": 1794810690000,
+  "source_sha": "dae54b98f090fcd53f2d3cf7730a19a3d7d9dc24",
+  "working_tree_dirty": true,
+  "summary": "Updated the root README and backend README, added a Windows local development runbook, and recorded the current prototype boundary and AWR ledger write limitation in the roadmap.",
+  "command": "Static review of source, package scripts and documentation; git diff --check. No build, test, runtime, or database command was executed.",
+  "scope": [
+    "README.md",
+    "backend/README.md",
+    "docs/ats-本地开发运行手册.md",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "checks": [
+    {
+      "name": "api_and_demo_data_boundary",
+      "passed": true,
+      "criteria": [
+        "README 正确区分真实 API、保留演示数据与未交付模块，启动、环境、数据初始化和验证步骤可复现。"
+      ],
+      "details": "Cross-checked src/api.ts, src/context.tsx, src/store.ts, src/data.ts, backend controllers and the ATS-007 implementation report. Candidate create/detail/stage and job/requisition APIs are described separately from demo pages and Mock OA behavior."
+    },
+    {
+      "name": "windows_setup_and_command_inventory",
+      "passed": true,
+      "criteria": [
+        "README 正确区分真实 API、保留演示数据与未交付模块，启动、环境、数据初始化和验证步骤可复现。"
+      ],
+      "details": "Compared command names with root and backend package.json, environment keys with backend/.env.example, migration cautions with backend/README.md, startup ports/proxy with vite.config.ts and backend/src/main.ts, and local bootstrap/login steps with the auth controller and identity adapter. Commands were inspected but not run."
+    },
+    {
+      "name": "prototype_scope_convergence",
+      "passed": true,
+      "criteria": [
+        "原型自建审批、试用期绩效等超范围入口有迁移/收敛说明；交付文档随各模块完成持续更新。"
+      ],
+      "details": "The scope note follows PRD §3.4 and the probation target boundary: no ATS self-approval flow; keep only conversion result and date, without demo scores, goals, check-ins or performance records."
+    },
+    {
+      "name": "whitespace_and_file_links",
+      "passed": true,
+      "criteria": [],
+      "details": "git diff --check completed with exit code 0. Referenced local runbook and verification report paths exist."
+    }
+  ],
+  "limitations": [
+    "No npm build, unit/API/E2E test, database migration, service startup or browser walkthrough was run for this documentation task.",
+    "An earlier AWR planned-to-in-progress proposal was rejected with proposal_required (quoted scalar marker mismatch; source_write_performed=false); no direct YAML edits were made."
+  ]
+}

@@ -1,5 +1,7 @@
 # Backend
 
+仓库级 Windows 本地开发、数据库初始化和前端接入说明见[ATS 本地开发运行手册](../docs/ats-本地开发运行手册.md)。本文补充后端环境、安全和 API 细节。
+
 ## 技术栈
 
 - NestJS + TypeScript
@@ -14,7 +16,7 @@
 ```powershell
 npm ci
 npm ci --prefix backend
-Copy-Item backend/.env.example backend/.env
+if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
 ```
 
 编辑 `backend/.env`，填入本机 MySQL 密码、至少 32 字节的随机 `JWT_ACCESS_SECRET`、`REFRESH_TOKEN_PEPPER` 和 `INITIAL_ADMIN_SECRET`。首次启动先创建空库 `talentflow` 并启动 MySQL、Redis，然后初始化：
