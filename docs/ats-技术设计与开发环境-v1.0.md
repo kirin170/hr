@@ -665,7 +665,7 @@ CI 工作流文件位置：`.github/workflows/ci.yml`。分支保护规则在 Gi
 - [x] Node.js 22 与依赖安装方式统一（v22.20.0 / npm 10.9.3）。
 - [x] API、Worker、Web 的目录和启动方式确定。
 - [x] 本机 MySQL/Redis 服务已启动；Redis 连接验证通过，MySQL 待凭据连接验证。
-- [x] GitHub Actions CI 工作流已提交；仓库分支保护仍需在 GitHub 设置中启用。
+- [x] GitHub Actions CI 工作流已提交；`master` 分支保护已启用，要求 `quality`、`secret-scan` 通过及至少 1 人 PR 评审，并对管理员生效（2026-11-16）。
 - [ ] Prisma 初版 Schema 覆盖 PRD 核心实体。
 - [ ] 状态机、权限、审计的归属模块明确。
 - [ ] AI、钉钉、招聘平台均有 Mock 接口。

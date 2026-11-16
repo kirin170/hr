@@ -185,17 +185,17 @@ work_items:
   next_action: "等待用户分配；用户分配后定义存储接口与私有访问契约，使用脱敏附件验证上传、访问和清理。"
 - id: ATS-006
   kind: delivery
-  status: in_progress
+  status: completed
   owner: Codex
   goal: ats-foundation
   priority: P0
   title: "工程运行约定、数据库迁移与 CI 门禁"
-  summary: "用户于 2026-11-16 明确分配后已实施 API/Worker/Web 启动约定、Prisma 迁移和 GitHub Actions 门禁。提交 4b66861 的 CI 运行 43799913740 中 quality 与 secret-scan 均通过；GitHub 对私有仓库的分支保护接口返回 403（要求 Pro 或改为公开），无法读取或设置保护规则，本项验收保持进行中。未运行本地测试套件或修改本地数据库。"
+  summary: "用户于 2026-11-16 明确分配后已实施 API/Worker/Web 启动约定、Prisma 迁移和 GitHub Actions 门禁。CI 运行 43799913740（提交 4b66861）及 43800562707（提交 8bee985）中 quality 与 secret-scan 均通过；master 分支保护已复核，要求 quality、secret-scan 严格通过及至少 1 人 PR 评审，并对管理员生效。ATS-006 验收完成。未运行本地测试套件或修改本地数据库。"
   acceptance:
   - "API/Worker/Web 启动约定、无真实密钥的环境示例和可重复初始化/迁移文档可用。"
   - "GitHub Actions 执行类型、Lint、单元/API 测试、各交付端构建、migration 校验和密钥检查；已有迁移不被覆盖。"
   depends_on: [ATS-001]
-  next_action: "CI 已通过；需先为私有仓库启用支持分支保护的 GitHub 计划，再为 master 配置 required checks 并复核；不改变仓库可见性。"
+  next_action: "ATS-006 验收完成（2026-11-16）；master 后续变更按 PR、至少 1 人评审及 CI 门禁执行。"
 - id: ATS-007
   kind: delivery
   status: planned
