@@ -148,7 +148,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | ATS-023 | 工作台与可下钻招聘报表 | ats-operations | P1 | ATS-007、ATS-013、ATS-014、ATS-016 | 待分配 / 未指定 |
 | ATS-024 | 业务设置与配置审计 | ats-operations | P1 | ATS-004、ATS-007、ATS-012 | 待分配 / 未指定 |
 | ATS-025 | 端到端验收、性能和发布运维准备 | ats-operations | P0 | ATS-006、ATS-009、ATS-011、ATS-013、ATS-016、ATS-018、ATS-019、ATS-020、ATS-021、ATS-022、ATS-023、ATS-024、ATS-026 | 待分配 / 未指定 |
-| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 本次用户分配，文档已交付；验收报告见 `docs/verification/ats026-readme-runbook-report.json` |
+| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 文档已交付并验收；台账状态为 completed，AWR 自动完成回执未生成 |
 
 既有 ATS-002 已完成，验收条件为：候选人列表/详情使用后端；阶段推进后端持久化；关键操作写入时间线/审计。本次仅同步状态，未重新运行开发测试；后续新增任务仍由用户明确分配。
 
@@ -388,7 +388,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 
 实施记录（2026-11-16）：按用户明确分配修订根 README，新增 Windows 本地运行手册，并从 backend README 链接到该手册。文档区分候选人/职位需求真实 API、内存演示数据和未交付集成；补充空库初始化、一次性管理员创建、本地登录令牌和三进程启动步骤；说明原型自建审批和试用期绩效不属于已交付范围。静态核对报告见 `docs/verification/ats026-readme-runbook-report.json`。本次未运行构建、测试或数据库命令。
 
-验收结果：文档验收项已完成；静态核对报告见 `docs/verification/ats026-readme-runbook-report.json`。AWR 证据登记与完成操作由本次授权会话按正式流程记录。报告明确本次未运行构建、测试或数据库命令；更大范围的应用验证由 ATS-025 负责。
+验收结果：文档验收项已完成；静态核对报告及 AWR 证据见 `docs/verification/ats026-readme-runbook-report.json` 和 `.awr/ats026-evidence-input.json`。AWR 的 `work.progress` 与 `work.complete` 写回均因 `quoted scalar marker mismatch` 返回 `proposal_required`，且 `source_write_performed=false`。按用户明确授权，已将 `.awr/intake/work-ledger.yaml` 中 ATS-026 更新为 `completed` 并登记报告路径与验证级别；AWR 自动完成回执未生成。报告明确本次未运行构建、测试或数据库命令；更大范围的应用验证由 ATS-025 负责。
 
 任务是可分配工作包，规模较大的模块可由用户再拆分给不同执行人。AI 解析、简历评估可先行分配为子项；听记面试评估仍依赖 ATS-020。设置与手册按模块持续维护，ATS-025 最终汇总验收。拆分时保留原验收和来源，避免遗漏跨模块交接。
 
