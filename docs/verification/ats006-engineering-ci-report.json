@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "work_item": "ATS-006",
+  "source_sha": "37e50246f60dd774be464f20b9bb075ccbc48fa1",
+  "working_tree_dirty": true,
+  "summary": "Added API/Worker/Web run scripts, environment examples, Prisma migration workflow and GitHub Actions quality gates for ATS-006.",
+  "command": "npm run db:generate --prefix backend; npm run db:validate --prefix backend (dummy DATABASE_URL); npm run typecheck --prefix backend; npm run lint --prefix backend; npm run build; npm run build:api; git diff --check",
+  "scope": [
+    "package.json",
+    "backend/package.json",
+    "backend/.env.example",
+    "backend/README.md",
+    "backend/src/main.ts",
+    "backend/src/worker.ts",
+    "backend/src/ai/parse.worker.ts",
+    "backend/prisma/migrations/",
+    ".github/workflows/ci.yml",
+    "docs/ats-技术设计与开发环境-v1.0.md",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "verified_at": 1794791584000,
+  "checks": [
+    {
+      "name": "startup_environment_and_migration_contract",
+      "passed": true,
+      "criteria": [
+        "API/Worker/Web 启动约定、无真实密钥的环境示例和可重复初始化/迁移文档可用。"
+      ],
+      "details": "Root scripts expose separate Web, API and Worker startup commands; Worker runs as an application-context process and API does not consume the queue. backend/.env.example contains development placeholders. Two additive migrations are present, db:setup replays migrations and seeds roles/permissions, and existing-database baselining is documented."
+    },
+    {
+      "name": "github_actions_quality_gates_configured",
+      "passed": true,
+      "criteria": [
+        "GitHub Actions 执行类型、Lint、单元/API 测试、各交付端构建、migration 校验和密钥检查；已有迁移不被覆盖。"
+      ],
+      "details": "The workflow provisions ephemeral MySQL 8 and Redis 7, generates Prisma Client, validates schema, applies committed migrations, checks migration status, runs typecheck/Lint/unit/API commands, builds Web/API/Worker outputs, and scans repository history with Gitleaks. The workflow itself was not dispatched in this task. There is no browser-extension project to build yet."
+    },
+    {
+      "name": "local_static_validation_and_build",
+      "passed": true,
+      "criteria": [],
+      "details": "Prisma Client generation and schema validation passed; API/Worker typecheck and Nest build passed; oxlint exited successfully with one existing warning in audit CSV formatting; Web build passed; both backend/dist/main.js and backend/dist/worker.js exist."
+    }
+  ],
+  "limitations": [
+    "Unit and API test suites were not run locally; CI is configured to run them on GitHub.",
+    "No migration was applied to the local MySQL database.",
+    "GitHub branch protection was not changed; it remains a repository-settings step requiring separate authorization.",
+    "The repository does not yet contain the browser extension project."
+  ]
+}

@@ -185,17 +185,17 @@ work_items:
   next_action: "等待用户分配；用户分配后定义存储接口与私有访问契约，使用脱敏附件验证上传、访问和清理。"
 - id: ATS-006
   kind: delivery
-  status: planned
-  owner: null
+  status: in_progress
+  owner: Codex
   goal: ats-foundation
   priority: P0
   title: "工程运行约定、数据库迁移与 CI 门禁"
-  summary: "仅规划，待用户分配后执行。依据：技术设计 §9/§11/§15.3/§16。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "用户于 2026-11-16 明确分配后已实施 API/Worker/Web 启动约定、Prisma 迁移和 GitHub Actions 门禁；本地静态校验与构建通过。未运行测试套件或修改本地数据库。"
   acceptance:
   - "API/Worker/Web 启动约定、无真实密钥的环境示例和可重复初始化/迁移文档可用。"
   - "GitHub Actions 执行类型、Lint、单元/API 测试、各交付端构建、migration 校验和密钥检查；已有迁移不被覆盖。"
   depends_on: [ATS-001]
-  next_action: "等待用户分配；用户分配后核对实际包脚本、迁移目录与现有 CI，再补齐缺失门禁；涉及仓库设置时单独落实权限。"
+  next_action: "仓库内实现已完成；GitHub 分支保护仍需在仓库设置中单独启用，并等待 GitHub Actions 首次执行。"
 - id: ATS-007
   kind: delivery
   status: planned
