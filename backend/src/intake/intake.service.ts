@@ -3,18 +3,24 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   AiRunStatus,
   AiRunType,
   CandidateStage,
+  DataScope,
   IntakeStatus,
   PoolType,
+  SensitiveField,
 } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import type { MockOutcome } from '../ai/ai.types.js';
 import { ParseQueueService } from '../ai/parse.queue.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuthorizationService } from '../auth/authorization.service.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { LocalStorageService } from '../storage/local-storage.service.js';
 import { TimelineService } from '../timeline/timeline.service.js';
 import {
@@ -90,6 +96,7 @@ export class IntakeService {
     private readonly timeline: TimelineService,
     private readonly storage: LocalStorageService,
     private readonly queue: ParseQueueService,
+    private readonly authorization: AuthorizationService,
   ) {}
 
   /** 批量上传 / 单个上传（FR-ENT-3） */
@@ -97,6 +104,7 @@ export class IntakeService {
     files: UploadedResumeFile[],
     body: UploadIntakeBody,
   ): Promise<IntakeResult[]> {
+    const actor = await this.requireActor(body.actorId);
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one resume file is required');
     }
@@ -109,7 +117,7 @@ export class IntakeService {
     this.assertSource(source);
     const jobId = body.jobId?.trim() || null;
     if (jobId) {
-      await this.assertJobExists(jobId);
+      await this.assertJobAccessible(jobId, actor, 'intake:manage');
     }
 
     const results: IntakeResult[] = [];
@@ -120,6 +128,7 @@ export class IntakeService {
             source,
             entryMode,
             jobId,
+            actorId: actor.id,
             errorCode: 'UNSUPPORTED_FORMAT',
             errorMessage: `Unsupported resume format: ${file.originalname}`,
           }),
@@ -136,6 +145,7 @@ export class IntakeService {
           entryMode,
           jobId,
           intentId: body.intentId ?? null,
+          actor,
           mockOutcome: body.mockOutcome,
         }),
       );
@@ -146,6 +156,7 @@ export class IntakeService {
 
   /** 手工录入（FR-ENT-3）：直接产生候选人或待分配池记录 */
   async ingestManual(body: ManualIntakeBody): Promise<IntakeResult> {
+    const actor = await this.requireActor(body.actorId);
     const name = body.name?.trim();
     if (!name) {
       throw new BadRequestException('name is required');
@@ -156,22 +167,36 @@ export class IntakeService {
     if (!phone && !email) {
       throw new BadRequestException('phone or email is required for dedup');
     }
+    await this.authorization.assertSensitiveFieldAccess(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'WRITE',
+    );
 
     const source = body.source ?? INTAKE_SOURCE.MANUAL;
     this.assertSource(source);
     const jobId = body.jobId?.trim() || null;
     if (jobId) {
-      await this.assertJobExists(jobId);
+      await this.assertJobAccessible(jobId, actor, 'intake:manage');
     }
 
     const duplicate = await this.findDuplicateCandidate(phone, email);
     if (duplicate) {
+      const duplicateCandidateId =
+        (await this.authorization.canAccessCandidate(
+          actor,
+          'intake:manage',
+          duplicate.id,
+        ))
+          ? duplicate.id
+          : null;
       const intake = await this.prisma.resumeIntake.create({
         data: {
           source,
           entryMode: ENTRY_MODE.MANUAL,
           status: IntakeStatus.DUPLICATE,
-          duplicateOfCandidateId: duplicate.id,
+          duplicateOfCandidateId: duplicateCandidateId,
+          createdById: actor.id,
           jobId,
           intentId: body.intentId ?? null,
         },
@@ -180,12 +205,16 @@ export class IntakeService {
         entityType: 'ResumeIntake',
         entityId: intake.id,
         action: 'intake.duplicate',
-        actorId: body.actorId ?? null,
-        payload: { candidateId: duplicate.id, entryMode: ENTRY_MODE.MANUAL },
+        actorId: actor.id,
+        payload: {
+          ...(duplicateCandidateId ? { candidateId: duplicateCandidateId } : {}),
+          entryMode: ENTRY_MODE.MANUAL,
+          duplicate: true,
+        },
       });
       return {
         intakeId: intake.id,
-        candidateId: duplicate.id,
+        candidateId: duplicateCandidateId,
         airRunId: null,
         status: intake.status,
         duplicate: true,
@@ -204,6 +233,7 @@ export class IntakeService {
         source,
         entryMode: ENTRY_MODE.MANUAL,
         intentId: body.intentId ?? null,
+        createdById: actor.id,
         appliedAt: new Date(),
       },
     });
@@ -214,6 +244,7 @@ export class IntakeService {
         entryMode: ENTRY_MODE.MANUAL,
         status: IntakeStatus.PARSED,
         candidateId: candidate.id,
+        createdById: actor.id,
         jobId,
         intentId: body.intentId ?? null,
       },
@@ -223,7 +254,7 @@ export class IntakeService {
       entityType: 'Candidate',
       entityId: candidate.id,
       action: 'candidate.entered',
-      actorId: body.actorId ?? null,
+      actorId: actor.id,
       payload: {
         intakeId: intake.id,
         source,
@@ -244,6 +275,7 @@ export class IntakeService {
 
   /** 邮箱自动获取（Mock）：附件入库 → 默认待分配池 → 触发解析（FR-ENT-1/FR-ENT-10） */
   async ingestEmailMock(body: EmailIntakeBody): Promise<IntakeResult[]> {
+    const actor = await this.requireActor(body.actorId);
     const attachments = body.attachments ?? [];
     if (attachments.length === 0) {
       throw new BadRequestException('At least one attachment is required');
@@ -263,7 +295,7 @@ export class IntakeService {
 
     const jobId = body.jobId?.trim() || null;
     if (jobId) {
-      await this.assertJobExists(jobId);
+      await this.assertJobAccessible(jobId, actor, 'intake:manage');
     }
     const receivedAt = body.receivedAt ? new Date(body.receivedAt) : new Date();
     if (Number.isNaN(receivedAt.getTime())) {
@@ -297,6 +329,7 @@ export class IntakeService {
             source: INTAKE_SOURCE.EMAIL,
             entryMode: ENTRY_MODE.EMAIL_AUTO,
             jobId,
+            actorId: actor.id,
             errorCode: 'UNSUPPORTED_FORMAT',
             errorMessage: `Unsupported resume format: ${fileName}`,
             mailFrom: body.from ?? null,
@@ -316,6 +349,7 @@ export class IntakeService {
           entryMode: ENTRY_MODE.EMAIL_AUTO,
           jobId,
           intentId: null,
+          actor,
           mockOutcome: body.mockOutcome,
           mail: {
             from: body.from ?? null,
@@ -331,11 +365,12 @@ export class IntakeService {
 
   /** 分配职位：只选职位，负责人由职位带出（FR-ENT-5） */
   async assignJob(intakeId: string, jobId: string, actorId?: string) {
+    const actor = await this.requireActor(actorId);
     const targetJobId = jobId?.trim();
     if (!targetJobId) {
       throw new BadRequestException('jobId is required');
     }
-    await this.assertJobExists(targetJobId);
+    await this.assertJobAccessible(targetJobId, actor, 'intake:manage');
 
     const intake = await this.prisma.resumeIntake.findUnique({
       where: { id: intakeId },
@@ -343,6 +378,7 @@ export class IntakeService {
     if (!intake) {
       throw new NotFoundException(`Intake ${intakeId} not found`);
     }
+    await this.assertIntakeAccessible(intake, actor, 'intake:manage');
     if (!intake.candidateId) {
       throw new BadRequestException(`Intake ${intakeId} has no candidate`);
     }
@@ -366,7 +402,7 @@ export class IntakeService {
       entityType: 'Candidate',
       entityId: candidate.id,
       action: 'candidate.job_assigned',
-      actorId: actorId ?? null,
+      actorId: actor.id,
       payload: { intakeId: intake.id, jobId: targetJobId },
     });
 
@@ -375,12 +411,14 @@ export class IntakeService {
 
   /** 解析失败后重试（可 Mock 成功/失败，重试不产生重复候选人） */
   async retry(intakeId: string, actorId?: string, mockOutcome?: MockOutcome) {
+    const actor = await this.requireActor(actorId);
     const intake = await this.prisma.resumeIntake.findUnique({
       where: { id: intakeId },
     });
     if (!intake) {
       throw new NotFoundException(`Intake ${intakeId} not found`);
     }
+    await this.assertIntakeAccessible(intake, actor, 'intake:manage');
     if (!intake.airRunId) {
       throw new BadRequestException(`Intake ${intakeId} has no AI run`);
     }
@@ -432,7 +470,7 @@ export class IntakeService {
       entityType: 'ResumeIntake',
       entityId: intake.id,
       action: 'intake.retry_requested',
-      actorId: actorId ?? null,
+      actorId: actor.id,
       payload: { airRunId: intake.airRunId, parseQueued, mockOutcome },
     });
 
@@ -443,37 +481,107 @@ export class IntakeService {
     status?: string;
     entryMode?: string;
     limit?: number;
-  }) {
+  }, actor: AuthenticatedUser) {
     const limit = Math.min(Math.max(Number(query.limit ?? 20), 1), 100);
-    return this.prisma.resumeIntake.findMany({
-      where: {
-        status: query.status
-          ? (query.status as IntakeStatus)
-          : undefined,
-        entryMode: query.entryMode || undefined,
-      },
+    const scopes = this.authorization.scopesFor(actor, 'intake:read');
+    const where: Prisma.ResumeIntakeWhereInput = {
+      status: query.status ? (query.status as IntakeStatus) : undefined,
+      entryMode: query.entryMode || undefined,
+    };
+    if (!scopes.includes(DataScope.ALL)) {
+      const [candidates, jobs] = await Promise.all([
+        this.prisma.candidate.findMany({
+          where: this.authorization.candidateWhere(actor, 'intake:read'),
+          select: { id: true },
+        }),
+        this.prisma.job.findMany({
+          where: this.authorization.jobWhere(actor, 'intake:read'),
+          select: { id: true },
+        }),
+      ]);
+      const clauses: Prisma.ResumeIntakeWhereInput[] = [];
+      if (
+        scopes.includes(DataScope.SELF) ||
+        scopes.includes(DataScope.OWN_JOBS)
+      ) {
+        clauses.push({ createdById: actor.id });
+      }
+      if (candidates.length) {
+        const candidateIds = candidates.map(({ id }) => id);
+        clauses.push(
+          { candidateId: { in: candidateIds } },
+          { duplicateOfCandidateId: { in: candidateIds } },
+        );
+      }
+      if (jobs.length) clauses.push({ jobId: { in: jobs.map(({ id }) => id) } });
+      where.AND = [{ OR: clauses.length ? clauses : [{ id: '__no_access__' }] }];
+    }
+    const items = await this.prisma.resumeIntake.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    return canReadContacts
+      ? items
+      : items.map((intake) => ({ ...intake, mailFrom: null }));
   }
 
-  async get(intakeId: string) {
+  async get(intakeId: string, actor: AuthenticatedUser) {
     const intake = await this.prisma.resumeIntake.findUnique({
       where: { id: intakeId },
-      include: { resumeFile: true },
+      include: {
+        resumeFile: {
+          select: { id: true, fileName: true, mimeType: true, size: true, createdAt: true },
+        },
+      },
     });
     if (!intake) {
       throw new NotFoundException(`Intake ${intakeId} not found`);
     }
-    const [candidate, airRun] = await Promise.all([
+    await this.assertIntakeAccessible(intake, actor, 'intake:read');
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    const [candidate, rawAirRun] = await Promise.all([
       intake.candidateId
-        ? this.prisma.candidate.findUnique({ where: { id: intake.candidateId } })
+        ? this.prisma.candidate.findFirst({
+            where: {
+              AND: [
+                { id: intake.candidateId },
+                this.authorization.candidateWhere(actor, 'intake:read'),
+              ],
+            },
+          })
         : null,
       intake.airRunId
         ? this.prisma.aIRun.findUnique({ where: { id: intake.airRunId } })
         : null,
     ]);
-    return { intake, candidate, airRun };
+    const airRun = intake.candidateId && !candidate ? null : rawAirRun;
+    return {
+      intake: {
+        ...intake,
+        mailFrom: canReadContacts ? intake.mailFrom : null,
+      },
+      candidate:
+        candidate && !canReadContacts
+          ? { ...candidate, phone: null, email: null }
+          : candidate,
+      airRun: airRun
+        ? {
+            ...airRun,
+            inputRefs: this.filterSensitiveOutput(airRun.inputRefs, canReadContacts),
+            output: this.filterSensitiveOutput(airRun.output, canReadContacts),
+          }
+        : null,
+    };
   }
 
   private async createFileIntake(params: {
@@ -483,10 +591,12 @@ export class IntakeService {
     entryMode: string;
     jobId: string | null;
     intentId: string | null;
+    actor: AuthenticatedUser;
     mockOutcome?: MockOutcome;
     mail?: { from: string | null; subject: string | null; receivedAt: Date };
   }): Promise<IntakeResult> {
-    const { file, sha256, source, entryMode, jobId, intentId } = params;
+    const { file, sha256, source, entryMode, jobId, intentId, actor } = params;
+    const actorId = actor.id;
 
     const existingFile = await this.prisma.resumeFile.findUnique({
       where: { sha256 },
@@ -497,13 +607,22 @@ export class IntakeService {
 
     if (existingFile) {
       const previous = existingFile.intakes[0] ?? null;
+      const duplicateCandidateId = previous?.candidateId &&
+        (await this.authorization.canAccessCandidate(
+          actor,
+          'intake:manage',
+          previous.candidateId,
+        ))
+        ? previous.candidateId
+        : null;
       const intake = await this.prisma.resumeIntake.create({
         data: {
           source,
           entryMode,
           status: IntakeStatus.DUPLICATE,
           resumeFileId: existingFile.id,
-          duplicateOfCandidateId: previous?.candidateId ?? null,
+          duplicateOfCandidateId: duplicateCandidateId,
+          createdById: actorId,
           jobId,
           intentId,
           mailFrom: params.mail?.from ?? null,
@@ -515,16 +634,17 @@ export class IntakeService {
         entityType: 'ResumeIntake',
         entityId: intake.id,
         action: 'intake.duplicate',
+        actorId,
         payload: {
           sha256,
           resumeFileId: existingFile.id,
-          candidateId: previous?.candidateId ?? null,
+          candidateId: duplicateCandidateId,
           entryMode,
         },
       });
       return {
         intakeId: intake.id,
-        candidateId: previous?.candidateId ?? null,
+        candidateId: duplicateCandidateId,
         airRunId: null,
         status: intake.status,
         duplicate: true,
@@ -558,6 +678,7 @@ export class IntakeService {
           source,
           entryMode,
           intentId,
+          createdById: actorId,
           appliedAt: new Date(),
         },
       });
@@ -568,6 +689,7 @@ export class IntakeService {
           entryMode,
           status: IntakeStatus.RECEIVED,
           candidateId: candidate.id,
+          createdById: actorId,
           jobId,
           intentId,
           resumeFileId: resumeFile.id,
@@ -610,6 +732,7 @@ export class IntakeService {
       entityType: 'Candidate',
       entityId: created.candidate.id,
       action: 'candidate.entered',
+      actorId,
       payload: {
         intakeId: created.intake.id,
         airRunId: created.airRun.id,
@@ -636,6 +759,7 @@ export class IntakeService {
       source: string;
       entryMode: string;
       jobId: string | null;
+      actorId: string;
       errorCode: string;
       errorMessage: string;
       mailFrom?: string | null;
@@ -648,6 +772,7 @@ export class IntakeService {
         source: params.source,
         entryMode: params.entryMode,
         status: IntakeStatus.FAILED,
+        createdById: params.actorId,
         jobId: params.jobId,
         errorCode: params.errorCode,
         errorMessage: params.errorMessage,
@@ -665,6 +790,7 @@ export class IntakeService {
       entityType: 'ResumeIntake',
       entityId: intake.id,
       action: 'intake.rejected',
+      actorId: params.actorId,
       payload: {
         fileName: file.originalname,
         errorCode: params.errorCode,
@@ -702,10 +828,77 @@ export class IntakeService {
     });
   }
 
-  private async assertJobExists(jobId: string): Promise<void> {
-    const job = await this.prisma.job.findUnique({ where: { id: jobId } });
-    if (!job) {
-      throw new BadRequestException(`Job ${jobId} not found`);
+  private async requireActor(actorId?: string): Promise<AuthenticatedUser> {
+    if (!actorId) throw new UnauthorizedException('需要登录后继续');
+    return this.authorization.loadUserContext(actorId);
+  }
+
+  private async assertJobAccessible(
+    jobId: string,
+    actor: AuthenticatedUser,
+    permission: string,
+  ): Promise<void> {
+    if (!(await this.authorization.canAccessJob(actor, permission, jobId))) {
+      throw new NotFoundException('职位不存在');
+    }
+  }
+
+  private async assertIntakeAccessible(
+    intake: {
+      candidateId: string | null;
+      duplicateOfCandidateId: string | null;
+      jobId: string | null;
+      createdById: string | null;
+    },
+    actor: AuthenticatedUser,
+    permission: string,
+  ): Promise<void> {
+    const scopes = this.authorization.scopesFor(actor, permission);
+    if (scopes.includes(DataScope.ALL)) return;
+
+    if (
+      intake.createdById === actor.id &&
+      (scopes.includes(DataScope.SELF) || scopes.includes(DataScope.OWN_JOBS))
+    ) {
+      return;
+    }
+    for (const candidateId of [intake.candidateId, intake.duplicateOfCandidateId]) {
+      if (
+        candidateId &&
+        (await this.authorization.canAccessCandidate(actor, permission, candidateId))
+      ) {
+        return;
+      }
+    }
+    if (
+      intake.jobId &&
+      (await this.authorization.canAccessJob(actor, permission, intake.jobId))
+    ) {
+      return;
+    }
+    throw new NotFoundException('简历入场记录不存在');
+  }
+
+  private filterSensitiveOutput(
+    output: string | null,
+    canReadContacts: boolean,
+  ): string | null {
+    if (canReadContacts || !output) return output;
+    try {
+      const value: unknown = JSON.parse(output);
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+      const profile = value as Record<string, unknown>;
+      for (const field of ['phone', 'email', 'contactEmail']) {
+        const contact = profile[field];
+        if (typeof contact === 'string') {
+          profile[field] = null;
+        } else if (contact && typeof contact === 'object' && !Array.isArray(contact)) {
+          (contact as Record<string, unknown>).value = null;
+        }
+      }
+      return JSON.stringify(profile);
+    } catch {
+      return null;
     }
   }
 

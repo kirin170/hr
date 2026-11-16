@@ -5,8 +5,10 @@ import { MockModelProvider } from './mock-model.provider.js';
 import { MODEL_PROVIDER } from './model-provider.js';
 import { ParseQueueService } from './parse.queue.js';
 import { ParseWorkerService } from './parse.worker.js';
+import { AuthorizationModule } from '../auth/authorization.module.js';
 
 @Module({
+  imports: [AuthorizationModule],
   controllers: [AiRunController],
   providers: [
     MockModelProvider,

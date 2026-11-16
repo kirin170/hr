@@ -156,17 +156,20 @@ work_items:
   next_action: 等待用户阅读项目路线图并分配具体工作项、负责人和优先顺序；在收到明确分配前不执行业务任务。ATS-002 已完成，ATS-004/006 基础与 ATS-007 需求闭环仅为建议起点。
 - id: ATS-004
   kind: delivery
-  status: planned
+  status: completed
   owner: null
   goal: ats-foundation
   priority: P0
   title: "身份鉴权与三维权限基础"
-  summary: "仅规划，待用户分配后执行。依据：PRD §2、SEC-F1～4、NFR-3/4/8。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "身份鉴权与三维权限基础已完成：JWT/轮换刷新会话、本地身份适配与钉钉身份映射、用户/角色/用户组/部门管理、服务端数据范围、敏感字段授权、审计查询与 CSV 导出均已实现。后端构建、类型检查、Lint、17 项测试和 Prisma Schema 校验通过；验收报告记录了未部署数据库迁移及 ATS-017 钉钉 OAuth 边界。"
   acceptance:
   - "建立用户/角色/用户组及部门数据范围，服务端拒绝越权访问并覆盖允许/拒绝分支。"
   - "联系方式、背调和流水实施字段或附件独立授权，访问与操作日志可追溯且可导出。"
   depends_on: [ATS-002]
-  next_action: "等待用户分配；用户分配后先梳理角色与 API 权限矩阵，明确本地身份适配和钉钉身份映射接口。"
+  evidence: [docs/verification/ats004-auth-authorization-report.json]
+  verification:
+    evidence_level: locally_verified
+  next_action: "无；ATS-004 代码和本地验收完成。部署数据库迁移前核对现有库结构；钉钉 OAuth 授权码接入由 ATS-017 承接。"
 - id: ATS-005
   kind: delivery
   status: planned

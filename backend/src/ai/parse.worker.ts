@@ -13,8 +13,7 @@ import {
 } from './parse.queue.js';
 
 /**
- * 解析 Worker。本期与 API 同进程启动，保持“异步消费 + 重试 + 幂等”的边界；
- * 独立进程部署时复用同一 AiRunService 即可。
+ * 解析 Worker 仅在独立 Worker 进程启动，API 进程不会重复消费队列。
  */
 @Injectable()
 export class ParseWorkerService implements OnModuleInit, OnModuleDestroy {
@@ -24,8 +23,11 @@ export class ParseWorkerService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly aiRunService: AiRunService) {}
 
   onModuleInit(): void {
-    if (process.env.PARSE_WORKER_DISABLED === 'true') {
-      this.logger.warn('Parse worker disabled by PARSE_WORKER_DISABLED');
+    if (
+      process.env.APP_PROCESS_ROLE !== 'worker' ||
+      process.env.PARSE_WORKER_DISABLED === 'true'
+    ) {
+      this.logger.log('Parse worker is disabled for this process');
       return;
     }
 

@@ -5,8 +5,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AiRunStatus, AiRunType, IntakeStatus } from '@prisma/client';
+import { AiRunStatus, AiRunType, IntakeStatus, SensitiveField } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuthorizationService } from '../auth/authorization.service.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { TimelineService } from '../timeline/timeline.service.js';
 import { MODEL_PROVIDER, type ModelProvider } from './model-provider.js';
 import type {
@@ -22,6 +24,7 @@ export class AiRunService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly timeline: TimelineService,
+    private readonly authorization: AuthorizationService,
     @Inject(MODEL_PROVIDER) private readonly provider: ModelProvider,
   ) {}
 
@@ -36,12 +39,18 @@ export class AiRunService {
     });
   }
 
-  async getRun(id: string) {
-    const run = await this.prisma.aIRun.findUnique({ where: { id } });
-    if (!run) {
-      throw new NotFoundException(`AI run ${id} not found`);
-    }
-    return run;
+  async getRun(id: string, actor: AuthenticatedUser, permission = 'ai:read') {
+    const { run } = await this.loadRunInScope(id, actor, permission);
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    return {
+      ...run,
+      inputRefs: this.filterSensitiveJson(run.inputRefs, canReadContacts),
+      output: this.filterSensitiveJson(run.output, canReadContacts),
+    };
   }
 
   /** Worker 消费入口：幂等处理一次解析任务 */
@@ -195,17 +204,14 @@ export class AiRunService {
   }
 
   /** 人工确认草稿后转正式档案（AI-1 / AI-6） */
-  async confirmRun(runId: string, actorId: string | null) {
-    const run = await this.getRun(runId);
+  async confirmRun(runId: string, actor: AuthenticatedUser) {
+    const { run, intake } = await this.loadRunInScope(runId, actor, 'ai:confirm');
     if (run.status !== AiRunStatus.SUCCESS || !run.output) {
       throw new BadRequestException(
         `AI run ${runId} has no successful draft to confirm`,
       );
     }
 
-    const intake = await this.prisma.resumeIntake.findFirst({
-      where: { airRunId: runId },
-    });
     if (!intake?.candidateId) {
       throw new BadRequestException(
         `AI run ${runId} is not linked to a candidate`,
@@ -213,15 +219,26 @@ export class AiRunService {
     }
 
     const draft = JSON.parse(run.output) as ParsedResume;
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id: intake.candidateId },
-    });
-    if (!candidate) {
-      throw new NotFoundException(`Candidate ${intake.candidateId} not found`);
+    if (draft.phone?.value || draft.email?.value) {
+      await this.authorization.assertSensitiveFieldAccess(
+        actor,
+        SensitiveField.CANDIDATE_CONTACT,
+        'WRITE',
+      );
     }
 
-    await this.prisma.$transaction([
-      this.prisma.candidate.update({
+    const candidateId = intake.candidateId;
+    await this.prisma.$transaction(async (tx) => {
+      const candidate = await tx.candidate.findFirst({
+        where: {
+          AND: [
+            { id: candidateId },
+            this.authorization.candidateWhere(actor, 'ai:confirm'),
+          ],
+        },
+      });
+      if (!candidate) throw new NotFoundException('候选人不存在');
+      await tx.candidate.update({
         where: { id: candidate.id },
         data: {
           name: draft.name?.value ?? candidate.name,
@@ -229,26 +246,74 @@ export class AiRunService {
           email: draft.email?.value ?? candidate.email,
           parsedProfileId: run.id,
         },
-      }),
-      this.prisma.aIRun.update({
+      });
+      await tx.aIRun.update({
         where: { id: run.id },
         data: {
           isDraft: false,
-          confirmedBy: actorId,
+          confirmedBy: actor.id,
           confirmedAt: new Date(),
         },
-      }),
-    ]);
+      });
+    });
 
     await this.timeline.record({
       entityType: 'Candidate',
-      entityId: candidate.id,
+      entityId: candidateId,
       action: 'candidate.profile_confirmed',
-      actorId,
+      actorId: actor.id,
       payload: { airRunId: run.id, intakeId: intake.id },
     });
 
-    return this.getRun(runId);
+    return this.getRun(runId, actor, 'ai:confirm');
+  }
+
+  private async loadRunInScope(
+    id: string,
+    actor: AuthenticatedUser,
+    permission: string,
+  ) {
+    const run = await this.prisma.aIRun.findUnique({ where: { id } });
+    if (!run) throw new NotFoundException(`AI run ${id} not found`);
+    const intake = await this.prisma.resumeIntake.findFirst({
+      where: { airRunId: id },
+      select: { id: true, candidateId: true, jobId: true },
+    });
+    if (!intake) throw new NotFoundException(`AI run ${id} not found`);
+
+    const candidateAllowed = intake.candidateId
+      ? await this.authorization.canAccessCandidate(actor, permission, intake.candidateId)
+      : false;
+    const jobAllowed = !candidateAllowed && intake.jobId
+      ? await this.authorization.canAccessJob(actor, permission, intake.jobId)
+      : false;
+    if (!candidateAllowed && !jobAllowed) {
+      throw new NotFoundException(`AI run ${id} not found`);
+    }
+    return { run, intake };
+  }
+
+  private filterSensitiveJson(
+    output: string | null,
+    canReadContacts: boolean,
+  ): string | null {
+    if (canReadContacts || !output) return output;
+    try {
+      const parsed: unknown = JSON.parse(output);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+      const value = parsed as Record<string, unknown>;
+      for (const field of ['phone', 'email', 'contactEmail']) {
+        const contact = value[field];
+        if (contact && typeof contact === 'object' && !Array.isArray(contact)) {
+          (contact as Record<string, unknown>).value = null;
+        } else if (typeof contact === 'string') {
+          value[field] = null;
+        }
+      }
+      return JSON.stringify(value);
+    } catch {
+      return null;
+    }
   }
 
   private parseInput(inputRefs: string | null, intakeId: string) {

@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "work_item": "ATS-004",
+  "source_sha": "41bbeff25dcef9d0afb3d8264e25b8fb8aa83442",
+  "working_tree_dirty": true,
+  "summary": "Implemented JWT access tokens and rotating hashed refresh sessions, a gated local identity adapter and DingTalk identity mapping, initial-admin bootstrap, user/role/group/department administration, functional/data-scope/field-level authorization, contact redaction, and auditable/exportable API operations.",
+  "command": "npm run db:generate --prefix backend; npm run db:validate --prefix backend; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build --prefix backend; node --check backend/prisma/seed.mjs",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/",
+    "backend/prisma/seed.mjs",
+    "backend/src/auth/",
+    "backend/src/audit/",
+    "backend/src/candidates/",
+    "backend/src/intake/",
+    "backend/src/ai/",
+    "backend/src/app.module.ts",
+    "backend/.env.example",
+    "backend/README.md",
+    "docs/ats-技术设计与开发环境-v1.0.md"
+  ],
+  "verified_at": 1794790999000,
+  "checks": [
+    {
+      "name": "schema_typecheck_build_and_lint",
+      "passed": true,
+      "criteria": [],
+      "details": "Prisma Client generated successfully; Prisma schema valid; backend typecheck, oxlint, and Nest build exited successfully. Seed script passed node --check."
+    },
+    {
+      "name": "functional_and_data_scope_allow_deny",
+      "passed": true,
+      "criteria": [
+        "建立用户/角色/用户组及部门数据范围，服务端拒绝越权访问并覆盖允许/拒绝分支。"
+      ],
+      "details": "AuthorizationService tests cover a granted permission, a missing permission rejection, an in-scope candidate allow, and an out-of-scope candidate deny. CandidatesService tests verify the scoped query and not-found behavior for an out-of-scope record."
+    },
+    {
+      "name": "sensitive_field_allow_deny_and_redaction",
+      "passed": true,
+      "criteria": [
+        "联系方式、背调和流水实施字段或附件独立授权，访问与操作日志可追溯且可导出。"
+      ],
+      "details": "AuthorizationService tests cover a user-group read grant and a denied write. CandidatesService verifies phone/email redaction, and IntakeService verifies a missing contact write grant prevents candidate creation. Background material and bank statement grants are represented by the same field-grant model and authorization API."
+    },
+    {
+      "name": "audit_and_export_implementation",
+      "passed": true,
+      "criteria": [
+        "联系方式、背调和流水实施字段或附件独立授权，访问与操作日志可追溯且可导出。"
+      ],
+      "details": "Global AuditInterceptor and AuditService are wired; audited routes record actor, action, resource, request ID, outcome, IP, user agent and a safe summary. Audit API implements permission-guarded filtered listing and CSV export with formula-injection escaping. These paths compiled; no live-database API smoke test was run."
+    }
+  ],
+  "limitations": [
+    "The new migration was validated as source but was not applied to a database; no MySQL/Redis integration smoke test was run.",
+    "DingTalk OAuth authorization-code exchange remains assigned to ATS-017; ATS-004 provides the verified-identity mapping interface.",
+    "Background-material and bank-statement field grants are foundational authorization points; their attachment routes will enforce them when those resources are added."
+  ]
+}

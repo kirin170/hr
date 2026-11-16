@@ -1,132 +1,75 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## 技术栈
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+- NestJS + TypeScript
+- Prisma + MySQL 8
+- BullMQ + Redis 7
+- Vitest / Supertest
 
-## Description
+## 本地运行
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+在仓库根目录安装前后端依赖，并复制无真实密钥的环境模板：
 
-## Project setup
-
-```bash
-$ npm install
+```powershell
+npm ci
+npm ci --prefix backend
+Copy-Item backend/.env.example backend/.env
 ```
 
-## Compile and run the project
+编辑 `backend/.env`，填入本机 MySQL 密码、至少 32 字节的随机 `JWT_ACCESS_SECRET`、`REFRESH_TOKEN_PEPPER` 和 `INITIAL_ADMIN_SECRET`。首次启动先创建空库 `talentflow` 并启动 MySQL、Redis，然后初始化：
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```powershell
+npm run db:setup
 ```
 
-## Run tests
+`db:setup` 会应用迁移并写入默认权限、`ADMIN`、`RECRUITER`、`HIRING_MANAGER` 和 `INTERVIEWER` 角色，不创建任何用户。使用配置的 `INITIAL_ADMIN_SECRET` 调用 `POST /api/v1/auth/bootstrap` 一次性创建管理员，提交成功后从运行环境移除该初始化密钥。此接口由数据库唯一标记保护，重复或并发初始化会被拒绝。示例请求体：
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```json
+{
+  "setupToken": "${INITIAL_ADMIN_SECRET}",
+  "displayName": "系统管理员",
+  "identityProvider": "DINGTALK",
+  "identitySubject": "已核验的钉钉用户 ID"
+}
 ```
 
-## Deployment
+ATS-004 提供钉钉身份映射，不含钉钉 OAuth 授权码交换流程；正式登录接入在 ATS-017。开发时如需本地登录，显式设置 `APP_ENV=local`、`LOCAL_AUTH_ENABLED=true` 和 `LOCAL_AUTH_SECRET`。生产环境不能启用本地身份适配。默认角色不会获得候选人联系方式授权；管理员通过 `/api/v1/authz/field-grants` 按用户或用户组授予独立的读取/写入权限及有效期。
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+受保护 API 使用 `Authorization: Bearer <accessToken>`。访问令牌默认 15 分钟；刷新令牌通过 HttpOnly Cookie 轮换，数据库只保存其 HMAC 哈希。管理员可通过 `/api/v1/authz` 管理用户、角色、部门、用户组和字段授权，通过 `/api/v1/audit-logs` 查询或导出审计记录。
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Web、API、解析 Worker 分别运行在三个终端：
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```powershell
+npm run dev:web
+npm run dev:api
+npm run dev:worker
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+API 和 Worker 使用独立进程；API 不消费解析队列。生产启动命令分别为 `npm --prefix backend run start:prod` 和 `npm --prefix backend run start:worker`。
 
-## Observability
+## 数据库迁移
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+迁移历史保存在 `prisma/migrations`。修改 Schema 后使用 `npm run db:migrate` 创建并应用新迁移；已提交迁移不可覆盖或编辑。CI 和部署使用 `npm run db:migrate:deploy`，空数据库可用 `npm run db:setup` 重复初始化。
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+此前通过 `prisma db push` 建立、但没有迁移历史的数据库需要先备份并比较实际结构。只有数据库结构与 `20261113000000_initial` 完全一致时，才可登记迁移基线：
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
-
-```bash
-$ npx @nestjs/observe link
+```powershell
+Set-Location backend
+npx prisma migrate resolve --applied 20261113000000_initial --schema prisma/schema.prisma
+Set-Location ..
 ```
 
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
+未核对的已有数据库不要直接运行 `db:setup` 或 `db:migrate:deploy`，因为首个迁移会创建全部表。
 
-Or do it by hand:
+## 质量门禁
 
-```bash
-$ npm install @nestjs/observe
+```powershell
+npm run typecheck --prefix backend
+npm run lint --prefix backend
+npm test --prefix backend
+npm run test:e2e --prefix backend
+npm run build:api
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+GitHub Actions 使用临时 MySQL 8 和 Redis 7 执行 Schema 校验、迁移、类型检查、Lint、单元/API 测试、前后端构建及 Gitleaks 密钥扫描。当前仓库尚未包含浏览器扩展工程。

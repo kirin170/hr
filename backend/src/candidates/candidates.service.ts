@@ -4,8 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CandidateStage as DbCandidateStage, Prisma } from '@prisma/client';
+import { CandidateStage as DbCandidateStage, Prisma, SensitiveField } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AuthorizationService } from '../auth/authorization.service.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
 
 const uiStages = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
 type UiStage = (typeof uiStages)[number];
@@ -54,40 +56,62 @@ type CandidateWithJob = Prisma.CandidateGetPayload<{ include: { job: true } }>;
 
 @Injectable()
 export class CandidatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly authorization: AuthorizationService,
+  ) {}
 
-  async list(page = 1, pageSize = 100) {
+  async list(actor: AuthenticatedUser, page = 1, pageSize = 100) {
     const safePage = Number.isInteger(page) && page > 0 ? page : 1;
     const safePageSize = Number.isInteger(pageSize) ? Math.min(Math.max(pageSize, 1), 100) : 100;
+    const where = this.authorization.candidateWhere(actor, 'candidate:read');
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
     const [items, total] = await this.prisma.$transaction([
       this.prisma.candidate.findMany({
+        where,
         include: { job: true },
         orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }],
         skip: (safePage - 1) * safePageSize,
         take: safePageSize,
       }),
-      this.prisma.candidate.count(),
+      this.prisma.candidate.count({ where }),
     ]);
 
     return {
-      items: items.map((candidate) => this.toCandidateDto(candidate)),
+      items: items.map((candidate) => this.toCandidateDto(candidate, canReadContacts)),
       page: safePage,
       pageSize: safePageSize,
       total,
     };
   }
 
-  async get(id: string) {
-    const candidate = await this.prisma.candidate.findUnique({
-      where: { id },
+  async get(id: string, actor: AuthenticatedUser) {
+    const candidate = await this.prisma.candidate.findFirst({
+      where: {
+        AND: [{ id }, this.authorization.candidateWhere(actor, 'candidate:read')],
+      },
       include: { job: true },
     });
     if (!candidate) throw new NotFoundException('候选人不存在');
-    return this.toCandidateDto(candidate);
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    return this.toCandidateDto(candidate, canReadContacts);
   }
 
-  async timeline(id: string) {
-    const exists = await this.prisma.candidate.findUnique({ where: { id }, select: { id: true } });
+  async timeline(id: string, actor: AuthenticatedUser) {
+    const exists = await this.prisma.candidate.findFirst({
+      where: {
+        AND: [{ id }, this.authorization.candidateWhere(actor, 'candidate:read')],
+      },
+      select: { id: true },
+    });
     if (!exists) throw new NotFoundException('候选人不存在');
 
     const events = await this.prisma.timelineEvent.findMany({
@@ -104,9 +128,14 @@ export class CandidatesService {
     }));
   }
 
-  async listJobs() {
+  async listJobs(actor: AuthenticatedUser) {
     return this.prisma.job.findMany({
-      where: { status: 'ACTIVE' },
+      where: {
+        AND: [
+          { status: 'ACTIVE' },
+          this.authorization.jobWhere(actor, 'job:read'),
+        ],
+      },
       select: {
         id: true,
         title: true,
@@ -119,12 +148,36 @@ export class CandidatesService {
     });
   }
 
-  async create(value: unknown) {
+  async create(value: unknown, actor: AuthenticatedUser) {
     const input = this.asRecord<CandidateInput>(value);
     const name = this.requiredText(input.name, '候选人姓名不能为空');
     const jobId = this.optionalText(input.jobId);
     const phone = this.optionalText(input.phone);
     const email = this.optionalText(input.email);
+    if (phone || email) {
+      await this.authorization.assertSensitiveFieldAccess(
+        actor,
+        SensitiveField.CANDIDATE_CONTACT,
+        'WRITE',
+      );
+    }
+    if (jobId) {
+      const authorizedJob = await this.prisma.job.findFirst({
+        where: {
+          AND: [
+            { id: jobId },
+            this.authorization.jobWhere(actor, 'candidate:create'),
+          ],
+        },
+        select: { id: true },
+      });
+      if (!authorizedJob) throw new NotFoundException('职位不存在');
+    }
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
     const source = this.optionalText(input.source) ?? '未知来源';
     const tags = Array.isArray(input.tags) ? input.tags.filter((tag): tag is string => typeof tag === 'string') : [];
     const rating = typeof input.rating === 'number' && Number.isFinite(input.rating)
@@ -153,6 +206,7 @@ export class CandidatesService {
           resumeName: this.optionalText(input.resumeName),
           workHistory: this.workHistory(input.workHistory),
           note: this.optionalText(input.note),
+          createdById: actor.id,
           appliedAt: new Date(),
         },
         include: { job: true },
@@ -162,6 +216,7 @@ export class CandidatesService {
         data: {
           entityType: 'Candidate',
           entityId: candidate.id,
+          actorId: actor.id,
           action: 'candidate.created',
           payload: {
             stage: this.toUiStage(candidate.stage),
@@ -171,11 +226,11 @@ export class CandidatesService {
         },
       });
 
-      return this.toCandidateDto(candidate);
+      return this.toCandidateDto(candidate, canReadContacts);
     });
   }
 
-  async updateStage(id: string, value: unknown) {
+  async updateStage(id: string, value: unknown, actor: AuthenticatedUser) {
     const input = this.asRecord<StageInput>(value);
     if (typeof input.stage !== 'string' || !uiStages.includes(input.stage as UiStage)) {
       throw new BadRequestException(`阶段必须是以下值之一：${uiStages.join(', ')}`);
@@ -184,11 +239,26 @@ export class CandidatesService {
     const nextDbStage = toDatabaseStage[nextUiStage];
 
     return this.prisma.$transaction(async (tx) => {
-      const current = await tx.candidate.findUnique({ where: { id }, include: { job: true } });
+      const current = await tx.candidate.findFirst({
+        where: {
+          AND: [
+            { id },
+            this.authorization.candidateWhere(actor, 'candidate:stage:update'),
+          ],
+        },
+        include: { job: true },
+      });
       if (!current) throw new NotFoundException('候选人不存在');
 
       const currentUiStage = this.toUiStage(current.stage);
-      if (currentUiStage === nextUiStage) return this.toCandidateDto(current);
+      if (currentUiStage === nextUiStage) {
+        const canReadContacts = await this.authorization.canAccessSensitiveField(
+          actor,
+          SensitiveField.CANDIDATE_CONTACT,
+          'READ',
+        );
+        return this.toCandidateDto(current, canReadContacts);
+      }
 
       if (nextUiStage !== 'rejected' && currentUiStage !== 'rejected') {
         const currentOrder = stageOrder[currentUiStage as Exclude<UiStage, 'rejected'>];
@@ -210,6 +280,7 @@ export class CandidatesService {
         data: {
           entityType: 'Candidate',
           entityId: id,
+          actorId: actor.id,
           action: 'candidate.stage_changed',
           payload: {
             from: currentUiStage,
@@ -220,16 +291,21 @@ export class CandidatesService {
         },
       });
 
-      return this.toCandidateDto(updated);
+      const canReadContacts = await this.authorization.canAccessSensitiveField(
+        actor,
+        SensitiveField.CANDIDATE_CONTACT,
+        'READ',
+      );
+      return this.toCandidateDto(updated, canReadContacts);
     });
   }
 
-  private toCandidateDto(candidate: CandidateWithJob) {
+  private toCandidateDto(candidate: CandidateWithJob, canReadContacts: boolean) {
     return {
       id: candidate.id,
       name: candidate.name,
-      phone: candidate.phone ?? '待补充',
-      email: candidate.email ?? '待补充',
+      phone: canReadContacts ? candidate.phone ?? '待补充' : '已隐藏',
+      email: canReadContacts ? candidate.email ?? '待补充' : '已隐藏',
       jobId: candidate.jobId ?? '',
       jobTitle: candidate.job?.title ?? '',
       jobLocation: candidate.job?.location ?? '',

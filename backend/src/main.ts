@@ -9,6 +9,8 @@ for (const envFile of ['.env.local', '.env']) {
   }
 }
 
+process.env.APP_PROCESS_ROLE = 'api';
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors({

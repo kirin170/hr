@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: talentflow_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      APP_ENV: test
+      APP_PORT: 3000
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/talentflow_test
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_ACCESS_SECRET: ci-only-placeholder-secret-at-least-32-bytes-long
+      REFRESH_TOKEN_PEPPER: ci-only-placeholder-pepper-at-least-32-bytes-long
+      AI_PROVIDER: mock
+      STORAGE_DRIVER: local
+      PARSE_WORKER_DISABLED: 'true'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - name: Install web dependencies
+        run: npm ci
+      - name: Install API and Worker dependencies
+        run: npm ci --prefix backend
+      - name: Generate Prisma Client
+        run: npm run db:generate
+      - name: Validate Prisma schema
+        run: npm run db:validate
+      - name: Apply committed migrations to CI database
+        run: npm run db:migrate:deploy
+      - name: Check migration status
+        run: npm run db:migrate:status
+      - name: Type check API and Worker
+        run: npm run typecheck --prefix backend
+      - name: Lint API and Worker
+        run: npm run lint --prefix backend
+      - name: Run unit tests
+        run: npm test --prefix backend
+      - name: Run API tests
+        run: npm run test:e2e --prefix backend
+      - name: Build Web
+        run: npm run build
+      - name: Build API and Worker
+        run: npm run build:api
+      - name: Confirm API and Worker entry points
+        run: |
+          test -f backend/dist/main.js
+          test -f backend/dist/worker.js
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
