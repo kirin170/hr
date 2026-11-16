@@ -6,6 +6,7 @@ const permissions = [
   ['authz:read', '查看角色、用户组和用户'],
   ['authz:admin', '管理用户与角色'],
   ['authz:field-grant:manage', '管理敏感字段授权'],
+  ['organization:sync', '触发钉钉组织架构同步'],
   ['audit:read', '查看审计日志'],
   ['audit:export', '导出审计日志'],
   ['candidate:read', '查看权限范围内候选人'],
@@ -20,6 +21,7 @@ const permissions = [
   ['requisition:sync', '触发钉钉 OA 招聘需求同步'],
   ['intake:read', '查看权限范围内简历入场记录'],
   ['intake:manage', '接收和处理简历入场记录'],
+  ['retention:manage', '查看保留期限并触发到期清理'],
   ['ai:read', '查看权限范围内 AI 解析草稿'],
   ['ai:confirm', '确认 AI 解析草稿'],
 ];

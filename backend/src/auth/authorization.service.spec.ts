@@ -114,4 +114,50 @@ describe('AuthorizationService', () => {
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
+
+  it('judges intake records by data scope for intake and attachment access', async () => {
+    const { authorization, mocks } = makeAuthorization();
+    const record = {
+      candidateId: 'candidate-1',
+      duplicateOfCandidateId: null,
+      jobId: 'job-1',
+      createdById: 'user-2',
+    };
+
+    await expect(
+      authorization.canAccessIntake(
+        actorWith(DataScope.ALL, ['intake:read']),
+        'intake:read',
+        record,
+      ),
+    ).resolves.toBe(true);
+
+    await expect(
+      authorization.canAccessIntake(
+        actorWith(DataScope.SELF, ['intake:read']),
+        'intake:read',
+        { ...record, createdById: 'user-1' },
+      ),
+    ).resolves.toBe(true);
+
+    mocks.candidateFindFirst.mockResolvedValueOnce(null);
+    mocks.jobFindFirst.mockResolvedValueOnce({ id: 'job-1' });
+    await expect(
+      authorization.canAccessIntake(
+        actorWith(DataScope.DEPARTMENT, ['intake:read']),
+        'intake:read',
+        record,
+      ),
+    ).resolves.toBe(true);
+
+    mocks.candidateFindFirst.mockResolvedValueOnce(null);
+    mocks.jobFindFirst.mockResolvedValueOnce(null);
+    await expect(
+      authorization.canAccessIntake(
+        actorWith(DataScope.DEPARTMENT, ['intake:read']),
+        'intake:read',
+        record,
+      ),
+    ).resolves.toBe(false);
+  });
 });

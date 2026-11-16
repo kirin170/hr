@@ -205,6 +205,46 @@ export class AuthorizationService {
     );
   }
 
+  /**
+   * 入场记录的数据范围判定，供简历入场与附件访问共用（ATS-004/ATS-005）。
+   * 调用方已通过权限守卫校验 permission，这里只判定具体记录是否在范围内。
+   */
+  async canAccessIntake(
+    actor: AuthenticatedUser,
+    permission: string,
+    intake: {
+      candidateId: string | null;
+      duplicateOfCandidateId: string | null;
+      jobId: string | null;
+      createdById: string | null;
+    },
+  ): Promise<boolean> {
+    const scopes = this.scopesFor(actor, permission);
+    if (scopes.includes(DataScope.ALL)) return true;
+
+    if (
+      intake.createdById === actor.id &&
+      (scopes.includes(DataScope.SELF) || scopes.includes(DataScope.OWN_JOBS))
+    ) {
+      return true;
+    }
+    for (const candidateId of [intake.candidateId, intake.duplicateOfCandidateId]) {
+      if (
+        candidateId &&
+        (await this.canAccessCandidate(actor, permission, candidateId))
+      ) {
+        return true;
+      }
+    }
+    if (
+      intake.jobId &&
+      (await this.canAccessJob(actor, permission, intake.jobId))
+    ) {
+      return true;
+    }
+    return false;
+  }
+
   async canAccessSensitiveField(
     actor: AuthenticatedUser,
     field: SensitiveField,
@@ -496,7 +536,7 @@ export class AuthorizationService {
     let frontier = [rootId];
     while (frontier.length) {
       const children = await this.prisma.department.findMany({
-        where: { parentId: { in: frontier } },
+        where: { parentId: { in: frontier }, isActive: true },
         select: { id: true },
       });
       frontier = children.map(({ id }) => id).filter((id) => !ids.has(id));

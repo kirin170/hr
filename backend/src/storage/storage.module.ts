@@ -1,9 +1,14 @@
 import { Global, Module } from '@nestjs/common';
-import { LocalStorageService } from './local-storage.service.js';
+import { StorageService, createStorageDriver } from './storage.service.js';
 
 @Global()
 @Module({
-  providers: [LocalStorageService],
-  exports: [LocalStorageService],
+  providers: [
+    {
+      provide: StorageService,
+      useFactory: () => new StorageService(createStorageDriver()),
+    },
+  ],
+  exports: [StorageService],
 })
 export class StorageModule {}

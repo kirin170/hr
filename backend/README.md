@@ -87,6 +87,23 @@ Set-Location ..
 
 周期规则：`cycleDays = max(1, 关闭日期 - 开始招聘日期)`，同日计 1 天、多日按自然日差不累加首尾日；开始招聘时间必填且不可事后补录，已关闭需求需先回退才能修改；未关闭需求显示「进行中 · 已 N 天」且不计入周期汇总；本期不补录的已关闭存量需求 `cycleEligible=false`，不纳入统计。需求提报时间只读、不参与计算。
 
+## 附件存储与生命周期 API
+
+附件只通过私有存储与短期签名链接读取，不提供静态目录或公开 URL。上传统一校验扩展名、声明 MIME 与文件头，并按 `RESUME_MAX_MB` 限制大小；被拒绝的文件写入 `resume_intakes` 并带 `errorCode`（`UNSUPPORTED_FORMAT` / `MIME_MISMATCH` / `CONTENT_MISMATCH` / `FILE_TOO_LARGE` / `EMPTY_FILE`）。
+
+| 方法 | 路径 | 权限 | 说明 |
+|---|---|---|---|
+| GET | `/attachments/:id/read-url` | `intake:read` | 校验数据范围与敏感材料独立授权后签发签名链接（`SIGNED_URL_TTL_SECONDS`，默认 300 秒） |
+| GET | `/attachments/content` | 签名 | 本地驱动回源下载；签名绑定 key、有效期与访问人，过期或篡改返回 403 |
+| GET | `/retention/policy` | `retention:manage` | 当前保留期限配置，用于上线前与业务确认 |
+| POST | `/retention/purge` | `retention:manage` | 到期清理；请求体 `{"dryRun": true}` 时只统计不删除 |
+
+- 驱动：`STORAGE_DRIVER=local` 写入 `LOCAL_STORAGE_DIR`（非 Git 目录）；`oss` 使用阿里云 OSS SDK，Bucket 私有，读操作只返回签名 URL。
+- 对象 key 为 `resumes/<sha256><ext>`，同一文件按内容去重，不重复占用存储。
+- 签发与下载分别写入审计 `attachment.read_url_issued`、`attachment.downloaded`；背调、流水等敏感材料需先授予 `BACKGROUND_MATERIALS` / `BANK_STATEMENTS` 的独立读授权。
+- 清理同时删除对象文件与 `resume_files` 记录，解绑 `resume_intakes.resumeFileId`，并写入 `timeline_events`、`audit_logs` 与 `retention_runs`；对象删除失败时保留结构化记录等待下次重试。
+- 定期执行：构建后 `npm --prefix backend run retention:purge`，开发环境 `npm --prefix backend run retention:purge:dev`，`RETENTION_DRY_RUN=true` 只统计。保留天数默认简历 365 天、敏感材料 180 天，具体数值上线前与业务确认。
+
 ## 质量门禁
 
 ```powershell

@@ -127,7 +127,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | 编号 | 工作包 | 目标 | 优先级 | 前置任务 | 状态/负责人 |
 |---|---|---|---|---|---|
 | ATS-004 | 身份鉴权与三维权限基础 | ats-foundation | P0 | ATS-002 | 待分配 / 未指定 |
-| ATS-005 | 附件私有存储、上传防护与生命周期 | ats-foundation | P0 | ATS-004 | 待分配 / 未指定 |
+| ATS-005 | 附件私有存储、上传防护与生命周期 | ats-foundation | P0 | ATS-004 | 本次用户分配，已完成；验收报告见 `docs/verification/ats005-attachment-storage-report.json` |
 | ATS-006 | 工程运行约定、数据库迁移与 CI 门禁 | ats-foundation | P0 | ATS-001 | 进行中 / Codex |
 | ATS-007 | 职位、HC、招聘需求与周期闭环 | ats-requisition | P0 | ATS-002、ATS-004 | 待分配 / 未指定 |
 | ATS-008 | 补齐简历入场 UI、批量导入与监控 | ats-intake | P0 | ATS-002、ATS-003、ATS-004、ATS-005、ATS-007 | 待分配 / 未指定 |
@@ -171,6 +171,10 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - 敏感材料访问留痕，到期清理覆盖文件与结构化记录；保留期限配置化并在上线前确认。
 
 分配后第一步：用户分配后定义存储接口与私有访问契约，使用脱敏附件验证上传、访问和清理。
+
+实施记录（2026-11-16）：用户当日分配后完成附件私有存储、上传防护与生命周期闭环。新增统一存储接口与驱动（本地磁盘、阿里云 OSS SDK 私有 Bucket），对象 key 为 `resumes/<sha256><ext>`，同一文件按内容去重；新增统一上传校验，扩展名、声明 MIME 与文件头三者一致才入库，超限或类型不符写入带 `errorCode`（`UNSUPPORTED_FORMAT`/`MIME_MISMATCH`/`CONTENT_MISMATCH`/`FILE_TOO_LARGE`/`EMPTY_FILE`）的拒绝记录，上传与邮箱 Mock 附件共用同一套校验。新增 `attachments` 模块：`GET /api/v1/attachments/:id/read-url` 在数据范围与敏感材料独立授权校验通过后签发短期签名链接（`SIGNED_URL_TTL_SECONDS`，默认 300 秒、限制 30～3600 秒），本地驱动通过 `GET /api/v1/attachments/content` 校验签名、有效期与访问人后回源输出，不暴露静态目录；签发与下载分别写入审计 `attachment.read_url_issued`、`attachment.downloaded`。数据范围判定收敛到 `AuthorizationService.canAccessIntake`，越权按 404 处理以免泄露附件存在性。新增 `retention` 模块与独立入口 `retention.runner`：到期清理同时删除对象文件、`resume_files` 记录、解绑 `resume_intakes.resumeFileId`，并写入时间线、审计与 `retention_runs` 批次；对象删除失败时保留结构化记录等待重试；保留期限通过 `RETENTION_RESUME_DAYS`/`RETENTION_SENSITIVE_DAYS` 配置（默认 365/180 天），新增权限 `retention:manage`。迁移 `20261116040000_attachment_lifecycle` 已加入。验证：后端类型检查与 Lint 通过，单元测试 78 项通过（新增 23 项）；在临时 MySQL 库 `talentflow_ats005` 上应用全部迁移后完成 23 项接口校验（上传防护、签名链接篡改/过期/越权、敏感材料授权、dry-run 与真实清理、审计与时间线），验证后删除临时库，未改动本地 `talentflow` 库。限制：OSS 驱动未连接真实 Bucket 验证（无测试凭据）；本机 `nest build` 因 Windows 回收站/安全删除守卫无法删除 `dist`，改用等价 `nest build` 配置输出到临时目录确认构建通过；保留期限默认值仍待业务确认；前端附件入口与预览由 ATS-008 承接。
+
+验收结果：ATS-005 已完成（2026-11-16）。验收报告：`docs/verification/ats005-attachment-storage-report.json`。
 
 ### ATS-006 工程运行约定、数据库迁移与 CI 门禁
 

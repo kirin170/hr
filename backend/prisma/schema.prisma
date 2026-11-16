@@ -375,16 +375,24 @@ model TimelineEvent {
 
 /// 简历附件：按内容 SHA-256 去重，相同文件不重复占用存储（PRD §6.4）
 model ResumeFile {
-  id         String   @id @default(cuid())
-  sha256     String   @unique
-  fileName   String
-  mimeType   String
-  size       Int
-  storageKey String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  intakes    ResumeIntake[]
+  id             String   @id @default(cuid())
+  sha256         String   @unique
+  fileName       String
+  mimeType       String
+  size           Int
+  storageKey     String
+  /// 写入时的存储驱动，便于迁移期间区分本地与 OSS 对象
+  storageDriver  String   @default("local")
+  /// 敏感材料分类：空为普通简历；背调/流水按独立授权访问（NFR-4）
+  category       SensitiveField?
+  /// 到期时间，由保留期限配置在写入时计算（NFR-2）
+  expiresAt      DateTime?
+  lastAccessedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  intakes        ResumeIntake[]
 
+  @@index([expiresAt])
   @@map("resume_files")
 }
 
@@ -487,6 +495,7 @@ model Department {
   id        String       @id @default(cuid())
   code      String       @unique
   name      String
+  isActive  Boolean      @default(true)
   parentId  String?
   parent    Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
   children  Department[] @relation("DepartmentTree")
@@ -673,4 +682,38 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 
   @@map("system_settings")
+}
+
+model DingTalkSyncEvent {
+  id          String    @id @default(cuid())
+  eventId     String    @unique
+  eventType   String
+  subjectId   String?
+  corpId      String
+  status      String    @default("RECEIVED")
+  attempts    Int       @default(0)
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+  lastError   String?
+
+  @@index([status, receivedAt])
+  @@map("dingtalk_sync_events")
+}
+
+/// 附件与结构化记录的到期清理批次（NFR-2；保留期限配置化，具体天数上线前确认）
+model RetentionRun {
+  id              String   @id @default(cuid())
+  scope           String
+  cutoff          DateTime
+  scanned         Int      @default(0)
+  expired         Int      @default(0)
+  deletedFiles    Int      @default(0)
+  detachedIntakes Int      @default(0)
+  failedDeletes   Int      @default(0)
+  dryRun          Boolean  @default(false)
+  actorId         String?
+  createdAt       DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("retention_runs")
 }

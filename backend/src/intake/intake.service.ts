@@ -21,15 +21,19 @@ import { ParseQueueService } from '../ai/parse.queue.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
-import { LocalStorageService } from '../storage/local-storage.service.js';
-import { TimelineService } from '../timeline/timeline.service.js';
+import { expiryFor, loadRetentionPolicy } from '../retention/retention.config.js';
+import { StorageService } from '../storage/storage.service.js';
+import { buildResumeStorageKey } from '../storage/storage.types.js';
 import {
-  isSupportedResumeFile,
-  normalizeEmail,
-  normalizePhone,
-} from './dedup.util.js';
+  resumeMaxBytes,
+  validateUpload,
+  type UploadValidationResult,
+} from '../storage/upload-validation.js';
+import { TimelineService } from '../timeline/timeline.service.js';
+import { normalizeEmail, normalizePhone } from './dedup.util.js';
 import {
   ALLOWED_ENTRY_MODES,
+  ALLOWED_RESUME_EXTENSIONS,
   ALLOWED_SOURCES,
   ENTRY_MODE,
   INTAKE_SOURCE,
@@ -85,6 +89,9 @@ export interface IntakeResult {
   status: IntakeStatus;
   duplicate: boolean;
   parseQueued: boolean;
+  /** 上传校验或解析失败时的明确错误码（NFR-11） */
+  errorCode?: string | null;
+  errorMessage?: string | null;
 }
 
 @Injectable()
@@ -94,7 +101,7 @@ export class IntakeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly timeline: TimelineService,
-    private readonly storage: LocalStorageService,
+    private readonly storage: StorageService,
     private readonly queue: ParseQueueService,
     private readonly authorization: AuthorizationService,
   ) {}
@@ -121,16 +128,26 @@ export class IntakeService {
     }
 
     const results: IntakeResult[] = [];
+    const limits = this.uploadLimits();
     for (const file of files) {
-      if (!isSupportedResumeFile(file.originalname)) {
+      const validation = validateUpload(
+        {
+          fileName: file.originalname,
+          mimeType: file.mimetype,
+          size: file.size,
+          buffer: file.buffer,
+        },
+        limits,
+      );
+      if (!validation.ok) {
         results.push(
           await this.recordRejectedFile(file, {
             source,
             entryMode,
             jobId,
             actorId: actor.id,
-            errorCode: 'UNSUPPORTED_FORMAT',
-            errorMessage: `Unsupported resume format: ${file.originalname}`,
+            errorCode: validation.code,
+            errorMessage: validation.message,
           }),
         );
         continue;
@@ -140,6 +157,7 @@ export class IntakeService {
       results.push(
         await this.createFileIntake({
           file,
+          validated: validation,
           sha256,
           source,
           entryMode,
@@ -303,6 +321,7 @@ export class IntakeService {
     }
 
     const results: IntakeResult[] = [];
+    const limits = this.uploadLimits();
     for (const attachment of attachments) {
       const fileName = attachment.fileName?.trim();
       if (!fileName || !attachment.contentBase64) {
@@ -323,15 +342,24 @@ export class IntakeService {
         buffer,
       };
 
-      if (!isSupportedResumeFile(fileName)) {
+      const validation = validateUpload(
+        {
+          fileName,
+          mimeType: file.mimetype,
+          size: file.size,
+          buffer,
+        },
+        limits,
+      );
+      if (!validation.ok) {
         results.push(
           await this.recordRejectedFile(file, {
             source: INTAKE_SOURCE.EMAIL,
             entryMode: ENTRY_MODE.EMAIL_AUTO,
             jobId,
             actorId: actor.id,
-            errorCode: 'UNSUPPORTED_FORMAT',
-            errorMessage: `Unsupported resume format: ${fileName}`,
+            errorCode: validation.code,
+            errorMessage: validation.message,
             mailFrom: body.from ?? null,
             mailSubject: body.subject ?? null,
             receivedAt,
@@ -344,6 +372,7 @@ export class IntakeService {
       results.push(
         await this.createFileIntake({
           file,
+          validated: validation,
           sha256,
           source: INTAKE_SOURCE.EMAIL,
           entryMode: ENTRY_MODE.EMAIL_AUTO,
@@ -586,6 +615,7 @@ export class IntakeService {
 
   private async createFileIntake(params: {
     file: UploadedResumeFile;
+    validated: Extract<UploadValidationResult, { ok: true }>;
     sha256: string;
     source: string;
     entryMode: string;
@@ -595,7 +625,7 @@ export class IntakeService {
     mockOutcome?: MockOutcome;
     mail?: { from: string | null; subject: string | null; receivedAt: Date };
   }): Promise<IntakeResult> {
-    const { file, sha256, source, entryMode, jobId, intentId, actor } = params;
+    const { file, validated, sha256, source, entryMode, jobId, intentId, actor } = params;
     const actorId = actor.id;
 
     const existingFile = await this.prisma.resumeFile.findUnique({
@@ -652,20 +682,23 @@ export class IntakeService {
       };
     }
 
-    const storageKey = await this.storage.putObject(
-      sha256,
-      file.originalname,
-      file.buffer,
-    );
+    const storageKey = buildResumeStorageKey(sha256, validated.extension);
+    await this.storage.putObject({
+      key: storageKey,
+      body: file.buffer,
+      contentType: validated.mimeType,
+    });
 
     const created = await this.prisma.$transaction(async (tx) => {
       const resumeFile = await tx.resumeFile.create({
         data: {
           sha256,
           fileName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
+          mimeType: validated.mimeType,
+          size: validated.size,
           storageKey,
+          storageDriver: this.storage.driverName,
+          expiresAt: expiryFor(new Date(), null, loadRetentionPolicy()),
         },
       });
 
@@ -805,6 +838,8 @@ export class IntakeService {
       status: intake.status,
       duplicate: false,
       parseQueued: false,
+      errorCode: params.errorCode,
+      errorMessage: params.errorMessage,
     };
   }
 
@@ -853,30 +888,16 @@ export class IntakeService {
     actor: AuthenticatedUser,
     permission: string,
   ): Promise<void> {
-    const scopes = this.authorization.scopesFor(actor, permission);
-    if (scopes.includes(DataScope.ALL)) return;
+    if (!(await this.authorization.canAccessIntake(actor, permission, intake))) {
+      throw new NotFoundException('简历入场记录不存在');
+    }
+  }
 
-    if (
-      intake.createdById === actor.id &&
-      (scopes.includes(DataScope.SELF) || scopes.includes(DataScope.OWN_JOBS))
-    ) {
-      return;
-    }
-    for (const candidateId of [intake.candidateId, intake.duplicateOfCandidateId]) {
-      if (
-        candidateId &&
-        (await this.authorization.canAccessCandidate(actor, permission, candidateId))
-      ) {
-        return;
-      }
-    }
-    if (
-      intake.jobId &&
-      (await this.authorization.canAccessJob(actor, permission, intake.jobId))
-    ) {
-      return;
-    }
-    throw new NotFoundException('简历入场记录不存在');
+  private uploadLimits() {
+    return {
+      maxBytes: resumeMaxBytes(),
+      allowedExtensions: ALLOWED_RESUME_EXTENSIONS,
+    };
   }
 
   private filterSensitiveOutput(

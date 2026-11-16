@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "work_item": "ATS-005",
+  "date": "2026-11-16",
+  "verified_at": 1794813832030,
+  "source_sha": "f202f741edd79ebdced8dd676978e1041314cba1",
+  "working_tree_dirty": true,
+  "summary": "Implemented private attachment storage with local and Aliyun OSS drivers, unified upload validation, signed read URLs with issuance/download auditing, sensitive-material grants, and configurable retention that purges objects plus structured records.",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npx prisma validate; npx prisma migrate deploy on a temporary MySQL database talentflow_ats005; npx nest build with a temporary no-delete output directory; node smoke-ats005.mjs against a temporary API instance on port 3111 (23 HTTP checks).",
+  "scope": [
+    "backend/src/storage/storage.types.ts",
+    "backend/src/storage/local-storage.driver.ts",
+    "backend/src/storage/oss-storage.driver.ts",
+    "backend/src/storage/storage.service.ts",
+    "backend/src/storage/upload-validation.ts",
+    "backend/src/storage/storage.module.ts",
+    "backend/src/attachments/",
+    "backend/src/retention/",
+    "backend/src/retention.runner.ts",
+    "backend/src/auth/authorization.service.ts",
+    "backend/src/intake/intake.service.ts",
+    "backend/src/intake/intake.controller.ts",
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261116040000_attachment_lifecycle/",
+    "backend/prisma/seed.mjs",
+    "backend/.env.example",
+    "backend/README.md",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "checks": [
+    {
+      "name": "unified_upload_validation",
+      "passed": true,
+      "criteria": [
+        "统一上传校验类型、大小和内容；OSS 私有读及短期签名链接校验有效期和访问权限。"
+      ],
+      "details": "Extension, declared MIME and magic bytes must agree before storage; rejected files persist an intake row with errorCode. Unit tests cover PDF/DOC/DOCX/PNG/JPEG/WEBP, empty, oversize, unsupported, MIME mismatch and content mismatch. HTTP smoke returned CONTENT_MISMATCH, MIME_MISMATCH and UNSUPPORTED_FORMAT for fake inputs."
+    },
+    {
+      "name": "private_storage_and_signed_read",
+      "passed": true,
+      "criteria": [
+        "统一上传校验类型、大小和内容；OSS 私有读及短期签名链接校验有效期和访问权限。"
+      ],
+      "details": "Objects stored under resumes/<sha256><ext> outside Git; GET /attachments/:id/read-url returned a local-driver URL bound to key, expiry (120s in smoke) and actor. Tampered signature, replaced actor and expired link all returned 403; the valid link served application/pdf with Cache-Control private, no-store."
+    },
+    {
+      "name": "access_control_and_sensitive_material",
+      "passed": true,
+      "criteria": [
+        "敏感材料访问留痕，到期清理覆盖文件与结构化记录；保留期限配置化并在上线前确认。"
+      ],
+      "details": "A second RECRUITER user outside the intake data scope received 404 for the attachment; marking the file BANK_STATEMENTS made issuance return 403 until a read field grant existed, then 200. Audit actions attachment.read_url_issued, attachment.downloaded and retention.purge were all present in audit_logs."
+    },
+    {
+      "name": "retention_lifecycle",
+      "passed": true,
+      "criteria": [
+        "敏感材料访问留痕，到期清理覆盖文件与结构化记录；保留期限配置化并在上线前确认。"
+      ],
+      "details": "GET /retention/policy exposed configurable days. Dry run reported expired=1 with deletedFiles=0 and left the row intact; the real purge deleted the object file, removed the resume_files row, detached resume_intakes.resumeFileId, wrote retention_runs, timeline attachment.purged and audit retention.purge. Object delete failure keeps the structured record for retry (unit test)."
+    },
+    {
+      "name": "quality_gates",
+      "passed": true,
+      "criteria": [
+        "统一上传校验类型、大小和内容；OSS 私有读及短期签名链接校验有效期和访问权限。"
+      ],
+      "details": "Prisma schema valid; all migrations applied to a fresh MySQL database; backend typecheck and oxlint (77 files, 0 warnings) passed; 78 unit tests passed (23 new); nest build with a temporary no-delete output directory emitted retention.runner.js and attachments controller."
+    }
+  ],
+  "limitations": [
+    "The Aliyun OSS driver was not exercised against a real bucket because no test credentials are available; only the local disk driver was verified end to end.",
+    "npm run build (nest build with deleteOutDir) fails on this Windows machine because the trash/safe-delete guard cannot remove dist while a dev watcher holds it; the build was verified with an equivalent nest build configuration writing to a temporary output directory.",
+    "Retention defaults (365 days for resumes, 180 days for background/bank materials) still require business confirmation before go-live.",
+    "Frontend attachment entry and preview remain in ATS-008 scope; only backend contracts and the local signed download were verified.",
+    "Temporary verification artifacts (dist-check, dist-verify, backend/.storage-verify) could not be removed because the environment safe-delete guard rejected the deletion; they are untracked and excluded from the commit."
+  ]
+}

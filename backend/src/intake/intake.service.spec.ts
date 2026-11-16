@@ -4,7 +4,7 @@ import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { ParseQueueService } from '../ai/parse.queue.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { LocalStorageService } from '../storage/local-storage.service.js';
+import { StorageService } from '../storage/storage.service.js';
 import { TimelineService } from '../timeline/timeline.service.js';
 import { IntakeService } from './intake.service.js';
 
@@ -31,7 +31,7 @@ describe('IntakeService sensitive-field authorization', () => {
     const service = new IntakeService(
       prisma,
       {} as TimelineService,
-      {} as LocalStorageService,
+      {} as StorageService,
       {} as ParseQueueService,
       authorization,
     );

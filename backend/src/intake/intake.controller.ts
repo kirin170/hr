@@ -11,6 +11,7 @@ import {
 import { AuditAction, CurrentUser, RequirePermission } from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { resumeMaxBytes } from '../storage/upload-validation.js';
 import { IntakeService } from './intake.service.js';
 import type {
   EmailIntakeBody,
@@ -19,7 +20,8 @@ import type {
   UploadedResumeFile,
 } from './intake.service.js';
 
-const MAX_RESUME_BYTES = Number(process.env.RESUME_MAX_MB ?? 20) * 1024 * 1024;
+/** 传输层保护（进程环境变量在模块加载时读取）；业务侧限制由统一上传校验按配置再校验一次。 */
+const MAX_RESUME_BYTES = resumeMaxBytes();
 
 @Controller('api/v1/intake')
 export class IntakeController {

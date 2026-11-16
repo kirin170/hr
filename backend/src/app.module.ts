@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { AiModule } from './ai/ai.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
+import { AttachmentsModule } from './attachments/attachments.module.js';
 import { CandidatesModule } from './candidates/candidates.module.js';
 import { IntakeModule } from './intake/intake.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { RequisitionsModule } from './requisitions/requisitions.module.js';
+import { RetentionModule } from './retention/retention.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { StorageModule } from './storage/storage.module.js';
 import { TimelineModule } from './timeline/timeline.module.js';
@@ -26,6 +28,8 @@ import { AuditModule } from './audit/audit.module.js';
     CandidatesModule,
     JobsModule,
     RequisitionsModule,
+    AttachmentsModule,
+    RetentionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
