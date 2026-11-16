@@ -55,9 +55,9 @@ jobs:
             package-lock.json
             backend/package-lock.json
       - name: Install web dependencies
-        run: npm install --include=optional --no-audit --no-fund
+        run: npm ci
       - name: Install API and Worker dependencies
-        run: npm install --include=optional --no-audit --no-fund --prefix backend
+        run: npm ci --prefix backend
       - name: Generate Prisma Client
         run: npm run db:generate
       - name: Validate Prisma schema

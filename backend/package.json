@@ -41,6 +41,10 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },
+  "optionalDependencies": {
+    "@oxlint/binding-linux-x64-gnu": "1.93.0",
+    "@oxlint-tsgolint/linux-x64": "7.0.2006"
+  },
   "devDependencies": {
     "@nestjs/cli": "^12.0.0",
     "@nestjs/mau": "^0.2.6",
