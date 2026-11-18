@@ -673,7 +673,8 @@ model User {
   id                 String             @id @default(cuid())
   employeeNo         String?            @unique
   displayName        String
-  email              String?            @unique
+  /// Contact email; duplicates are allowed and must not be used as an identity key.
+  email              String?
   status             UserStatus         @default(ACTIVE)
   departmentId       String?
   department         Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)

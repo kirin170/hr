@@ -424,16 +424,6 @@ export class DingTalkSyncService {
         ...retainedLocalDepartments,
       ])];
 
-      const emailOwner = email
-        ? await tx.user.findUnique({ where: { email }, select: { id: true } })
-        : null;
-      if (emailOwner && user && emailOwner.id !== user.id) {
-        throw new ConflictException('钉钉邮箱与另一位 ATS 用户冲突，需管理员处理');
-      }
-      if (emailOwner && !user) {
-        throw new ConflictException('钉钉邮箱与未映射的 ATS 用户冲突，需管理员处理');
-      }
-
       const beforeDepartmentIds = user?.departmentMemberships
         .map(({ departmentId }) => departmentId)
         .sort() ?? [];
@@ -453,9 +443,7 @@ export class DingTalkSyncService {
           data: {
             displayName: name,
             employeeNo: employeeNo ?? user.employeeNo,
-            email: !email || (emailOwner && emailOwner.id !== user.id)
-              ? user.email
-              : email,
+            email: email ?? user.email,
             status: UserStatus.ACTIVE,
             departmentId: primaryDepartmentId,
           },
@@ -472,7 +460,7 @@ export class DingTalkSyncService {
           data: {
             employeeNo: employeeNo ?? undefined,
             displayName: name,
-            email: emailOwner ? undefined : email ?? undefined,
+            email: email ?? undefined,
             status: UserStatus.ACTIVE,
             departmentId: primaryDepartmentId,
           },
