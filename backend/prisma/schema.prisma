@@ -88,10 +88,11 @@ model Candidate {
   poolType        PoolType @default(NONE)
   stage           CandidateStage @default(UNASSIGNED)
   source          String?
+  channel         String?
   entryMode       String?
   browserImportTaskId String?
   intentId        String?
-  tags            String?
+    tags            String?  @db.Text
   rating          Int?
   experience      String?
   education       String?
@@ -103,12 +104,14 @@ model Candidate {
   workHistory     Json?
   note            String?  @db.Text
   archiveReasonId String?
+  archiveReasonText String? @db.Text
   lockedState     LockedState @default(NONE)
   parsedProfileId String?
   appliedAt       DateTime?
   createdById     String?
   createdBy       User?    @relation("CandidateCreator", fields: [createdById], references: [id], onDelete: SetNull)
   interviews      Interview[]
+  departmentScreenings CandidateDepartmentScreening[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   job             Job? @relation(fields: [jobId], references: [id])
@@ -149,6 +152,45 @@ enum LockedState {
   INOPERABLE
 
   @@map("locked_state")
+}
+
+enum DepartmentScreeningResult {
+  PASS
+  HOLD
+  REJECT
+
+  @@map("department_screening_result")
+}
+
+model CandidateDepartmentScreening {
+  id                String   @id @default(cuid())
+  candidateId       String
+  reviewerId        String?
+  result            DepartmentScreeningResult
+  reason            String?  @db.Text
+  availabilitySlots Json?
+  revokedAt         DateTime?
+  createdAt         DateTime @default(now())
+  candidate         Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  reviewer          User? @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([candidateId, result, revokedAt])
+  @@index([reviewerId, candidateId])
+  @@map("candidate_department_screenings")
+}
+
+model SavedCandidateFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId, updatedAt])
+  @@map("saved_candidate_filters")
 }
 
 model Interview {
@@ -643,6 +685,8 @@ model User {
   issuedFieldGrants   FieldAccessGrant[] @relation("FieldGrantIssuer")
   refreshSessions     RefreshSession[]
   createdCandidates   Candidate[]        @relation("CandidateCreator")
+  departmentScreenings CandidateDepartmentScreening[]
+  savedCandidateFilters SavedCandidateFilter[]
   createdIntakes      ResumeIntake[]      @relation("IntakeCreator")
   excelImportBatches  ExcelImportBatch[]  @relation("ExcelImportCreator")
   auditLogs           AuditLog[]          @relation("AuditActor")
