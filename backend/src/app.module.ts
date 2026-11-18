@@ -4,6 +4,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { CandidatesModule } from './candidates/candidates.module.js';
+import { DingTalkModule } from './dingtalk/dingtalk.module.js';
 import { IntakeModule } from './intake/intake.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { RequisitionsModule } from './requisitions/requisitions.module.js';
@@ -30,6 +31,7 @@ import { AuditModule } from './audit/audit.module.js';
     RequisitionsModule,
     AttachmentsModule,
     RetentionModule,
+    DingTalkModule,
   ],
   controllers: [AppController],
   providers: [AppService],

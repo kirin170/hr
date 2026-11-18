@@ -101,6 +101,45 @@ try {
     });
   }
 
+  if (process.env.APP_ENV === 'local' && process.env.LOCAL_AUTH_ENABLED === 'true') {
+    const identifier = process.env.LOCAL_ADMIN_IDENTIFIER?.trim() || 'admin';
+    const adminUser = await prisma.user.upsert({
+      where: { employeeNo: 'LOCAL-ADMIN' },
+      create: {
+        employeeNo: 'LOCAL-ADMIN',
+        displayName: '本地管理员',
+        status: 'ACTIVE',
+      },
+      update: { displayName: '本地管理员', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    await prisma.identityLink.upsert({
+      where: { provider_subject: { provider: 'LOCAL', subject: identifier } },
+      create: {
+        provider: 'LOCAL',
+        subject: identifier,
+        userId: adminUser.id,
+        verifiedAt: new Date(),
+      },
+      update: { userId: adminUser.id, verifiedAt: new Date() },
+    });
+    const adminRole = await prisma.role.findUniqueOrThrow({
+      where: { code: 'ADMIN' },
+      select: { id: true },
+    });
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+      create: { userId: adminUser.id, roleId: adminRole.id },
+      update: {},
+    });
+    await prisma.systemSetting.upsert({
+      where: { key: 'auth.initial-admin-created-at' },
+      create: { key: 'auth.initial-admin-created-at', value: new Date().toISOString() },
+      update: {},
+    });
+    console.info(`Seeded local administrator "${identifier}" (password comes from LOCAL_AUTH_SECRET).`);
+  }
+
   console.info(`Seeded ${permissions.length} permissions and ${roles.length} roles.`);
 } finally {
   await prisma.$disconnect();

@@ -17,6 +17,7 @@ async function bootstrap() {
     origin: process.env.EXTENSION_ALLOWED_ORIGINS?.split(',') ?? true,
   });
   app.enableShutdownHooks();
-  await app.listen(process.env.APP_PORT ?? process.env.PORT ?? 3000);
+  const host = process.env.APP_ENV === 'local' ? '127.0.0.1' : '0.0.0.0';
+  await app.listen(process.env.APP_PORT ?? process.env.PORT ?? 3000, host);
 }
 await bootstrap();

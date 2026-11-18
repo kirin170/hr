@@ -619,6 +619,7 @@ model Department {
   parent    Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
   children  Department[] @relation("DepartmentTree")
   users     User[]
+  memberships UserDepartment[]
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
@@ -634,6 +635,7 @@ model User {
   status             UserStatus         @default(ACTIVE)
   departmentId       String?
   department         Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentMemberships UserDepartment[]
   identityLinks      IdentityLink[]
   roleAssignments    UserRole[]
   groupMemberships   UserGroupMember[]
@@ -649,6 +651,20 @@ model User {
 
   @@index([departmentId, status])
   @@map("users")
+}
+
+/// 钉钉用户可属于多个部门；departmentId 仍保留为主部门以兼容现有业务。
+model UserDepartment {
+  userId       String
+  departmentId String
+  isPrimary    Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, departmentId])
+  @@index([departmentId, userId])
+  @@map("user_departments")
 }
 
 model IdentityLink {

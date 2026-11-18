@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { ArrowRight, ShieldCheck } from 'lucide-react'
 import { loginLocal, startDingTalkLogin } from './api'
-import { getLocalPreviewCredentials } from './localPreview'
 
 type DingTalkLoginProps = {
   onAuthenticated: () => void
@@ -9,9 +8,8 @@ type DingTalkLoginProps = {
 
 export function DingTalkLogin({ onAuthenticated }: DingTalkLoginProps) {
   const isLocalPreview = import.meta.env.DEV
-  const previewCredentials = getLocalPreviewCredentials()
-  const [identifier, setIdentifier] = useState(previewCredentials?.identifier ?? '')
-  const [secret, setSecret] = useState(previewCredentials?.secret ?? '')
+  const [identifier, setIdentifier] = useState(isLocalPreview ? 'admin' : '')
+  const [secret, setSecret] = useState(isLocalPreview ? 'admin' : '')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -35,7 +33,7 @@ export function DingTalkLogin({ onAuthenticated }: DingTalkLoginProps) {
       <p className="dingtalk-login-eyebrow">TalentFlow ATS</p>
       <h1>{isLocalPreview ? '账号密码登录' : '使用钉钉登录'}</h1>
       {isLocalPreview ? <>
-        <p className="dingtalk-login-copy">使用本地演示账号浏览招聘工作台，无需启动后端或配置钉钉凭证。页面使用预置样例数据。</p>
+        <p className="dingtalk-login-copy">本机开发环境可使用预填的管理员账号登录，也可使用企业钉钉账号授权。</p>
         <form className="local-login-form" onSubmit={handleLocalLogin}>
           <label>
             账号
@@ -68,7 +66,7 @@ export function DingTalkLogin({ onAuthenticated }: DingTalkLoginProps) {
         前往钉钉授权 <ArrowRight size={16} />
       </button>
       <p className="dingtalk-login-footnote">{isLocalPreview
-        ? '本地演示仅在开发预览中启用；演示修改不会写入数据库。'
+        ? '本地管理员账号需要先初始化开发数据库；钉钉登录需配置企业应用凭据。'
         : '仅接受已同步并完成 ATS 身份映射的企业账号。'}</p>
     </section>
   </main>

@@ -26,9 +26,6 @@ import type {
   SavedCandidateFilter,
   SourceRecordList,
 } from './types'
-import { getLocalPreviewCredentials, getLocalPreviewSessionToken, isLocalPreviewSession } from './localPreview'
-import { departments as demoDepartments, jobs as demoJobs, seedCandidates } from './data'
-
 const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 const authApiBase = (import.meta.env.VITE_AUTH_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const tokenKey = 'talentflow.accessToken'
@@ -36,7 +33,12 @@ let refreshInFlight: Promise<string | null> | null = null
 
 export function getAccessToken(): string | null {
   try {
-    return window.localStorage.getItem(tokenKey)
+    const token = window.localStorage.getItem(tokenKey)
+    if (token === 'local-preview-session') {
+      window.localStorage.removeItem(tokenKey)
+      return null
+    }
+    return token
   } catch {
     return null
   }
@@ -80,19 +82,6 @@ export function startDingTalkLogin(): void {
 }
 
 export async function loginLocal(identifier: string, secret: string): Promise<string> {
-  const previewCredentials = getLocalPreviewCredentials()
-  const previewSessionToken = getLocalPreviewSessionToken()
-  if (
-    import.meta.env.DEV &&
-    previewCredentials &&
-    previewSessionToken &&
-    identifier === previewCredentials.identifier &&
-    secret === previewCredentials.secret
-  ) {
-    setAccessToken(previewSessionToken)
-    return previewSessionToken
-  }
-
   let response: Response
   try {
     response = await fetch(`${authApiBase}/auth/local`, {
@@ -170,50 +159,11 @@ function toQuery(params: Record<string, string | number | undefined>): string {
 }
 
 export async function listCandidates(): Promise<Candidate[]> {
-  if (isLocalPreviewSession()) return [...seedCandidates]
   const result = await request<{ items: Candidate[] }>('/candidates?page=1&pageSize=100')
   return result.items
 }
 
 export function listCandidatePage(query: CandidateFilter & { page?: number; pageSize?: number } = {}): Promise<CandidatePage> {
-  if (isLocalPreviewSession()) {
-    const stageMap: Record<string, CandidateStage> = {
-      new: 'RECOMMENDED', screening: 'HR_SCREENING', interview: 'INTERVIEWING',
-      offer: 'OFFERING', hired: 'ONBOARDED', rejected: 'ARCHIVED',
-    }
-    const allStages: CandidateStage[] = [
-      'UNASSIGNED', 'VIRTUAL_POOL', 'RECOMMENDED', 'HR_SCREENING', 'DEPT_SCREENING',
-      'INTERVIEWING', 'OFFERING', 'PENDING_ONBOARD', 'ONBOARDED', 'PROBATION', 'ENDED', 'ARCHIVED',
-    ]
-    const counts = Object.fromEntries(allStages.map((value) => [value, 0])) as CandidatePage['counts']
-    const normalized = seedCandidates.map((candidate) => ({
-      ...candidate,
-      stage: stageMap[candidate.stage] ?? candidate.stage,
-      poolType: 'NONE' as const,
-      lockedState: 'NONE' as const,
-    }))
-    for (const candidate of normalized) {
-      const key = candidate.stage === 'VIRTUAL_POOL' ? 'UNASSIGNED' : candidate.stage
-      counts[key as keyof typeof counts] = (counts[key as keyof typeof counts] ?? 0) + 1
-    }
-    const items = normalized.filter((candidate) => {
-      if (query.stage === 'UNASSIGNED' && !['UNASSIGNED', 'VIRTUAL_POOL'].includes(candidate.stage)) return false
-      if (query.stage && query.stage !== 'UNASSIGNED' && candidate.stage !== query.stage) return false
-      if (query.departmentId && candidate.departmentId !== query.departmentId) return false
-      if (query.jobId && candidate.jobId !== query.jobId) return false
-      if (query.company && !candidate.currentCompany.toLowerCase().includes(query.company.toLowerCase())) return false
-      if (query.source && candidate.source !== query.source) return false
-      if (query.channel && candidate.channel !== query.channel) return false
-      if (query.tag && !candidate.tags.includes(query.tag)) return false
-      const keyword = query.keyword?.toLowerCase()
-      if (keyword && !`${candidate.name} ${candidate.currentCompany} ${candidate.currentTitle} ${candidate.tags.join(' ')}`.toLowerCase().includes(keyword)) return false
-      return true
-    })
-    const page = Math.max(1, query.page ?? 1)
-    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20))
-    const result = items.slice((page - 1) * pageSize, page * pageSize)
-    return Promise.resolve({ items: result, page, pageSize, total: items.length, counts })
-  }
   return request<CandidatePage>(`/candidates${toQuery({ page: 1, pageSize: 20, ...query })}`)
 }
 
@@ -232,17 +182,10 @@ export function deleteSavedCandidateFilter(id: string): Promise<{ deleted: boole
 }
 
 export function getCandidateDetail(id: string): Promise<Candidate> {
-  if (isLocalPreviewSession()) {
-    const candidate = seedCandidates.find((item) => item.id === id)
-    return candidate ? Promise.resolve(candidate) : Promise.reject(new Error('未找到演示候选人'))
-  }
   return request<Candidate>(`/candidates/${encodeURIComponent(id)}`)
 }
 
 export function getCandidateTimeline(id: string): Promise<CandidateTimelineEvent[]> {
-  if (isLocalPreviewSession()) {
-    return Promise.resolve(seedCandidates.find((item) => item.id === id)?.timeline ?? [])
-  }
   return request<CandidateTimelineEvent[]>(`/candidates/${encodeURIComponent(id)}/timeline`)
 }
 
@@ -326,35 +269,6 @@ export type JobQuery = {
 }
 
 export async function listJobs(query: JobQuery = {}): Promise<JobListItem[]> {
-  if (isLocalPreviewSession()) {
-    const keyword = query.keyword?.trim().toLowerCase()
-    const items: JobListItem[] = demoJobs.map((job) => ({
-      id: job.id,
-      title: job.title,
-      departmentId: job.departmentId,
-      location: job.location,
-      headcount: job.headcount,
-      hiredCount: job.hired,
-      code: `DEMO-${job.id.toUpperCase()}`,
-      status: job.status === 'closed' ? 'CLOSED' : 'ACTIVE',
-      recruiterId: job.owner,
-      requirements: '演示职位样例',
-      channel: null,
-      isVirtual: false,
-      requisitionId: null,
-      headcountFull: job.hired >= job.headcount,
-      headcountHint: `${job.hired}/${job.headcount}`,
-      createdAt: `${job.createdAt}T00:00:00.000Z`,
-      updatedAt: `${job.createdAt}T00:00:00.000Z`,
-    }))
-    return items.filter((job) =>
-      (!keyword || `${job.title} ${job.code}`.toLowerCase().includes(keyword)) &&
-      (!query.status || job.status === query.status) &&
-      (!query.departmentId || job.departmentId === query.departmentId) &&
-      (!query.recruiterId || job.recruiterId === query.recruiterId) &&
-      (query.isVirtual === undefined || String(job.isVirtual) === query.isVirtual),
-    )
-  }
   const result = await request<{ items: JobListItem[] }>(`/jobs${toQuery({ pageSize: 100, ...query })}`)
   return result.items
 }
@@ -410,9 +324,6 @@ export type RequisitionQuery = {
 }
 
 export function listRequisitions(query: RequisitionQuery = {}): Promise<RequisitionList> {
-  if (isLocalPreviewSession()) {
-    return Promise.resolve({ items: [], page: query.page ?? 1, pageSize: query.pageSize ?? 50, total: 0 })
-  }
   return request<RequisitionList>(`/requisitions${toQuery({ pageSize: 50, ...query })}`)
 }
 
@@ -467,25 +378,10 @@ export function listRequisitionTimeline(id: string): Promise<CandidateTimelineEv
 // ---------- 组织基础数据 ----------
 
 export function listDepartments(): Promise<ApiDepartment[]> {
-  if (isLocalPreviewSession()) {
-    return Promise.resolve(demoDepartments.map((department) => ({
-      id: department.id,
-      code: department.id.toUpperCase(),
-      name: department.name,
-      parentId: null,
-    })))
-  }
   return request<ApiDepartment[]>('/api/v1/authz/departments')
 }
 
 export function listUsers(): Promise<ApiUser[]> {
-  if (isLocalPreviewSession()) {
-    return Promise.resolve([...new Set(demoJobs.map((job) => job.owner))].map((name) => ({
-      id: name,
-      displayName: name,
-      status: 'ACTIVE',
-    })))
-  }
   return request<ApiUser[]>('/api/v1/authz/users')
 }
 

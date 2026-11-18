@@ -1,0 +1,78 @@
+{
+  "work_item": "ATS-017",
+  "report_id": "ats017-dingtalk-integration-v1",
+  "verified_at": "2026-11-18",
+  "verification_level": "locally_verified",
+  "scope": "Local implementation, documentation, mocked API contracts, and authorization behavior only.",
+  "acceptance": [
+    {
+      "id": 1,
+      "status": "verified_locally",
+      "evidence": [
+        "docs/ats-钉钉集成技术设计-v1.0.md",
+        "backend/src/dingtalk/"
+      ],
+      "notes": "Design records all six use cases, permissions/data boundaries, callbacks, throttling, identity mapping, retries, and fallbacks. OAuth login, encrypted HTTP callbacks, directory sync, and admin retry endpoints are implemented. Official contracts were checked against DingTalk Open Platform documentation."
+    },
+    {
+      "id": 2,
+      "status": "blocked_pending_authorized_test_tenant",
+      "evidence": [
+        "backend/src/dingtalk/*.spec.ts"
+      ],
+      "notes": "Local mocks cover code exchange, state validation, callback encryption, batch event IDs, department transfer, offboarding revocation, duplicate events, and retry/error behavior. No authorized DingTalk test organization or credentials were available, so live User/Department sync, userId mapping, callback delivery, and tenant permission validation were not performed."
+    }
+  ],
+  "checks": [
+    {
+      "command": "npm run db:generate",
+      "result": "passed",
+      "scope": "backend"
+    },
+    {
+      "command": "npm test",
+      "result": "passed: 18 test files, 99 tests",
+      "scope": "backend"
+    },
+    {
+      "command": "npm run typecheck",
+      "result": "passed",
+      "scope": "backend"
+    },
+    {
+      "command": "npm run lint",
+      "result": "passed without warnings",
+      "scope": "backend"
+    },
+    {
+      "command": "npm run build",
+      "result": "passed",
+      "scope": "backend"
+    },
+    {
+      "command": "npm run db:validate",
+      "result": "passed with a one-time DATABASE_URL placeholder; no database connection was made",
+      "scope": "backend"
+    },
+    {
+      "command": "npm run build",
+      "result": "passed",
+      "scope": "frontend"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed",
+      "scope": "workspace"
+    }
+  ],
+  "not_performed": [
+    "Live DingTalk OAuth and callback verification against a tenant",
+    "Database migration deployment against MySQL",
+    "Production permission approval or release"
+  ],
+  "required_to_continue": [
+    "An authorized DingTalk test organization and approved app permissions",
+    "AppKey, AppSecret, corpId, callback Token, and callback AESKey injected through the local runtime environment",
+    "A publicly reachable HTTPS callback URL for real event delivery"
+  ]
+}

@@ -104,6 +104,13 @@ export class AuthService {
             email: input.email?.trim() || undefined,
             departmentId: input.departmentId || undefined,
             status: UserStatus.ACTIVE,
+            ...(input.departmentId
+              ? {
+                  departmentMemberships: {
+                    create: { departmentId: input.departmentId, isPrimary: true },
+                  },
+                }
+              : {}),
           },
           select: { id: true, displayName: true },
         });

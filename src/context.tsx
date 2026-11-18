@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState } from 'react'
 import type { ApiJob, AppData, Candidate, Interview } from './types'
 import { createCandidate as createCandidateRequest, listCandidates, updateCandidateStage } from './api'
-import { isLocalPreviewSession } from './localPreview'
 
 export type Toast = { id: number; message: string; type?: 'success' | 'info' }
 
@@ -42,7 +41,7 @@ const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, addToast, toasts, dismissToast, children }: AppProviderProps) {
   const addCandidate = async (candidate: Candidate) => {
-    const created = isLocalPreviewSession() ? candidate : await createCandidateRequest(candidate)
+    const created = await createCandidateRequest(candidate)
     setData((prev) => ({
       ...prev,
       candidates: [created, ...prev.candidates.filter((item) => item.id !== created.id)],
@@ -53,13 +52,6 @@ export function AppProvider({ data, setData, resetData, candidatesLoading, candi
 
   const updateCandidate = async (id: string, patch: Partial<Candidate>) => {
     if (patch.stage === undefined) return null
-    if (isLocalPreviewSession()) {
-      const current = data.candidates.find((candidate) => candidate.id === id)
-      if (!current) return null
-      const updated = { ...current, ...patch, stage: patch.stage }
-      setData((prev) => ({ ...prev, candidates: prev.candidates.map((candidate) => candidate.id === id ? updated : candidate) }))
-      return updated
-    }
     const updated = await updateCandidateStage(id, patch.stage)
     setData((prev) => ({ ...prev, candidates: prev.candidates.map((candidate) => candidate.id === id ? { ...candidate, ...updated } : candidate) }))
     return updated

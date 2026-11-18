@@ -29,15 +29,23 @@ export class AuthorizationService {
           },
         },
         groupMemberships: { select: { groupId: true } },
+        departmentMemberships: {
+          where: { department: { isActive: true } },
+          select: { departmentId: true },
+        },
       },
     });
     if (!user || user.status !== 'ACTIVE') {
       throw new UnauthorizedException('用户不存在或已停用');
     }
 
-    const departmentIds = user.departmentId
-      ? await this.departmentTree(user.departmentId)
-      : [];
+    const rootDepartmentIds = user.departmentMemberships.map(
+      ({ departmentId }) => departmentId,
+    );
+    if (!rootDepartmentIds.length && user.departmentId) {
+      rootDepartmentIds.push(user.departmentId);
+    }
+    const departmentIds = await this.departmentTree(rootDepartmentIds);
     return {
       id: user.id,
       displayName: user.displayName,
@@ -348,8 +356,8 @@ export class AuthorizationService {
     }
     if (
       input.parentId &&
-      !(await this.prisma.department.findUnique({
-        where: { id: input.parentId },
+      !(await this.prisma.department.findFirst({
+        where: { id: input.parentId, isActive: true },
         select: { id: true },
       }))
     ) {
@@ -381,8 +389,8 @@ export class AuthorizationService {
     }
     if (
       input.departmentId &&
-      !(await this.prisma.department.findUnique({
-        where: { id: input.departmentId },
+      !(await this.prisma.department.findFirst({
+        where: { id: input.departmentId, isActive: true },
         select: { id: true },
       }))
     ) {
@@ -396,6 +404,13 @@ export class AuthorizationService {
           email: input.email?.trim() || undefined,
           departmentId: input.departmentId,
           status: UserStatus.ACTIVE,
+          ...(input.departmentId
+            ? {
+                departmentMemberships: {
+                  create: { departmentId: input.departmentId, isPrimary: true },
+                },
+              }
+            : {}),
         },
         select: { id: true, employeeNo: true, displayName: true, email: true, departmentId: true, status: true },
       });
@@ -509,6 +524,7 @@ export class AuthorizationService {
 
   listDepartments() {
     return this.prisma.department.findMany({
+      where: { isActive: true },
       orderBy: [{ parentId: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       select: { id: true, code: true, name: true, parentId: true },
     });
@@ -531,9 +547,13 @@ export class AuthorizationService {
     });
   }
 
-  private async departmentTree(rootId: string): Promise<string[]> {
-    const ids = new Set<string>([rootId]);
-    let frontier = [rootId];
+  private async departmentTree(rootIds: string[]): Promise<string[]> {
+    const roots = await this.prisma.department.findMany({
+      where: { id: { in: [...new Set(rootIds)] }, isActive: true },
+      select: { id: true },
+    });
+    const ids = new Set(roots.map(({ id }) => id));
+    let frontier = [...ids];
     while (frontier.length) {
       const children = await this.prisma.department.findMany({
         where: { parentId: { in: frontier }, isActive: true },

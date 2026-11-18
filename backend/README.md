@@ -19,13 +19,15 @@ npm ci --prefix backend
 if (-not (Test-Path backend/.env)) { Copy-Item backend/.env.example backend/.env }
 ```
 
-编辑 `backend/.env`，填入本机 MySQL 密码、至少 32 字节的随机 `JWT_ACCESS_SECRET`、`REFRESH_TOKEN_PEPPER` 和 `INITIAL_ADMIN_SECRET`。首次启动先创建空库 `talentflow` 并启动 MySQL、Redis，然后初始化：
+编辑 `backend/.env`，填入本机 MySQL 密码、至少 32 字节的随机 `JWT_ACCESS_SECRET` 和 `REFRESH_TOKEN_PEPPER`。首次启动先创建空库 `talentflow` 并启动 MySQL、Redis，然后初始化：
 
 ```powershell
 npm run db:setup
 ```
 
-`db:setup` 会应用迁移并写入默认权限、`ADMIN`、`RECRUITER`、`HIRING_MANAGER` 和 `INTERVIEWER` 角色，不创建任何用户。使用配置的 `INITIAL_ADMIN_SECRET` 调用 `POST /api/v1/auth/bootstrap` 一次性创建管理员，提交成功后从运行环境移除该初始化密钥。此接口由数据库唯一标记保护，重复或并发初始化会被拒绝。示例请求体：
+`db:setup` 会应用迁移并写入默认权限、`ADMIN`、`RECRUITER`、`HIRING_MANAGER` 和 `INTERVIEWER` 角色。仅当 `APP_ENV=local` 且 `LOCAL_AUTH_ENABLED=true` 时，种子脚本还会创建 `LOCAL_ADMIN_IDENTIFIER`（默认 `admin`）本地用户并关联 `ADMIN` 角色；其密码由 `LOCAL_AUTH_SECRET` 提供，示例本机配置为 `admin`。此默认账号只允许在隔离的本机开发环境使用。
+
+生产环境使用配置的 `INITIAL_ADMIN_SECRET` 调用 `POST /api/v1/auth/bootstrap` 一次性创建管理员，提交成功后从运行环境移除该初始化密钥。此接口由数据库唯一标记保护，重复或并发初始化会被拒绝。示例请求体：
 
 ```json
 {
@@ -36,7 +38,7 @@ npm run db:setup
 }
 ```
 
-ATS-004 提供钉钉身份映射，不含钉钉 OAuth 授权码交换流程；正式登录接入在 ATS-017。开发时如需本地登录，显式设置 `APP_ENV=local`、`LOCAL_AUTH_ENABLED=true` 和 `LOCAL_AUTH_SECRET`。生产环境不能启用本地身份适配。默认角色不会获得候选人联系方式授权；管理员通过 `/api/v1/authz/field-grants` 按用户或用户组授予独立的读取/写入权限及有效期。
+ATS-017 提供钉钉 OAuth 登录与组织身份同步：前端从 `/api/v1/auth/dingtalk/login` 开始授权，后端回调后通过 HttpOnly 刷新 Cookie 恢复前端访问令牌。配置 `DINGTALK_CLIENT_ID`、`DINGTALK_CLIENT_SECRET`、`DINGTALK_CORP_ID`、匹配的 `DINGTALK_REDIRECT_URI` 和前端 `DINGTALK_LOGIN_SUCCESS_REDIRECT`；事件同步另需回调 Token/AESKey 和 `organization:sync` 管理权限。开发时如需不依赖钉钉的本地 API 登录，显式设置 `APP_ENV=local`、`LOCAL_AUTH_ENABLED=true` 和 `LOCAL_AUTH_SECRET`。生产环境不能启用本地身份适配。默认角色不会获得候选人联系方式授权；管理员通过 `/api/v1/authz/field-grants` 按用户或用户组授予独立的读取/写入权限及有效期。
 
 受保护 API 使用 `Authorization: Bearer <accessToken>`。访问令牌默认 15 分钟；刷新令牌通过 HttpOnly Cookie 轮换，数据库只保存其 HMAC 哈希。管理员可通过 `/api/v1/authz` 管理用户、角色、部门、用户组和字段授权，通过 `/api/v1/audit-logs` 查询或导出审计记录。
 

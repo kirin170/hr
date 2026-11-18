@@ -6,7 +6,6 @@ import { useApp } from '../context'
 import type { Candidate, CandidateMainStage, CandidateStage, CandidateTimelineEvent } from '../types'
 import { cn, stageMeta } from '../utils'
 import { StageBadge } from '../pages/Candidates'
-import { isLocalPreviewSession } from '../localPreview'
 
 export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidateId: string; onClose: () => void; onSchedule: (candidate: Candidate) => void }) {
   const { data, setData, toast } = useApp()
@@ -29,12 +28,6 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
     setDetailCandidate(null)
     setTimeline([])
     setTimelineLoading(true)
-    if (isLocalPreviewSession()) {
-      setDetailCandidate(candidateFromList ?? null)
-      setTimeline(candidateFromList?.timeline ?? [])
-      setTimelineLoading(false)
-      return () => { active = false }
-    }
     getCandidateDetail(candidateId).then((item) => {
       if (active) setDetailCandidate(item)
     }).catch((error: unknown) => {
