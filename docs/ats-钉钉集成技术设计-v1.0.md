@@ -44,7 +44,7 @@
 - 事件接收端只校验、保存最小事件元数据并异步入 BullMQ；不在 HTTP 回调内调用钉钉目录 API。消息体不落库。事件 ID 缺失时对脱敏前的规范化事件输入计算摘要作为幂等键。
 - Worker 先标记 `PROCESSING`，成功后写 `PROCESSED`；重试中写 `QUEUED`；超过最大次数写 `FAILED` 和不含令牌/个人资料的错误码。队列配置默认 5 次指数退避、1 秒基准延迟、目录并发 1。队列/数据库写入短暂故障时，未完成的 `RECEIVED` 记录由后台 Outbox 轮询补投。
 - 离职、转岗和部门移除均写审计记录。未知事件类型不改数据并正常确认，避免平台对不支持事件无限重投；签名、AES 或企业标识错误拒绝处理。
-- 管理端接口：`POST /api/v1/admin/organization/dingtalk/sync` 触发全量同步；`GET /api/v1/admin/organization/dingtalk/events` 查看状态；`POST /api/v1/admin/organization/dingtalk/events/:id/retry` 重试失败项。均要求 `organization:sync`。
+- 管理端接口：`POST /api/v1/admin/organization/dingtalk/sync` 触发同步；请求体可传 `{"departmentId": 123}`，从该部门及其下级部门同步；省略时使用 `DINGTALK_SYNC_ROOT_DEPARTMENT_ID`，默认值为企业根部门 `1`。指定子部门同步只更新该子树，不停用范围外的部门或用户。`GET /api/v1/admin/organization/dingtalk/events` 查看状态；`POST /api/v1/admin/organization/dingtalk/events/:id/retry` 重试失败项。均要求 `organization:sync`。
 - `DINGTALK_SYNC_DEACTIVATE_MISSING=false` 默认关闭“全量列表中未出现即停用”。只有测试证明应用能读取完整通讯录后才可启用，防止通讯录权限范围不足造成批量误停用。明确的离职/删除事件不受此开关影响。
 
 ## 5. 通用限流、重试与错误处理

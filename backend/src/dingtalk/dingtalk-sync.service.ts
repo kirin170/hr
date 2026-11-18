@@ -90,14 +90,16 @@ export class DingTalkSyncService {
     return { eventId: firstEventId, accepted: true };
   }
 
-  async enqueueManualSync() {
+  async enqueueManualSync(departmentId?: number) {
+    const rootDepartmentId = this.syncRootDepartmentId(departmentId);
     const event = await this.prisma.dingTalkSyncEvent.create({
       data: {
         eventId: `manual:${randomUUID()}`,
         eventType: 'MANUAL_FULL_SYNC',
+        subjectId: String(rootDepartmentId),
         corpId: this.corpId(),
       },
-      select: { id: true, status: true, receivedAt: true },
+      select: { id: true, subjectId: true, status: true, receivedAt: true },
     });
     void this.queue.dispatch(event.id).catch((error: unknown) => {
       this.logger.warn(`Manual DingTalk sync ${event.id} awaits outbox retry: ${this.safeError(error)}`);
@@ -134,9 +136,14 @@ export class DingTalkSyncService {
     try {
       switch (event.eventType) {
         case 'MANUAL_FULL_SYNC':
+          await this.fullSync(
+            event.id,
+            this.syncRootDepartmentId(this.parseDepartmentId(event.subjectId)),
+          );
+          break;
         case 'org_dept_create':
         case 'org_dept_modify':
-          await this.fullSync(event.id);
+          await this.fullSync(event.id, this.syncRootDepartmentId());
           break;
         case 'org_dept_remove':
           await this.removeDepartment(event.subjectId!, event.id);
@@ -151,9 +158,13 @@ export class DingTalkSyncService {
           const known = await this.prisma.department.count({
             where: { code: { in: [...departmentIds].map((id) => this.departmentCode(id)) } },
           });
-          if (known < departmentIds.size) await this.syncDepartmentsOnly(event.id);
-          const departments = await this.departmentMap(record.dept_id_list);
-          await this.syncUser(record, departments, event.id);
+          const rootDepartmentId = this.syncRootDepartmentId();
+          if (known < departmentIds.size) {
+            await this.syncDepartmentsOnly(event.id, rootDepartmentId);
+          }
+          const scopedSync = rootDepartmentId !== ROOT_DEPARTMENT_ID;
+          const departments = await this.departmentMap(record.dept_id_list, scopedSync);
+          await this.syncUser(record, departments, event.id, scopedSync);
           break;
         }
         default:
@@ -181,16 +192,21 @@ export class DingTalkSyncService {
     });
   }
 
-  private async fullSync(eventId: string) {
-    const snapshot = await this.loadSnapshot();
-    const departments = await this.syncDepartments(snapshot.departments, eventId);
+  private async fullSync(eventId: string, rootDepartmentId: number) {
+    const scopedSync = rootDepartmentId !== ROOT_DEPARTMENT_ID;
+    const snapshot = await this.loadSnapshot(rootDepartmentId);
+    const departments = await this.syncDepartments(
+      snapshot.departments,
+      eventId,
+      rootDepartmentId,
+    );
     let usersSynced = 0;
     for (const user of snapshot.users) {
-      await this.syncUser(user, departments, eventId);
+      await this.syncUser(user, departments, eventId, scopedSync);
       usersSynced += 1;
     }
 
-    if (process.env.DINGTALK_SYNC_DEACTIVATE_MISSING === 'true') {
+    if (!scopedSync && process.env.DINGTALK_SYNC_DEACTIVATE_MISSING === 'true') {
       const seenUserIds = snapshot.users.map(({ userid }) => userid);
       if (seenUserIds.length) {
         const missingLinks = await this.prisma.identityLink.findMany({
@@ -206,13 +222,16 @@ export class DingTalkSyncService {
     return { departmentCount: snapshot.departments.length, usersSynced };
   }
 
-  private async syncDepartmentsOnly(eventId: string) {
-    const departments = await this.loadDepartments();
-    return this.syncDepartments(departments, eventId);
+  private async syncDepartmentsOnly(
+    eventId: string,
+    rootDepartmentId = this.syncRootDepartmentId(),
+  ) {
+    const departments = await this.loadDepartments(rootDepartmentId);
+    return this.syncDepartments(departments, eventId, rootDepartmentId);
   }
 
-  private async loadSnapshot(): Promise<OrganizationSnapshot> {
-    const departments = await this.loadDepartments();
+  private async loadSnapshot(rootDepartmentId: number): Promise<OrganizationSnapshot> {
+    const departments = await this.loadDepartments(rootDepartmentId);
     const usersById = new Map<string, DingTalkUserRecord>();
     for (const department of departments) {
       for (const user of await this.api.listDepartmentUsers(department.dept_id)) {
@@ -229,25 +248,32 @@ export class DingTalkSyncService {
         });
       }
     }
-    return { departments, users: [...usersById.values()] };
+    const scopedDepartmentIds = new Set(departments.map(({ dept_id }) => dept_id));
+    const users = [...usersById.values()].map((user) => ({
+      ...user,
+      dept_id_list: user.dept_id_list.filter((id) => scopedDepartmentIds.has(id)),
+    }));
+    return { departments, users };
   }
 
-  private async loadDepartments(): Promise<DingTalkDepartmentRecord[]> {
-    const root: DingTalkDepartmentRecord = {
-      dept_id: ROOT_DEPARTMENT_ID,
-      name: process.env.DINGTALK_ROOT_DEPARTMENT_NAME?.trim() || '企业根部门',
-      parent_id: 0,
-    };
+  private async loadDepartments(rootDepartmentId: number): Promise<DingTalkDepartmentRecord[]> {
+    const root: DingTalkDepartmentRecord = rootDepartmentId === ROOT_DEPARTMENT_ID
+      ? {
+          dept_id: ROOT_DEPARTMENT_ID,
+          name: process.env.DINGTALK_ROOT_DEPARTMENT_NAME?.trim() || '企业根部门',
+          parent_id: 0,
+        }
+      : await this.api.getDepartment(rootDepartmentId);
     const departments = [root];
-    const seen = new Set<number>([ROOT_DEPARTMENT_ID]);
-    const pending = [ROOT_DEPARTMENT_ID];
+    const seen = new Set<number>([rootDepartmentId]);
+    const pending = [rootDepartmentId];
     while (pending.length) {
       const parentId = pending.shift()!;
       const children = await this.api.listChildDepartments(parentId);
       for (const child of children) {
         if (
           child.dept_id === ACCESS_LIMIT_DEPARTMENT_ID ||
-          child.dept_id === ROOT_DEPARTMENT_ID ||
+          child.dept_id === rootDepartmentId ||
           seen.has(child.dept_id)
         ) {
           continue;
@@ -266,15 +292,26 @@ export class DingTalkSyncService {
   private async syncDepartments(
     departments: DingTalkDepartmentRecord[],
     eventId: string,
+    rootDepartmentId: number,
   ): Promise<Map<number, string>> {
     const prefix = this.departmentPrefix();
     const idMap = new Map<number, string>();
     for (const department of departments) {
       const code = this.departmentCode(department.dept_id);
-      const parentId = department.dept_id === ROOT_DEPARTMENT_ID
+      let parentId = department.dept_id === rootDepartmentId
         ? null
-        : idMap.get(department.parent_id);
-      if (department.dept_id !== ROOT_DEPARTMENT_ID && !parentId) {
+        : idMap.get(department.parent_id) ?? null;
+      if (department.dept_id === rootDepartmentId && department.parent_id > 0) {
+        const existingParent = await this.prisma.department.findFirst({
+          where: {
+            code: this.departmentCode(department.parent_id),
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        parentId = existingParent?.id ?? null;
+      }
+      if (department.dept_id !== rootDepartmentId && !parentId) {
         throw new ConflictException('钉钉部门上级未同步');
       }
       const saved = await this.prisma.department.upsert({
@@ -286,7 +323,10 @@ export class DingTalkSyncService {
       idMap.set(department.dept_id, saved.id);
     }
 
-    if (process.env.DINGTALK_SYNC_DEACTIVATE_MISSING === 'true') {
+    if (
+      rootDepartmentId === ROOT_DEPARTMENT_ID &&
+      process.env.DINGTALK_SYNC_DEACTIVATE_MISSING === 'true'
+    ) {
       const codes = departments.map(({ dept_id }) => this.departmentCode(dept_id));
       const stale = await this.prisma.department.findMany({
         where: { code: { startsWith: prefix, notIn: codes } },
@@ -302,7 +342,10 @@ export class DingTalkSyncService {
     return idMap;
   }
 
-  private async departmentMap(externalIds: number[]): Promise<Map<number, string>> {
+  private async departmentMap(
+    externalIds: number[],
+    allowMissing = false,
+  ): Promise<Map<number, string>> {
     const ids = [...new Set(externalIds)].filter((id) => id !== ACCESS_LIMIT_DEPARTMENT_ID);
     const rows = await this.prisma.department.findMany({
       where: { code: { in: ids.map((id) => this.departmentCode(id)) }, isActive: true },
@@ -310,7 +353,9 @@ export class DingTalkSyncService {
     });
     const reverse = new Map(rows.map(({ id, code }) => [Number(code.slice(code.lastIndexOf('_') + 1)), id]));
     for (const id of ids) {
-      if (!reverse.has(id)) throw new ConflictException('钉钉用户引用了尚未同步的部门');
+      if (!allowMissing && !reverse.has(id)) {
+        throw new ConflictException('钉钉用户引用了尚未同步的部门');
+      }
     }
     return reverse;
   }
@@ -319,6 +364,7 @@ export class DingTalkSyncService {
     record: DingTalkUserRecord,
     departmentMap: Map<number, string>,
     eventId: string,
+    preserveOutOfScopeDepartments = false,
   ): Promise<void> {
     const name = record.name.trim();
     const userId = record.userid.trim();
@@ -326,12 +372,7 @@ export class DingTalkSyncService {
 
     const externalDepartments = [...new Set(record.dept_id_list ?? [])]
       .filter((id) => id !== ACCESS_LIMIT_DEPARTMENT_ID);
-    const missing = externalDepartments.filter((id) => !departmentMap.has(id));
-    if (missing.length) throw new ConflictException('钉钉用户引用了尚未同步的部门');
-    const localDepartments = externalDepartments
-      .map((id) => departmentMap.get(id)!)
-      .filter((id, index, all) => all.indexOf(id) === index);
-    const primaryDepartmentId = localDepartments[0] ?? null;
+    const scopedLocalDepartmentIds = new Set(departmentMap.values());
     const employeeNo = this.optionalText(record.job_number);
     const email = this.optionalText(record.email)?.toLowerCase() ?? null;
 
@@ -349,6 +390,39 @@ export class DingTalkSyncService {
           include: { departmentMemberships: true },
         });
       }
+
+      const missing = externalDepartments.filter((id) => !departmentMap.has(id));
+      if (missing.length && !preserveOutOfScopeDepartments) {
+        throw new ConflictException('钉钉用户引用了尚未同步的部门');
+      }
+      const syncedLocalDepartments = externalDepartments
+        .flatMap((id) => {
+          const localId = departmentMap.get(id);
+          return localId ? [localId] : [];
+        })
+        .filter((id, index, all) => all.indexOf(id) === index);
+      const retainedLocalDepartments = preserveOutOfScopeDepartments
+        ? [...new Set([
+            ...(user?.departmentMemberships
+              .map(({ departmentId }) => departmentId)
+              .filter((departmentId) => !scopedLocalDepartmentIds.has(departmentId)) ?? []),
+            ...(user?.departmentId && !scopedLocalDepartmentIds.has(user.departmentId)
+              ? [user.departmentId]
+              : []),
+          ])]
+        : [];
+      const preservedPrimaryDepartmentId = preserveOutOfScopeDepartments &&
+        user?.departmentId &&
+        !scopedLocalDepartmentIds.has(user.departmentId)
+        ? user.departmentId
+        : null;
+      const primaryDepartmentId = preservedPrimaryDepartmentId ??
+        syncedLocalDepartments[0] ?? retainedLocalDepartments[0] ?? null;
+      const localDepartments = [...new Set([
+        ...(primaryDepartmentId ? [primaryDepartmentId] : []),
+        ...syncedLocalDepartments,
+        ...retainedLocalDepartments,
+      ])];
 
       const emailOwner = email
         ? await tx.user.findUnique({ where: { email }, select: { id: true } })
@@ -413,10 +487,10 @@ export class DingTalkSyncService {
       await tx.userDepartment.deleteMany({ where: { userId: currentUserId } });
       if (localDepartments.length) {
         await tx.userDepartment.createMany({
-          data: localDepartments.map((departmentId, index) => ({
+          data: localDepartments.map((departmentId) => ({
             userId: currentUserId,
             departmentId,
-            isPrimary: index === 0,
+            isPrimary: departmentId === primaryDepartmentId,
           })),
         });
       }
@@ -599,6 +673,42 @@ export class DingTalkSyncService {
   private departmentPrefix(): string {
     const digest = createHash('sha256').update(this.corpId()).digest('hex').slice(0, 12);
     return `DINGTALK_${digest}_`;
+  }
+
+  private syncRootDepartmentId(departmentId?: number): number {
+    if (departmentId !== undefined) {
+      if (!Number.isSafeInteger(departmentId) || departmentId < 1) {
+        throw new BadRequestException('departmentId 必须为正整数');
+      }
+      return departmentId;
+    }
+
+    const configured = process.env.DINGTALK_SYNC_ROOT_DEPARTMENT_ID?.trim();
+    if (!configured) return ROOT_DEPARTMENT_ID;
+    if (!/^[1-9]\d*$/.test(configured)) {
+      throw new ServiceUnavailableException(
+        'DINGTALK_SYNC_ROOT_DEPARTMENT_ID 必须为正整数',
+      );
+    }
+    const parsed = Number(configured);
+    if (!Number.isSafeInteger(parsed)) {
+      throw new ServiceUnavailableException(
+        'DINGTALK_SYNC_ROOT_DEPARTMENT_ID 必须为正整数',
+      );
+    }
+    return parsed;
+  }
+
+  private parseDepartmentId(value: string | null): number | undefined {
+    if (value === null) return undefined;
+    if (!/^[1-9]\d*$/.test(value)) {
+      throw new BadRequestException('同步事件中的部门标识无效');
+    }
+    const departmentId = Number(value);
+    if (!Number.isSafeInteger(departmentId)) {
+      throw new BadRequestException('同步事件中的部门标识无效');
+    }
+    return departmentId;
   }
 
   private corpId(): string {

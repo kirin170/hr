@@ -109,6 +109,25 @@ export class DingTalkApiClient {
     });
   }
 
+  async getDepartment(departmentId: number): Promise<DingTalkDepartmentRecord> {
+    const result = await this.postOapi<{ result?: unknown }>(
+      'topapi/v2/department/get',
+      { dept_id: departmentId },
+    );
+    const department = this.asRecord(result.result);
+    const resolvedId = this.numeric(department?.dept_id);
+    const parentId = this.numeric(department?.parent_id);
+    if (
+      !department ||
+      resolvedId !== departmentId ||
+      parentId === null ||
+      typeof department.name !== 'string'
+    ) {
+      throw new DingTalkApiError('invalid_department_response', false);
+    }
+    return { dept_id: resolvedId, name: department.name, parent_id: parentId };
+  }
+
   async listDepartmentUsers(departmentId: number): Promise<DingTalkUserRecord[]> {
     const users: DingTalkUserRecord[] = [];
     let cursor = 0;

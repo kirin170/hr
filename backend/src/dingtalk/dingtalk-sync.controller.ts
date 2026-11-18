@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -23,8 +24,22 @@ export class DingTalkSyncController {
   @Post('sync')
   @HttpCode(HttpStatus.ACCEPTED)
   @AuditAction('dingtalk.organization.sync.queued', 'DingTalkOrganization')
-  enqueueFullSync() {
-    return this.sync.enqueueManualSync();
+  enqueueFullSync(@Body() body: unknown = {}) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('请求体必须是 JSON 对象');
+    }
+    const value = (body as Record<string, unknown>).departmentId;
+    if (value === undefined) return this.sync.enqueueManualSync();
+
+    const departmentId = typeof value === 'number'
+      ? value
+      : typeof value === 'string' && /^[1-9]\d*$/.test(value)
+        ? Number(value)
+        : Number.NaN;
+    if (!Number.isSafeInteger(departmentId) || departmentId < 1) {
+      throw new BadRequestException('departmentId 必须为正整数');
+    }
+    return this.sync.enqueueManualSync(departmentId);
   }
 
   @Get('events')
