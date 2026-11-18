@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, LayoutDashboard, LogOut, Settings, Sparkles, Users, UsersRound } from 'lucide-react'
+import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, Sparkles, Users, UsersRound } from 'lucide-react'
 import type { PageKey } from '../types'
 import { cn } from '../utils'
 
@@ -8,6 +8,10 @@ type SidebarProps = { page: PageKey; onNavigate: (page: PageKey) => void; onSett
 const navPrimary: { key: PageKey; label: string; icon: typeof LayoutDashboard; badge?: string }[] = [
   { key: 'dashboard', label: '工作台', icon: LayoutDashboard },
   { key: 'positions', label: '职位与需求', icon: Building2 },
+  { key: 'intake', label: '简历入场', icon: FileSearch },
+  { key: 'pool', label: '待分配池', icon: Inbox },
+  { key: 'intakeMonitor', label: '入场监控', icon: Activity },
+  { key: 'campus', label: '校招投递', icon: GraduationCap },
   { key: 'candidates', label: '简历库', icon: Users },
   { key: 'pipeline', label: '招聘流程', icon: BriefcaseBusiness },
   { key: 'interviews', label: '面试安排', icon: CalendarDays, badge: '3' },

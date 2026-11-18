@@ -130,8 +130,8 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | ATS-005 | 附件私有存储、上传防护与生命周期 | ats-foundation | P0 | ATS-004 | 本次用户分配，已完成；验收报告见 `docs/verification/ats005-attachment-storage-report.json` |
 | ATS-006 | 工程运行约定、数据库迁移与 CI 门禁 | ats-foundation | P0 | ATS-001 | 进行中 / Codex |
 | ATS-007 | 职位、HC、招聘需求与周期闭环 | ats-requisition | P0 | ATS-002、ATS-004 | 待分配 / 未指定 |
-| ATS-008 | 补齐简历入场 UI、批量导入与监控 | ats-intake | P0 | ATS-002、ATS-003、ATS-004、ATS-005、ATS-007 | 待分配 / 未指定 |
-| ATS-009 | 简历来源记录与校园招聘投递门户 | ats-intake | P1 | ATS-007、ATS-008 | 待分配 / 未指定 |
+| ATS-008 | 补齐简历入场 UI、批量导入与监控 | ats-intake | P0 | ATS-002、ATS-003、ATS-004、ATS-005、ATS-007 | 本次用户分配，已完成；验收报告见 `docs/verification/ats008-intake-ui-monitor-report.json` |
+| ATS-009 | 简历来源记录与校园招聘投递门户 | ats-intake | P1 | ATS-007、ATS-008 | 本次用户分配，已完成；验收报告见 `docs/verification/ats009-source-campus-report.json` |
 | ATS-010 | 通用浏览器导入 API 与任务审计 | ats-intake | P1 | ATS-004、ATS-005、ATS-008 | 待分配 / 未指定 |
 | ATS-011 | Chrome/Edge MV3 扩展与双平台适配 | ats-intake | P1 | ATS-010 | 待分配 / 未指定 |
 | ATS-012 | 九阶段候选人主链与筛选状态机 | ats-candidate-flow | P0 | ATS-004、ATS-007、ATS-008 | 待分配 / 未指定 |
@@ -139,7 +139,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | ATS-014 | 面试排期、登记表与评价协同 | ats-interview | P1 | ATS-012 | 待分配 / 未指定 |
 | ATS-015 | Offer 状态、OA 材料和背调流程 | ats-offer-onboarding | P1 | ATS-012、ATS-014、ATS-005 | 待分配 / 未指定 |
 | ATS-016 | 待入职、确认入职与试用期闭环 | ats-offer-onboarding | P1 | ATS-015 | 待分配 / 未指定 |
-| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 待分配 / 未指定 |
+| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 已认领 / Codex（租户验证阻塞） |
 | ATS-018 | 钉钉日历与固定事件通知正式接入 | ats-integrations | P1 | ATS-017、ATS-014、ATS-016 | 待分配 / 未指定 |
 | ATS-019 | 钉钉 OA 需求同步与录用审批对接 | ats-integrations | P1 | ATS-017、ATS-007、ATS-015 | 待分配 / 未指定 |
 | ATS-020 | 钉钉听记素材按权限读取 | ats-integrations | P1 | ATS-017、ATS-014 | 待分配 / 未指定 |
@@ -211,6 +211,8 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 
 分配后第一步：用户分配后以 ATS-003 已有 Mock 链为基础做差异清单，优先连通待分配、人工确认和监控页面。
 
+实施记录（2026-11-18）：用户当日分配后完成简历入场 UI、批量导入与监控闭环。前端新增「简历入场」（上传/手工录入/邮箱模拟/Excel 批量导入/入场记录）、「待分配池」（待分配与待合并查重）、「入场监控」三个页面，并把简历库「批量导入」入口接到入场页；后端新增入场列表分页与职位/接收邮箱/时间筛选、待分配池与查重列表、批量分配职位、查重合并、入场监控聚合、Excel 模板下载/行校验/导入/失败行导出与接收邮箱配置查询。Excel 使用独立 `entryMode=EXCEL_IMPORT` 直接建档为 `PARSED`，不创建 AIRun、不入解析队列；虚拟职位分配后停留 `VIRTUAL_POOL`，负责人由职位带出；查重合并把重复记录挂到原候选人并保留来源与附件（`mergedAt`/`mergedById`）。入场记录新增 `mailboxAddress`（接收简历的招聘邮箱），邮箱筛选与监控按接收邮箱而非候选人发件地址；顺带修复重试因 `AIRun.inputRefs` 为 `VARCHAR(191)` 触发 P2000 的问题（改为 TEXT）。后端 114 项单元测试（新增 15 项）、类型检查、Lint 与构建通过，前端 `tsc -b && vite build` 通过，并在临时 MySQL 库 `talentflow_ats008` 上重放迁移后执行 37 项接口校验全部通过（校验后删库，未改动本地 talentflow 库）。未运行 E2E/性能测试，未做真实 OSS、真实钉钉租户与浏览器人工走查。验收报告见 `docs/verification/ats008-intake-ui-monitor-report.json`。
+
 ### ATS-009 简历来源记录与校园招聘投递门户
 
 依据：FR-ENT-2/6、FR-REF-1～4；功能需求 §4.8/§4.9。前置：ATS-007、ATS-008。
@@ -219,6 +221,8 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - 校招个人意愿表、虚拟职位与批量人工分配保留原始意愿；带正式职位投递直入 RECOMMENDED，虚拟职位按待分配规则处理。
 
 分配后第一步：用户分配后定义来源/推荐人字段与校招投递、意愿及人工分配数据契约。
+
+实施记录（2026-11-18）：用户当日分配后完成来源记录与校招投递门户。后端新增 `candidate_source_records` 来源台账与 `campus_applications` 校招投递表；`resume_intakes` 增加推荐人/联系方式/来源标识/来源备注字段。手工、上传、Excel 与校招投递建档时写入来源台账，查重合并把重复记录来源写入原候选人并保留附件；`GET api/v1/intake/sources` 支持来源、推荐人关键词、职位、候选人与时间筛选，`PATCH api/v1/intake/sources/:id` 供 HR 维护。校招门户 `POST api/v1/campus/applications` 为公开接口：虚拟职位投递进入 `VIRTUAL_POOL`，带正式职位投递直入 `RECOMMENDED`；个人意愿 JSON 与学校/专业/毕业年份/意向城市/可到岗时间/备注保存在投递记录上，批量人工分配仅补充分配结果，不覆盖原始意愿；重复手机号/邮箱投递生成查重记录并保留附件。前端新增「来源记录」页签、「校招投递」管理页与公开投递门户 `/campus`（含意愿表与可选简历附件）。后端 122 项单元测试（新增 8 项）、Lint 通过，前端 `tsc -b && vite build` 通过。后端 `typecheck/build` 当前被并发任务 ATS-012 未完成的 `candidates.service.ts` 类型错误阻断（本次新增代码无类型错误），且环境无 `DATABASE_URL` 与 mysql 客户端，未重放迁移与接口冒烟；未做浏览器人工走查与 E2E/性能测试。验收报告见 `docs/verification/ats009-source-campus-report.json`。
 
 ### ATS-010 通用浏览器导入 API 与任务审计
 
@@ -297,7 +301,9 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - 形成钉钉集成技术设计，记录六类用途所需权限、回调、限流、身份映射和错误策略；实际 API 以接入时官方文档核对。
 - 授权测试组织中 User/Department 增量同步、userId 一对一映射、离职/转岗权限变更及失败重试有测试记录。
 
-分配后第一步：用户分配后先核对测试企业、权限和身份字段，凭据通过环境注入；当前规划不连接企业系统。
+执行记录（2026-11-18）：已完成六用途技术设计、钉钉 OAuth 登录及前端会话恢复、加密事件回调、组织全量/增量同步、多部门授权、离职撤权和 BullMQ 重试/人工恢复接口。后端 99 项测试、类型检查、Lint、构建、Prisma 校验和前端构建通过；本地 mock 不作为租户验收证据。报告与 AWR 本地验证证据见 `docs/verification/ats017-dingtalk-integration-report.json` 和 `ats017-dingtalk-integration-v1`。当前 AWR 状态为 blocked：未提供授权测试组织、应用权限与凭据，尚未进行真实 OAuth、回调及 User/Department 联调。
+
+下一步：通过环境变量注入授权测试组织凭据，验证 OAuth、User/Department 增量同步、转岗、离职、回调幂等和失败重试后补齐第二条验收证据。
 
 ### ATS-018 钉钉日历与固定事件通知正式接入
 

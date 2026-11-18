@@ -297,7 +297,8 @@ enum ReasonType {
 model AIRun {
   id          String   @id @default(cuid())
   type        AiRunType
-  inputRefs   String?
+  /// 输入引用为 JSON 文本，重试时追加 mockOutcome 等字段会超出 VARCHAR(191)
+  inputRefs   String?  @db.Text
   output      String?  @db.Text
   status      AiRunStatus @default(PENDING)
   isDraft     Boolean  @default(true)
@@ -412,10 +413,20 @@ model ResumeIntake {
   duplicateOfCandidateId String?
   mailFrom               String?
   mailSubject            String?
+  /// 接收简历的招聘邮箱（邮箱渠道监控与筛选口径）
+  mailboxAddress         String?
+  /// 来源记录：推荐人/来源标识随入场保存，查重合并时写入来源台账（FR-REF-1～3）
+  referrerName           String?
+  referrerContact        String?
+  referralCode           String?
+  sourceNote             String?      @db.Text
   receivedAt             DateTime?
   attempts               Int          @default(0)
   errorCode              String?
   errorMessage           String?
+  /// 查重合并时间：合并后来源与附件保留在本条入场记录上（FR-ENT-6）
+  mergedAt               DateTime?
+  mergedById             String?
   createdAt              DateTime     @default(now())
   updatedAt              DateTime     @updatedAt
   resumeFile             ResumeFile?  @relation(fields: [resumeFileId], references: [id])
@@ -424,7 +435,115 @@ model ResumeIntake {
   @@index([entryMode])
   @@index([candidateId])
   @@index([createdById])
+  @@index([jobId])
+  @@index([mailFrom])
+  @@index([mailboxAddress])
+  @@index([referrerName])
+  @@index([referralCode])
   @@map("resume_intakes")
+}
+
+/// 简历来源记录：每次入场保留一条，查重合并时把来源全部保留到原候选人（FR-REF-1～3）
+model CandidateSourceRecord {
+  id                    String   @id @default(cuid())
+  candidateId           String
+  /// 对应入场记录；一次入场最多一条来源记录
+  intakeId              String?  @unique
+  source                String
+  entryMode             String?
+  jobId                 String?
+  /// 推荐人姓名或员工标识
+  referrerName          String?
+  /// 推荐人联系方式（工号/手机号/邮箱），仅用于来源追溯
+  referrerContact       String?
+  /// 来源标识（内推码、渠道活动码等）
+  referralCode          String?
+  note                  String?  @db.Text
+  /// 查重合并时记录来源所属的重复候选人
+  mergedFromCandidateId String?
+  createdById           String?
+  createdAt             DateTime @default(now())
+
+  @@index([candidateId, createdAt])
+  @@index([source])
+  @@index([jobId])
+  @@index([referrerName])
+  @@index([referralCode])
+  @@map("candidate_source_records")
+}
+
+/// 校招投递：虚拟职位统一入口 + 个人意愿表；人工分配正式职位后保留原始意愿（功能需求 §4.9）
+model CampusApplication {
+  id             String    @id @default(cuid())
+  intakeId       String    @unique
+  candidateId    String?
+  /// 投递时选择的职位（虚拟职位或带正式职位投递）
+  jobId          String?
+  jobIsVirtual   Boolean   @default(false)
+  /// 个人意愿表单（JSON 文本）：意向岗位、城市、毕业时间等
+  preferences    String    @db.Text
+  school         String?
+  major          String?
+  graduationYear String?
+  expectedCity   String?
+  availableFrom  DateTime?
+  remark         String?   @db.Text
+  /// SUBMITTED（已投递待分配）/ ASSIGNED（已人工分配正式职位）
+  status         String    @default("SUBMITTED")
+  assignedJobId  String?
+  assignedAt     DateTime?
+  assignedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status, createdAt])
+  @@index([jobId])
+  @@index([candidateId])
+  @@index([assignedJobId])
+  @@map("campus_applications")
+}
+
+/// Excel 批量导入批次：Excel 走独立表格导入，不进入 AI 解析管道（PRD §6.4）
+model ExcelImportBatch {
+  id            String           @id @default(cuid())
+  fileName      String
+  createdById   String?
+  createdBy     User?            @relation("ExcelImportCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  totalRows     Int              @default(0)
+  successRows   Int              @default(0)
+  duplicateRows Int              @default(0)
+  failedRows    Int              @default(0)
+  createdAt     DateTime         @default(now())
+  rows          ExcelImportRow[]
+
+  @@index([createdById])
+  @@map("excel_import_batches")
+}
+
+/// Excel 行级结果：失败行可导出、可人工处理，不重复建档
+model ExcelImportRow {
+  id           String           @id @default(cuid())
+  batchId      String
+  batch        ExcelImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowNumber    Int
+  payload      Json?
+  status       ExcelRowStatus   @default(FAILED)
+  candidateId  String?
+  intakeId     String?
+  errorCode    String?
+  errorMessage String?
+  createdAt    DateTime         @default(now())
+
+  @@index([batchId, status])
+  @@map("excel_import_rows")
+}
+
+enum ExcelRowStatus {
+  SUCCESS
+  DUPLICATE
+  FAILED
+
+  @@map("excel_row_status")
 }
 
 enum IntakeStatus {
@@ -523,6 +642,7 @@ model User {
   refreshSessions     RefreshSession[]
   createdCandidates   Candidate[]        @relation("CandidateCreator")
   createdIntakes      ResumeIntake[]      @relation("IntakeCreator")
+  excelImportBatches  ExcelImportBatch[]  @relation("ExcelImportCreator")
   auditLogs           AuditLog[]          @relation("AuditActor")
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt

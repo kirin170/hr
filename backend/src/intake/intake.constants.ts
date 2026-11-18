@@ -16,6 +16,8 @@ export const ENTRY_MODE = {
   SINGLE_UPLOAD: 'SINGLE_UPLOAD',
   MANUAL: 'MANUAL',
   BROWSER_EXTENSION: 'BROWSER_EXTENSION',
+  /** Excel 表格批量导入：独立于文件上传，不进入 AI 解析管道 */
+  EXCEL_IMPORT: 'EXCEL_IMPORT',
 } as const;
 
 export type IntakeSource = (typeof INTAKE_SOURCE)[keyof typeof INTAKE_SOURCE];

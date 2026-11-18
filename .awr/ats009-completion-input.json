@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+  "acceptance": [
+    {
+      "criterion": "简历来源记录推荐人/来源标识，支持查询筛选，查重合并保留全部来源；不建设内推门户、分享或推荐人进度查询，不判定有效推荐、不自动结算。",
+      "evidence": ["ats009-source-campus-report-v5"]
+    },
+    {
+      "criterion": "校招个人意愿表、虚拟职位与批量人工分配保留原始意愿；带正式职位投递直入 RECOMMENDED，虚拟职位按待分配规则处理。",
+      "evidence": ["ats009-source-campus-report-v5"]
+    }
+  ]
+}

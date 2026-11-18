@@ -1,6 +1,10 @@
 export type PageKey =
   | 'dashboard'
   | 'positions'
+  | 'intake'
+  | 'pool'
+  | 'intakeMonitor'
+  | 'campus'
   | 'candidates'
   | 'pipeline'
   | 'interviews'
@@ -9,7 +13,20 @@ export type PageKey =
   | 'reports'
   | 'settings'
 
-export type CandidateStage = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected'
+export type CandidateMainStage =
+  | 'RECOMMENDED'
+  | 'HR_SCREENING'
+  | 'DEPT_SCREENING'
+  | 'INTERVIEWING'
+  | 'OFFERING'
+  | 'PENDING_ONBOARD'
+  | 'ONBOARDED'
+  | 'PROBATION'
+  | 'ENDED'
+export type CandidatePoolStage = 'UNASSIGNED' | 'VIRTUAL_POOL'
+export type CandidateStage = CandidateMainStage | CandidatePoolStage | 'ARCHIVED'
+export type LegacyCandidateStage = 'new' | 'screening' | 'interview' | 'offer' | 'hired' | 'rejected'
+export type CandidateStageFilter = 'UNASSIGNED' | CandidateMainStage | 'ARCHIVED'
 
 export type Department = {
   id: string
@@ -44,8 +61,12 @@ export type Candidate = {
   departmentId: string
   departmentName?: string
   departmentColor?: string
-  stage: CandidateStage
+  stage: CandidateStage | LegacyCandidateStage
+  poolType?: 'NONE' | 'UNASSIGNED' | 'VIRTUAL'
+  lockedState?: 'NONE' | 'OPERABLE' | 'INOPERABLE'
   source: string
+  channel?: string
+  archiveReasonText?: string
   experience: string
   education: string
   school: string
@@ -71,6 +92,35 @@ export type CandidateTimelineEvent = {
   payload?: Record<string, unknown> | null
   actor: string
   createdAt: string
+}
+
+export type CandidatePage = {
+  items: Candidate[]
+  page: number
+  pageSize: number
+  total: number
+  counts: Record<CandidateStageFilter | 'VIRTUAL_POOL', number>
+}
+
+export type CandidateFilter = {
+  stage?: CandidateStageFilter
+  keyword?: string
+  departmentId?: string
+  jobId?: string
+  company?: string
+  channel?: string
+  source?: string
+  tag?: string
+  lockedState?: 'NONE' | 'OPERABLE' | 'INOPERABLE'
+  updatedBefore?: string
+}
+
+export type SavedCandidateFilter = {
+  id: string
+  name: string
+  filters: CandidateFilter
+  createdAt: string
+  updatedAt: string
 }
 
 export type ApiJob = {
@@ -126,6 +176,188 @@ export type RequisitionList = {
   page: number
   pageSize: number
   total: number
+}
+
+// ---------- 简历入场（FR-ENT） ----------
+
+export type IntakeStatus =
+  | 'RECEIVED'
+  | 'PARSING'
+  | 'PARSED'
+  | 'DUPLICATE'
+  | 'NEEDS_MANUAL'
+  | 'FAILED'
+
+export type ApiIntakeCandidate = {
+  id: string
+  name: string
+  stage: string
+  poolType: string
+  jobId: string | null
+  appliedAt: string | null
+}
+
+export type ApiIntakeJob = {
+  id: string
+  code: string
+  title: string
+  isVirtual: boolean
+  recruiterId: string | null
+}
+
+export type ApiIntakeFile = {
+  id: string
+  fileName: string
+  mimeType: string
+  size: number
+}
+
+export type ApiIntakeAirRun = {
+  id: string
+  status: string
+  isDraft: boolean
+  attempts?: number
+  errorCode?: string | null
+}
+
+export type ApiIntake = {
+  id: string
+  source: string
+  entryMode: string
+  status: IntakeStatus
+  candidateId: string | null
+  jobId: string | null
+  resumeFileId: string | null
+  airRunId: string | null
+  duplicateOfCandidateId: string | null
+  mailFrom: string | null
+  mailSubject: string | null
+  mailboxAddress: string | null
+  referrerName: string | null
+  referrerContact: string | null
+  referralCode: string | null
+  sourceNote: string | null
+  receivedAt: string | null
+  attempts: number
+  errorCode: string | null
+  errorMessage: string | null
+  mergedAt: string | null
+  mergedById: string | null
+  createdAt: string
+  updatedAt: string
+  resumeFile: ApiIntakeFile | null
+  candidate: ApiIntakeCandidate | null
+  duplicateCandidate: ApiIntakeCandidate | null
+  job: ApiIntakeJob | null
+  aiRun: ApiIntakeAirRun | null
+}
+
+export type IntakeList = {
+  items: ApiIntake[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export type IntakePoolItem = {
+  candidateId: string
+  name: string
+  phone: string | null
+  email: string | null
+  source: string | null
+  entryMode: string | null
+  appliedAt: string | null
+  createdAt: string
+  intakeId: string | null
+  intakeStatus: IntakeStatus | null
+  mailFrom: string | null
+  mailSubject: string | null
+  mailboxAddress: string | null
+  receivedAt: string | null
+  resumeFileId: string | null
+  resumeFileName: string | null
+  aiRun: ApiIntakeAirRun | null
+}
+
+export type IntakePoolList = {
+  items: IntakePoolItem[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export type IntakeMonitor = {
+  totals: {
+    total: number
+    entered: number
+    notEntered: number
+    enteredRate: number
+    assigned: number
+    pool: number
+    latencySamples: number
+    averageLatencySeconds: number | null
+    p90LatencySeconds: number | null
+    maxLatencySeconds: number | null
+  }
+  byStatus: { status: string; count: number }[]
+  bySource: { source: string; count: number }[]
+  byEntryMode: { entryMode: string; count: number }[]
+  byMailbox: { mailbox: string; count: number; lastReceivedAt: string | null }[]
+  failureReasons: { errorCode: string; count: number }[]
+  recentFailures: {
+    id: string
+    source: string
+    entryMode: string
+    status: IntakeStatus
+    errorCode: string | null
+    errorMessage: string | null
+    mailFrom: string | null
+    createdAt: string
+    jobId: string | null
+  }[]
+}
+
+export type IntakeResult = {
+  intakeId: string
+  candidateId: string | null
+  airRunId: string | null
+  status: IntakeStatus
+  duplicate: boolean
+  parseQueued: boolean
+  errorCode?: string | null
+  errorMessage?: string | null
+}
+
+export type ExcelImportRowResult = {
+  rowNumber: number
+  status: 'SUCCESS' | 'DUPLICATE' | 'FAILED'
+  name: string | null
+  phone: string | null
+  email: string | null
+  jobCode: string | null
+  source: string | null
+  candidateId: string | null
+  intakeId: string | null
+  errorCode: string | null
+  errorMessage: string | null
+}
+
+export type ExcelImportResult = {
+  batchId: string
+  fileName: string
+  totalRows: number
+  successRows: number
+  duplicateRows: number
+  failedRows: number
+  rows: ExcelImportRowResult[]
+}
+
+export type MailboxConfig = {
+  id: string
+  address: string
+  provider: string
+  active: boolean
+  lastPolledAt: string | null
 }
 
 export type ApiDepartment = {
@@ -207,4 +439,114 @@ export type AppData = {
   probation: ProbationEmployee[]
   approvals: Approval[]
   activities: Activity[]
+}
+
+// ---------- 简历来源与校招投递（ATS-009） ----------
+
+export type ApiSourceCandidate = {
+  id: string
+  name: string
+  phone: string | null
+  email: string | null
+  stage: string
+  jobId: string | null
+}
+
+export type ApiSourceJob = {
+  id: string
+  code: string
+  title: string
+  isVirtual: boolean
+}
+
+export type ApiSourceRecord = {
+  id: string
+  candidateId: string
+  intakeId: string | null
+  source: string
+  entryMode: string | null
+  jobId: string | null
+  referrerName: string | null
+  referrerContact: string | null
+  referralCode: string | null
+  note: string | null
+  mergedFromCandidateId: string | null
+  createdById: string | null
+  createdAt: string
+  candidate: ApiSourceCandidate | null
+  job: ApiSourceJob | null
+}
+
+export type SourceRecordList = {
+  items: ApiSourceRecord[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export type CampusJob = {
+  id: string
+  code: string
+  title: string
+  location: string | null
+  isVirtual: boolean
+  headcount: number
+}
+
+export type CampusPreferences = {
+  desiredPositions?: string[]
+  expectedCity?: string | null
+  school?: string | null
+  major?: string | null
+  graduationYear?: string | null
+  availableFrom?: string | null
+  remark?: string | null
+}
+
+export type ApiCampusApplication = {
+  id: string
+  intakeId: string
+  candidateId: string | null
+  jobId: string | null
+  jobIsVirtual: boolean
+  preferences: CampusPreferences
+  school: string | null
+  major: string | null
+  graduationYear: string | null
+  expectedCity: string | null
+  availableFrom: string | null
+  remark: string | null
+  status: 'SUBMITTED' | 'ASSIGNED' | string
+  assignedJobId: string | null
+  assignedAt: string | null
+  assignedById: string | null
+  createdAt: string
+  updatedAt: string
+  candidate: ApiSourceCandidate | null
+  job: ApiSourceJob | null
+  assignedJob: ApiSourceJob | null
+}
+
+export type CampusApplicationList = {
+  items: ApiCampusApplication[]
+  page: number
+  pageSize: number
+  total: number
+}
+
+export type CampusApplyResult = {
+  applicationId: string
+  intakeId: string
+  candidateId: string | null
+  status: string
+  duplicate: boolean
+  jobIsVirtual: boolean
+  message: string
+}
+
+export type CampusAssignResult = {
+  job: { id: string; code: string; title: string; isVirtual: boolean } | null
+  assigned: number
+  failed: number
+  results: { applicationId: string; ok: boolean; candidateId?: string | null; error?: string }[]
 }

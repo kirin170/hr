@@ -3,26 +3,28 @@ import { ChevronDown, Filter, MoreHorizontal, Plus, Search, Users, X } from 'luc
 import { departments, getCandidateDepartment, getCandidateJob, getDepartment, getJob, jobs } from '../data'
 import { useApp } from '../context'
 import type { CandidateStage } from '../types'
-import { cn, stageMeta } from '../utils'
+import { cn } from '../utils'
 import { StageBadge } from './Candidates'
 
 type PipelineProps = { onOpenCandidate: (id: string) => void; onAddCandidate: () => void }
 
 const columns: { key: CandidateStage; title: string; color: string }[] = [
-  { key: 'new', title: '新简历', color: '#6E83E9' },
-  { key: 'screening', title: '筛选中', color: '#E4A03D' },
-  { key: 'interview', title: '面试中', color: '#9A72DE' },
-  { key: 'offer', title: 'Offer', color: '#E47D59' },
-  { key: 'hired', title: '已入职', color: '#22A97B' },
+  { key: 'RECOMMENDED', title: '人才推荐', color: '#6E83E9' },
+  { key: 'HR_SCREENING', title: '初筛', color: '#E4A03D' },
+  { key: 'DEPT_SCREENING', title: '部门筛选', color: '#D58A28' },
+  { key: 'INTERVIEWING', title: '面试', color: '#9A72DE' },
+  { key: 'OFFERING', title: '沟通 Offer', color: '#E47D59' },
+  { key: 'PENDING_ONBOARD', title: '待入职', color: '#DB8A4C' },
+  { key: 'ONBOARDED', title: '已入职', color: '#22A97B' },
+  { key: 'PROBATION', title: '试用期', color: '#31A783' },
+  { key: 'ENDED', title: '结束', color: '#667085' },
 ]
 
 export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
-  const { data, updateCandidate, toast, apiJobs } = useApp()
+  const { data, apiJobs } = useApp()
   const [department, setDepartment] = useState('all')
   const [job, setJob] = useState('all')
   const [search, setSearch] = useState('')
-  const [dragged, setDragged] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState<CandidateStage | null>(null)
   const [view, setView] = useState<'kanban' | 'table'>('kanban')
 
   const departmentFilters = Array.from(new Set([
@@ -40,31 +42,16 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
   ]).entries()).map(([value, label]) => ({ value, label }))
 
   const filtered = useMemo(() => data.candidates.filter(candidate => {
-    if (candidate.stage === 'rejected') return false
+    if (!columns.some((column) => column.key === candidate.stage)) return false
     if (department !== 'all' && candidate.departmentId !== department) return false
     if (job !== 'all' && candidate.jobId !== job) return false
     if (search && !`${candidate.name}${candidate.currentCompany}${candidate.currentTitle}`.toLowerCase().includes(search.toLowerCase())) return false
     return true
   }), [data.candidates, department, job, search])
 
-  const drop = async (stage: CandidateStage) => {
-    if (!dragged) return
-    const candidate = data.candidates.find(c => c.id === dragged)
-    if (candidate && candidate.stage !== stage) {
-      try {
-        await updateCandidate(dragged, { stage })
-        toast(`${candidate.name} 已移动到「${stageMeta[stage].label}」`)
-      } catch (error) {
-        toast(error instanceof Error ? error.message : '阶段更新失败', 'info')
-      }
-    }
-    setDragged(null)
-    setDragOver(null)
-  }
-
   return <div className="page-stack pipeline-page">
     <div className="page-title-row">
-      <div><div className="eyebrow">招聘流程 <span className="eyebrow-separator">·</span> 实时协同</div><h2>候选人流程</h2><p>拖拽卡片推进招聘阶段，团队进展一目了然。</p></div>
+      <div><div className="eyebrow">招聘流程 <span className="eyebrow-separator">·</span> 实时协同</div><h2>候选人流程</h2><p>阶段动作在候选人详情中明确执行并记录。</p></div>
       <div className="page-title-actions"><button className="button button-secondary"><Users size={16} />邀请协作</button><button className="button button-primary" onClick={onAddCandidate}><Plus size={17} />添加候选人</button></div>
     </div>
     <div className="pipeline-toolbar panel">
@@ -74,13 +61,13 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
     {view === 'kanban' ? <div className="kanban-board">
       {columns.map(column => {
         const items = filtered.filter(candidate => candidate.stage === column.key)
-        return <section className={cn('kanban-column', dragOver === column.key && 'drag-over')} key={column.key} onDragOver={e => { e.preventDefault(); setDragOver(column.key) }} onDragLeave={() => setDragOver(null)} onDrop={() => drop(column.key)}>
+        return <section className="kanban-column" key={column.key}>
           <header className="kanban-header"><div><i style={{background: column.color}} /><strong>{column.title}</strong><span>{items.length}</span></div><div><button className="icon-button icon-button-small"><MoreHorizontal size={16} /></button><button className="icon-button icon-button-small"><Plus size={16} /></button></div></header>
           <div className="kanban-list">
             {items.map(candidate => {
               const job = getCandidateJob(candidate)
               const department = getCandidateDepartment(candidate)
-              return <button className="kanban-card" draggable key={candidate.id} onDragStart={() => setDragged(candidate.id)} onDragEnd={() => { setDragged(null); setDragOver(null) }} onClick={() => onOpenCandidate(candidate.id)}>
+              return <button className="kanban-card" key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}>
                 <div className="kanban-card-top"><span className="avatar avatar-sm" style={{background: `${candidate.avatarColor}18`, color: candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span className="kanban-name">{candidate.name}</span><span className="kanban-salary">{candidate.experience}</span></div>
                 <p>{candidate.currentTitle} · {candidate.currentCompany}</p>
                 <div className="kanban-job"><span className="department-dot" style={{background: department?.color}} />{job?.title}</div>
@@ -88,7 +75,7 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
                 <div className="kanban-footer"><span className={cn('kanban-source', candidate.source === '内部推荐' && 'referral')}>{candidate.source}</span><span className="kanban-user"><span className="avatar avatar-xs avatar-warm">{candidate.owner.slice(-1)}</span>{candidate.owner}</span></div>
               </button>
             })}
-            {items.length === 0 && <div className="kanban-empty">暂无候选人<span>拖拽卡片到这里</span></div>}
+            {items.length === 0 && <div className="kanban-empty">暂无候选人</div>}
           </div>
         </section>
       })}

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "work_item": "ATS-009",
+  "date": "2026-11-18",
+  "verified_at": 1794971984608,
+  "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+  "working_tree_dirty": true,
+  "summary": "简历来源记录与校园招聘投递门户：新增来源台账（推荐人/联系方式/来源标识/来源备注），手工、上传、Excel 与校招投递建档时写入，查重合并把重复记录来源写入原候选人；新增来源查询筛选与 HR 维护接口。新增公开校招投递门户与个人意愿表：虚拟职位投递进入 VIRTUAL_POOL，带正式职位投递直入 RECOMMENDED，批量人工分配正式职位只补充分配结果、不覆盖原始意愿；重复投递生成查重记录并保留附件与来源。前端新增来源记录页签、校招投递管理页与公开投递页 /campus。",
+  "command": "npm run lint --prefix backend; npm test --prefix backend (21 files, 122 tests); npm run build (web, tsc -b + vite build); npm run typecheck --prefix backend (only concurrent ATS-012 candidates.service.ts errors)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261118120000_source_records_campus/migration.sql",
+    "backend/src/intake/intake.constants.ts",
+    "backend/src/intake/intake-excel.ts",
+    "backend/src/intake/intake-excel.spec.ts",
+    "backend/src/intake/intake-ats008.spec.ts",
+    "backend/src/intake/intake-ats009.spec.ts",
+    "backend/src/intake/intake.service.ts",
+    "backend/src/intake/intake.controller.ts",
+    "backend/src/intake/campus.controller.ts",
+    "backend/src/intake/intake.module.ts",
+    "src/api.ts",
+    "src/types.ts",
+    "src/main.tsx",
+    "src/App.tsx",
+    "src/components/Sidebar.tsx",
+    "src/pages/Intake.tsx",
+    "src/pages/SourceRecords.tsx",
+    "src/pages/Campus.tsx",
+    "src/pages/CampusPortal.tsx",
+    "src/styles.css",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "checks": [
+    {
+      "name": "source_record_capture_and_query",
+      "passed": true,
+      "criteria": [
+        "简历来源记录推荐人/来源标识，支持查询筛选，查重合并保留全部来源；不建设内推门户、分享或推荐人进度查询，不判定有效推荐、不自动结算。"
+      ],
+      "details": "新增 candidate_source_records 台账与 resume_intakes.referrerName/referrerContact/referralCode/sourceNote；手工、上传、Excel 与校招投递建档时写入来源记录，Excel 模板新增「推荐人」「来源标识」列。GET /api/v1/intake/sources 支持 source/referrer（推荐人姓名/联系方式/来源标识关键词）/candidateId/jobId/createdFrom/createdTo 筛选并按数据范围收敛，联系方式在无 CANDIDATE_CONTACT 读权限时脱敏；PATCH /api/v1/intake/sources/:id 供 HR 维护来源信息并写时间线。前端「简历入场」新增来源记录页签，提供来源、推荐人关键词与时间筛选和行内编辑。未提供内推门户、分享、推荐人进度查询、有效推荐判定或结算。"
+    },
+    {
+      "name": "dedup_merge_preserves_all_sources",
+      "passed": true,
+      "criteria": [
+        "简历来源记录推荐人/来源标识，支持查询筛选，查重合并保留全部来源；不建设内推门户、分享或推荐人进度查询，不判定有效推荐、不自动结算。"
+      ],
+      "details": "mergeDuplicate 在挂接原候选人的同时，用 candidateSourceRecord.upsert 把重复入场的 source/entryMode/jobId/推荐人/来源标识/备注写入原候选人来源台账，并保留 resumeFileId；合并结果返回 sourceRecordId，时间线 payload 记录来源台账 id。新增单元用例覆盖来源写入与合并保留。"
+    },
+    {
+      "name": "campus_portal_preferences_and_manual_assignment",
+      "passed": true,
+      "criteria": [
+        "校招个人意愿表、虚拟职位与批量人工分配保留原始意愿；带正式职位投递直入 RECOMMENDED，虚拟职位按待分配规则处理。"
+      ],
+      "details": "新增 campus_applications 表保存个人意愿 JSON（意向岗位/城市/学校/专业/毕业年份/可到岗时间/备注）。公开接口 POST /api/v1/campus/applications：虚拟职位落 PoolType.VIRTUAL + CandidateStage.VIRTUAL_POOL，正式职位落 PoolType.NONE + CandidateStage.RECOMMENDED；重复手机号/邮箱生成 DUPLICATE 入场记录并保留附件与来源。POST /api/v1/campus/applications/batch-assign 仅接受正式职位，逐条调用分配；assignJob 对正式职位只更新 assignedJobId/assignedAt/assignedById/status，不修改 preferences。前端新增「校招投递」管理页（意愿展示、状态筛选、批量分配）与公开投递页 /campus（意愿表、推荐人字段、可选简历附件）。"
+    },
+    {
+      "name": "automated_checks",
+      "passed": true,
+      "criteria": [],
+      "details": "backend: npm run lint 0 warnings 0 errors；npm test 21 files / 122 tests 全通过（新增 intake-ats009.spec.ts 8 项：手工来源写入、合并保留来源、来源筛选与联系方式脱敏、虚拟职位投递、正式职位直入 RECOMMENDED、重复投递查重、批量分配保留意愿、拒绝虚拟职位分配）。web: npm run build（tsc -b + vite build）通过。"
+    }
+  ],
+  "limitations": [
+    "后端 npm run typecheck 与 npm run build 未通过：工作区存在并发任务 ATS-012 未完成的 candidates.service.ts 改动（2 处类型错误），报错均不在本次新增文件；待其完成后需复跑后端类型检查与构建。",
+    "当前环境无 backend/.env 与 DATABASE_URL，且无 mysql 客户端，未在临时库重放迁移，也未执行接口冒烟；迁移 SQL 仅做静态核对。",
+    "未在浏览器人工走查 /campus 公开投递门户、来源记录页与校招投递页；未运行 E2E、性能测试与真实第三方集成。",
+    "backend/dist 因环境安全删除策略无法自动清理，构建前已移至 backend/.tmp-ats009-dist，需手动删除。"
+  ]
+}
