@@ -29,7 +29,10 @@ export function Sidebar({ page, onNavigate, onSettings }: SidebarProps) {
     <aside className={cn('sidebar', collapsed && 'sidebar-collapsed')}>
       <div className="sidebar-brand">
         <div className="brand-mark"><span /><span /><span /></div>
-        {!collapsed && <span className="brand-word">TalentFlow</span>}
+        {!collapsed && <span className="brand-copy">
+          <span className="brand-word">TalentFlow</span>
+          <span className="brand-subtitle">招聘管理系统</span>
+        </span>}
       </div>
       <button className="workspace-switch">
         <span className="workspace-logo">P</span>

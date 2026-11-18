@@ -96,7 +96,10 @@ export function CampusPortal() {
       <header className="campus-portal-header">
         <div className="campus-portal-brand">
           <div className="brand-mark"><span /><span /><span /></div>
-          <span className="brand-word">TalentFlow</span>
+          <span className="brand-copy">
+            <span className="brand-word">TalentFlow</span>
+            <span className="brand-subtitle">招聘管理系统</span>
+          </span>
         </div>
         <span className="campus-portal-tag">校园招聘投递</span>
       </header>

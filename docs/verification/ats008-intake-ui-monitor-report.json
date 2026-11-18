@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "work_item": "ATS-008",
+  "date": "2026-11-18",
+  "verified_at": 1794966477001,
+  "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+  "working_tree_dirty": true,
+  "summary": "补齐简历入场的真实界面与接口：新增「简历入场」（上传/手工录入/邮箱模拟/Excel 批量导入/入场记录）、「待分配池」（待分配与待合并查重）和「入场监控」三个页面，并把简历库的「批量导入」按钮接到入场页。后端新增入场列表分页与职位/接收邮箱/时间筛选、待分配池与查重列表、批量分配职位（虚拟职位停留在校招容器）、查重合并（保留来源与附件）、入场监控聚合（进入/未进入、渠道/方式/接收邮箱、接收时延均值/P90/最大、去向与失败归因、最近失败）、Excel 模板下载/行校验/导入/失败行导出，以及接收邮箱配置查询。Excel 走独立 entryMode=EXCEL_IMPORT 直接建档为 PARSED，不创建 AIRun、不入解析队列。顺带修复重试因 AIRun.inputRefs 为 VARCHAR(191) 导致 P2000 的问题（改为 TEXT）。",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend (114 tests); npm run build (web, tsc -b + vite build); npx prisma generate; npx prisma migrate reset --force --skip-seed + node prisma/seed.mjs against a temporary MySQL database talentflow_ats008; node live API smoke script (37 checks) on port 3118; temporary database dropped afterwards",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261116060000_intake_excel_import/migration.sql",
+    "backend/src/intake/intake.constants.ts",
+    "backend/src/intake/intake-excel.ts",
+    "backend/src/intake/intake-excel.spec.ts",
+    "backend/src/intake/intake-ats008.spec.ts",
+    "backend/src/intake/intake.service.ts",
+    "backend/src/intake/intake.controller.ts",
+    "backend/package.json",
+    "backend/package-lock.json",
+    "src/api.ts",
+    "src/types.ts",
+    "src/pages/Intake.tsx",
+    "src/pages/IntakePool.tsx",
+    "src/pages/IntakeMonitor.tsx",
+    "src/pages/Candidates.tsx",
+    "src/components/Sidebar.tsx",
+    "src/App.tsx",
+    "src/styles.css",
+    "docs/ats-项目目标与实施路线图-v1.0.md"
+  ],
+  "checks": [
+    {
+      "name": "intake_entry_ui_batch_and_excel_import",
+      "passed": true,
+      "criteria": [
+        "上传/手工/邮箱适配入口、批量文件和 Excel 模板/行校验/失败导出具备真实界面及 API；Excel 不进入 AI 解析管道。"
+      ],
+      "details": "新增页面 src/pages/Intake.tsx：上传（多文件、来源、目标职位、逐条结果与重试/草稿确认）、手工录入、邮箱模拟（接收邮箱/发件人/主题/接收时间/附件 base64）、Excel 批量导入（模板下载、导入结果指标、行级结果、失败行导出）、入场记录（状态/进入方式/接收邮箱筛选 + 分页 + 附件/重试/确认草稿）。后端新增 GET /api/v1/intake/excel/template、POST /api/v1/intake/excel/import、GET /api/v1/intake/excel/batches/:batchId、GET /api/v1/intake/excel/batches/:batchId/failed-rows，Excel 由 exceljs 解析并按姓名必填、手机号/邮箱格式、来源枚举、职位编号存在性逐行校验，单文件上限 500 行；导入行以 entryMode=EXCEL_IMPORT、status=PARSED 直接建档，不创建 AIRun、不调用解析队列。临时库实测：模板下载返回 xlsx（>1000 字节），4 行导入得到成功 1/查重 1/失败 2，错误码分别为 INVALID_PHONE 与 JOB_NOT_FOUND，导入前后 aIRun 数量不变，Excel 入场记录 airRunId 为 null。"
+    },
+    {
+      "name": "pool_manual_assignment_dedup_merge_and_draft_confirm",
+      "passed": true,
+      "criteria": [
+        "邮箱附件先进待分配池 / 临时待处理区，由人事导入时手工选职位，不自动匹配；虚拟职位、选职位带出负责人、查重合并保留来源和附件、草稿人工确认可验证。"
+      ],
+      "details": "新增 GET /api/v1/intake/pool（按 poolType=UNASSIGNED，含最新入场记录、附件名与解析状态）、GET /api/v1/intake/duplicates（DUPLICATE 且 mergedAt 为空）、POST /api/v1/intake/batch-assign-job（逐条返回成功/失败，单次上限 200）、POST /api/v1/intake/:id/merge。assignJob 现在按职位 isVirtual 决定落 RECOMMENDED 还是 VIRTUAL_POOL，并在响应与时间线里带出职位 recruiterId；页面显示「负责人：X（职位带出）」。查重合并把重复入场记录挂到原候选人并写 mergedAt/mergedById，来源、进入方式与 resumeFileId 仍保留在该记录上，时间线写 candidate.duplicate_merged；重复合并返回 400。草稿确认沿用 POST /api/v1/ai-runs/:id/confirm，入场页、待分配池与记录列表均可触发。临时库实测：邮箱附件入场后出现在待分配池（接收邮箱 hr-smoke@example.com），批量分配后离开待分配池且候选人 stage=RECOMMENDED，虚拟职位分配后 stage=VIRTUAL_POOL，重复上传同一文件得到 DUPLICATE 并可合并、二次合并被拒。"
+    },
+    {
+      "name": "intake_monitor_and_failure_handling",
+      "passed": true,
+      "criteria": [
+        "监控页展示进入/未进入、渠道/邮箱/接收时间/时延/去向及失败归因；失败可重试和人工处理，不重复建档。"
+      ],
+      "details": "新增 GET /api/v1/intake/monitor 与页面 src/pages/IntakeMonitor.tsx：按 jobId/mailbox/entryMode/source/receivedFrom/receivedTo 过滤，返回 total/entered/notEntered/enteredRate/assigned/pool 与接收时延（均值、P90、最大，基于 receivedAt→createdAt），以及 byStatus/bySource/byEntryMode/byMailbox（含最近接收时间）、failureReasons（按 errorCode 聚合）与最近 10 条 FAILED/NEEDS_MANUAL 记录；页面提供指标卡、渠道/进入方式条形分布、接收邮箱与去向表、失败归因表与一键重试。列表同时新增分页（page/pageSize/total）与职位、接收邮箱、创建/接收时间筛选，非法 status 返回 400。入场记录新增 mailboxAddress 字段（接收简历的招聘邮箱），筛选与监控口径按接收邮箱而非候选人发件地址；发件人仍按 CANDIDATE_CONTACT 敏感字段授权脱敏。修复重试路径：AIRun.inputRefs 改为 TEXT，避免重试追加 mockOutcome 后超出 VARCHAR(191) 触发 P2000。临时库实测：邮箱范围监控 total=1、entered=1、latencySamples=1 且均值≥100 秒，byMailbox 返回 hr-smoke@example.com；上传记录的 retry 返回 201 且重新入队，Excel 记录 retry 返回 400。"
+    },
+    {
+      "name": "automated_checks",
+      "passed": true,
+      "criteria": [
+        "类型/Lint/单元测试/前端构建通过，新增接口在真实数据库上完成接口级校验。"
+      ],
+      "details": "backend: npm run typecheck 通过，npm run lint 0 warning 0 error（92 files），npm test 114 tests / 20 files 全通过（新增 15 项：intake-excel.spec.ts 5 项解析与校验、intake-ats008.spec.ts 10 项列表分页/筛选/监控聚合/虚拟职位分配/批量分配/查重合并/Excel 导入与查重跳过）。web: npm run build（tsc -b + vite build）通过。临时 MySQL 库 talentflow_ats008 上 prisma migrate reset 重放 6 个迁移并 seed 后，临时端口 3118 启动 API 执行 37 项接口校验全部通过（含 401 未登录拒绝、附件签名链接签发与回源下载返回 %PDF 字节）；校验后临时库已删除，本地 talentflow 库未改动。"
+    }
+  ],
+  "notes": [
+    "邮箱能力仍为 Mock（真实 IMAP 轮询与附件抓取由 ATS-022 承接），AI 解析仍为 Mock provider（正式 provider 由 ATS-021 承接）。",
+    "本次未运行 E2E/性能测试，未做真实 OSS 与真实钉钉租户验证；前端未做浏览器人工走查，仅完成构建与接口级验证。",
+    "backend/dist 因安全删除策略无法清理，本次改用独立临时目录编译校验服务，校验后已删除临时编译产物（.tmp-ats008-dist 目录因回收站异常未能自动清理，需手动删除）。"
+  ]
+}

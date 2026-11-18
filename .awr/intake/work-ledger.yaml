@@ -1,7 +1,7 @@
 goals:
 - id: ats-delivery
   status: active
-  title: 交付覆盖招聘全流程、可审计且可运维的 TalentFlow ATS
+  title: 交付覆盖招聘全流程、可审计且可运维的 TalentFlow 招聘管理系统
   success_criteria:
   - 以职位和招聘需求为业务起点，覆盖简历入场、九阶段候选人主链、面试、Offer、入职、试用期与人才复用，并支持社招、校招和内推。
   - 基于 React 18/Vite/TypeScript、NestJS/Prisma/MySQL、Redis/BullMQ 的冻结技术栈，核心页面使用真实 API 和持久化数据。

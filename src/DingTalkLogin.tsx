@@ -30,7 +30,8 @@ export function DingTalkLogin({ onAuthenticated }: DingTalkLoginProps) {
   return <main className="dingtalk-login">
     <section className="dingtalk-login-card">
       <div className="dingtalk-login-mark"><ShieldCheck size={24} /></div>
-      <p className="dingtalk-login-eyebrow">TalentFlow ATS</p>
+      <p className="dingtalk-login-eyebrow">TalentFlow</p>
+      <p className="dingtalk-login-subtitle">招聘管理系统</p>
       <h1>{isLocalPreview ? '账号密码登录' : '使用钉钉登录'}</h1>
       {isLocalPreview ? <>
         <p className="dingtalk-login-copy">本机开发环境可使用预填的管理员账号登录，也可使用企业钉钉账号授权。</p>

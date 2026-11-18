@@ -54,7 +54,7 @@ const makeService = (options: {
   create?: ReturnType<typeof vi.fn>;
 } = {}) => {
   const prisma = {
-    department: { findUnique: vi.fn().mockResolvedValue({ id: 'dept-1' }) },
+    department: { findFirst: vi.fn().mockResolvedValue({ id: 'dept-1' }) },
     jobRequisition: {
       findUnique: options.findUnique ?? vi.fn().mockResolvedValue(null),
       findFirst: vi.fn().mockResolvedValue(options.record ?? null),

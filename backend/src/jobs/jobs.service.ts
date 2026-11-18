@@ -398,8 +398,8 @@ export class JobsService {
   }
 
   private async assertDepartment(departmentId: string) {
-    const department = await this.prisma.department.findUnique({
-      where: { id: departmentId },
+    const department = await this.prisma.department.findFirst({
+      where: { id: departmentId, isActive: true },
       select: { id: true },
     });
     if (!department) throw new NotFoundException('部门不存在');

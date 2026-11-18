@@ -44,6 +44,7 @@ svg { flex: none; }
 .dingtalk-login-card { width: min(440px, 100%); padding: 38px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-md); }
 .dingtalk-login-mark { width: 46px; height: 46px; display: grid; place-items: center; margin-bottom: 22px; border-radius: 13px; color: var(--primary); background: var(--primary-soft); }
 .dingtalk-login-eyebrow { margin-bottom: 5px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+.dingtalk-login-subtitle { margin-bottom: 18px; color: var(--text-2); font-size: 12px; }
 .dingtalk-login-card h1 { font-size: 25px; letter-spacing: -.5px; }
 .dingtalk-login-copy { margin-top: 12px; color: var(--text-2); line-height: 1.8; }
 .dingtalk-login-button { width: 100%; height: 42px; margin-top: 26px; }
@@ -106,6 +107,8 @@ svg { flex: none; }
 .brand-mark span:nth-child(2) { height: 15px; }
 .brand-mark span:nth-child(3) { height: 11px; }
 .brand-word { font-size: 18px; font-weight: 750; letter-spacing: -.65px; color: #24283a; }
+.brand-copy { display: flex; flex-direction: column; gap: 2px; }
+.brand-subtitle { color: var(--muted); font-size: 10px; line-height: 1.4; }
 .workspace-switch { display: flex; width: 100%; min-height: 52px; padding: 8px 9px; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 10px; text-align: left; margin-bottom: 17px; transition: .15s ease; }
 .workspace-switch:hover { border-color: #d3d7e6; background: #fafbff; }
 .workspace-logo { width: 29px; height: 29px; border-radius: 8px; background: #edefff; color: var(--primary); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex: none; }

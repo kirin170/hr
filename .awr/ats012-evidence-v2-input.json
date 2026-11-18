@@ -1,0 +1,27 @@
+{
+  "work_item_key": "ATS-012",
+  "external_key": "ats012-candidate-flow-report-v2",
+  "evidence_type": "verification_report",
+  "summary": "ATS-012 本轮验收报告 v2：补入批量部门筛选、批量标签和权限内状态查看；后端 typecheck/build、前端生产构建、Prisma schema 校验与 diff 检查通过。未执行测试、API/E2E、浏览器走查或真实数据库迁移，任务未完成。",
+  "locator": "docs/verification/ats012-candidate-flow-report-v2.json",
+  "level": "locally_verified",
+  "sha256": "091b59d006e41ef28281bb1d1c90f5cb91efa2ce5129e7385b9003c897512029",
+  "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+  "command": "npm run typecheck --prefix backend; npm run build --prefix backend; npm run build; npm run db:validate --prefix backend (temporary placeholder DATABASE_URL); git diff --check",
+  "scope": [
+    "docs/ats012-candidate-stage-migration.md",
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261118120000_ats012_candidate_state/migration.sql",
+    "backend/src/candidates/candidates.controller.ts",
+    "backend/src/candidates/candidates.service.ts",
+    "src/pages/Candidates.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/pages/Pipeline.tsx",
+    "src/api.ts",
+    "src/types.ts",
+    "src/utils.ts",
+    "src/styles.css"
+  ],
+  "verified_at": 1794973376000,
+  "branch_id": null
+}

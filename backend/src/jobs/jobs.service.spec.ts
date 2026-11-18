@@ -57,7 +57,7 @@ const makeService = (options: {
     },
   );
   const prisma = {
-    department: { findUnique: vi.fn().mockResolvedValue({ id: 'dept-1' }) },
+    department: { findFirst: vi.fn().mockResolvedValue({ id: 'dept-1' }) },
     user: { findUnique: vi.fn().mockResolvedValue({ id: 'user-1' }) },
     jobRequisition: { findUnique: vi.fn().mockResolvedValue({ id: 'req-1' }) },
     job: {
