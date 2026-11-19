@@ -1,9 +1,22 @@
 {
+  "version": 1,
   "work_item": "ATS-017",
   "report_id": "ats017-dingtalk-integration-v1",
-  "verified_at": "2026-11-18",
-  "verification_level": "locally_verified",
-  "scope": "Local implementation, documentation, mocked API contracts, and authorization behavior only.",
+  "source_sha": "dc15bf3de6a7302833a876a87883bd301bc768f2",
+  "summary": "本地钉钉集成与授权租户全量组织同步已完成。用户确认已初步验证，并要求关闭 ATS-017 以解除下游依赖；此关闭决定不代表未执行的 OAuth 闭环、增量变更、HTTPS 回调及重试检查已通过。",
+  "command": "Previously recorded local verification checks are listed below; authorized tenant full sync event cmwlsjkds001dxjl8iyajjfmf completed with status PROCESSED. This report records the user's completion acceptance; no additional test commands were run for this status change.",
+  "verified_at": 1794993511000,
+  "verification_level": "partially_verified",
+  "scope": [
+    "Local implementation, documentation, and mocked DingTalk API contracts.",
+    "Authorized tenant full directory sync: 462 departments and 2,736 identity mappings."
+  ],
+  "closure_disposition": {
+    "status": "user_accepted_for_downstream_progress",
+    "date": "2026-11-18",
+    "notes": "User reports preliminary verification and explicitly requests ATS-017 be marked completed so downstream tasks can proceed. The outstanding checks remain documented below and are not represented as passed.",
+    "awr_completion_receipt": "Not created: AWR work.complete requires every acceptance check to pass, and the detailed tenant integration check remains unverified. The authoritative source status was changed to completed per the user's explicit instruction; this is an administrative close, not an engineering verification receipt."
+  },
   "acceptance": [
     {
       "id": 1,
@@ -16,14 +29,15 @@
     },
     {
       "id": 2,
-      "status": "blocked_pending_authorized_test_tenant",
+      "status": "partially_verified",
       "evidence": [
-        "backend/src/dingtalk/*.spec.ts"
+        "backend/src/dingtalk/*.spec.ts",
+        "DingTalk sync event cmwlsjkds001dxjl8iyajjfmf (PROCESSED)"
       ],
-      "notes": "Local mocks cover code exchange, state validation, callback encryption, batch event IDs, department transfer, offboarding revocation, duplicate events, and retry/error behavior. No authorized DingTalk test organization or credentials were available, so live User/Department sync, userId mapping, callback delivery, and tenant permission validation were not performed."
+      "notes": "Authorized tenant full directory sync completed successfully: 462 departments and 2,736 DingTalk identity mappings were synchronized. Local mocks cover code exchange, state validation, callback encryption, batch event IDs, department transfer, offboarding revocation, duplicate events, and retry/error behavior. The bound-user OAuth login flow, incremental User/Department changes, transfer/offboarding permission effects, live HTTPS callback delivery, and tenant-side retry behavior remain unverified."
     }
   ],
-  "checks": [
+  "verification_commands": [
     {
       "command": "npm run db:generate",
       "result": "passed",
@@ -66,13 +80,33 @@
     }
   ],
   "not_performed": [
-    "Live DingTalk OAuth and callback verification against a tenant",
+    "End-to-end OAuth login after identity binding",
+    "Incremental User/Department changes and transfer/offboarding permission effects",
+    "Live HTTPS callback delivery, idempotency, and retry verification",
     "Database migration deployment against MySQL",
     "Production permission approval or release"
   ],
-  "required_to_continue": [
-    "An authorized DingTalk test organization and approved app permissions",
-    "AppKey, AppSecret, corpId, callback Token, and callback AESKey injected through the local runtime environment",
-    "A publicly reachable HTTPS callback URL for real event delivery"
+  "checks": [
+    {
+      "name": "integration_design_and_local_implementation",
+      "passed": true,
+      "criteria": [
+        "形成钉钉集成技术设计，记录六类用途所需权限、回调、限流、身份映射和错误策略；实际 API 以接入时官方文档核对。"
+      ],
+      "details": "The technical design and local implementation are recorded in the report. Existing backend verification checks are listed under verification_commands."
+    },
+    {
+      "name": "authorized_tenant_incremental_and_exception_acceptance",
+      "passed": false,
+      "criteria": [
+        "授权测试组织中 User/Department 增量同步、userId 一对一映射、离职/转岗权限变更及失败重试有测试记录。"
+      ],
+      "details": "The authorized tenant full sync is verified, but the report does not claim that incremental changes, transfer/offboarding permission effects, live callbacks, and tenant retry paths were tested. The user accepted closing ATS-017 at the current preliminary verification stage so downstream tasks can proceed."
+    }
+  ],
+  "follow_up_not_blocking_downstream": [
+    "Run the remaining OAuth and directory-change checks in the authorized tenant",
+    "A publicly reachable HTTPS callback URL and callback configuration for live event delivery",
+    "Exercise callback idempotency and failure retry with tenant-delivered test events"
   ]
 }

@@ -1,0 +1,17 @@
+{
+  "branch_id": null,
+  "verified_at": 1794993787000,
+  "evidence_type": "verification_report",
+  "scope": [
+    "Local DingTalk integration, docs, and mocked API contracts",
+    "Authorized tenant full organization sync event cmwlsjkds001dxjl8iyajjfmf: 462 departments and 2736 identity mappings"
+  ],
+  "command": "See verification report; no new test commands were run for the user-directed administrative closure.",
+  "source_sha": "dc15bf3de6a7302833a876a87883bd301bc768f2",
+  "work_item_key": "ATS-017",
+  "summary": "Local implementation and authorized tenant full directory sync (462 departments, 2736 identity mappings) are evidenced. Remaining detailed integration checks are explicitly unverified; user accepted task closure to unblock downstream work.",
+  "external_key": "ats017-dingtalk-integration-v2",
+  "locator": "docs/verification/ats017-dingtalk-integration-report.json",
+  "sha256": "1e0186b3b8bd9b2d8a713552b6136a53ea4a9646d96c42a89b35c2828bca05a9",
+  "level": "locally_verified"
+}

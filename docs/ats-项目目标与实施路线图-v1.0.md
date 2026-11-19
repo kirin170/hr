@@ -139,7 +139,7 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 | ATS-014 | 面试排期、登记表与评价协同 | ats-interview | P1 | ATS-012 | 待分配 / 未指定 |
 | ATS-015 | Offer 状态、OA 材料和背调流程 | ats-offer-onboarding | P1 | ATS-012、ATS-014、ATS-005 | 待分配 / 未指定 |
 | ATS-016 | 待入职、确认入职与试用期闭环 | ats-offer-onboarding | P1 | ATS-015 | 待分配 / 未指定 |
-| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 已认领 / Codex（租户验证阻塞） |
+| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 已完成 / Codex（用户确认初步验证并要求关闭以解除下游依赖；后续验证项见报告） |
 | ATS-018 | 钉钉日历与固定事件通知正式接入 | ats-integrations | P1 | ATS-017、ATS-014、ATS-016 | 待分配 / 未指定 |
 | ATS-019 | 钉钉 OA 需求同步与录用审批对接 | ats-integrations | P1 | ATS-017、ATS-007、ATS-015 | 待分配 / 未指定 |
 | ATS-020 | 钉钉听记素材按权限读取 | ats-integrations | P1 | ATS-017、ATS-014 | 待分配 / 未指定 |
@@ -301,9 +301,9 @@ P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代�
 - 形成钉钉集成技术设计，记录六类用途所需权限、回调、限流、身份映射和错误策略；实际 API 以接入时官方文档核对。
 - 授权测试组织中 User/Department 增量同步、userId 一对一映射、离职/转岗权限变更及失败重试有测试记录。
 
-执行记录（2026-11-18）：已完成六用途技术设计、钉钉 OAuth 登录及前端会话恢复、加密事件回调、组织全量/增量同步、多部门授权、离职撤权和 BullMQ 重试/人工恢复接口。后端 99 项测试、类型检查、Lint、构建、Prisma 校验和前端构建通过；本地 mock 不作为租户验收证据。报告与 AWR 本地验证证据见 `docs/verification/ats017-dingtalk-integration-report.json` 和 `ats017-dingtalk-integration-v1`。当前 AWR 状态为 blocked：未提供授权测试组织、应用权限与凭据，尚未进行真实 OAuth、回调及 User/Department 联调。
+执行记录（2026-11-18）：已完成六用途技术设计、钉钉 OAuth 接入、加密事件回调、组织全量/增量同步、多部门授权、离职撤权和 BullMQ 重试/人工恢复接口。后端 99 项测试、类型检查、Lint、构建、Prisma 校验和前端构建通过。授权租户全量组织同步实测成功：事件 `cmwlsjkds001dxjl8iyajjfmf` 状态为 `PROCESSED`，同步 462 个部门及 2,736 条钉钉身份映射。用户确认已初步验证，并明确要求关闭 ATS-017 以解除下游任务依赖，因此状态记为已完成。绑定身份后的 OAuth 闭环、User/Department 增量同步、转岗/离职权限变化、真实 HTTPS 回调投递及失败重试仍列为后续补充验证，不代表已通过。AWR `work.complete` 因上述验收检查未全部通过而未生成完成回执；本次按用户明确指示更新权威台账状态。验证报告见 `docs/verification/ats017-dingtalk-integration-report.json`。
 
-下一步：通过环境变量注入授权测试组织凭据，验证 OAuth、User/Department 增量同步、转岗、离职、回调幂等和失败重试后补齐第二条验收证据。
+下一步：无；ATS-017 已按用户确认关闭。若后续需要完整钉钉租户验收，再补充报告中列出的回调、增量变更和失败路径验证。
 
 ### ATS-018 钉钉日历与固定事件通知正式接入
 

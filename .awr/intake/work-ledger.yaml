@@ -349,18 +349,18 @@ work_items:
   next_action: "等待用户分配；用户分配后先定义入职显式动作、幂等与原型试用期数据迁移范围。"
 - id: ATS-017
   kind: delivery
-  status: blocked
-  owner: null
+  status: completed
+  owner: Codex
   goal: ats-integrations
   priority: P0
   title: "钉钉集成设计与组织身份正式接入"
-  summary: "本地钉钉 OAuth、身份映射、加密事件回调、组织同步、权限撤销、多部门范围和重试管理已实现；技术设计及本地验证报告已完成。授权测试组织实测尚未进行，本地模拟不作为租户验收证据。"
-  blocker: "缺少授权测试组织、测试应用权限与环境凭据，无法验证真实 OAuth、HTTP 事件回调和通讯录同步。"
+  summary: "2026-11-18 用户确认已初步验证并要求关闭 ATS-017 以解除下游依赖。授权租户全量组织同步已实测成功（462 个部门、2,736 条身份映射）。绑定身份后的 OAuth 闭环、增量变更、转岗/离职权限变化、真实 HTTPS 回调及失败重试仍记录为后续补充验证，未声称已通过。"
   acceptance:
   - "形成钉钉集成技术设计，记录六类用途所需权限、回调、限流、身份映射和错误策略；实际 API 以接入时官方文档核对。"
   - "授权测试组织中 User/Department 增量同步、userId 一对一映射、离职/转岗权限变更及失败重试有测试记录。"
   depends_on: [ATS-004]
-  next_action: "提供授权测试组织和最小应用权限，将 AppKey、AppSecret、corpId、回调 Token/AESKey 通过环境注入；验证 OAuth、User/Department 增量同步、转岗、离职、回调幂等和失败重试后补齐第二条验收证据。"
+  evidence: [docs/verification/ats017-dingtalk-integration-report.json]
+  next_action: "无；按用户确认将 ATS-017 关闭以解除下游任务依赖。若后续需要完整钉钉租户验收，再补测绑定身份 OAuth、增量变更、转岗/离职、HTTPS 回调幂等及失败重试。"
 - id: ATS-018
   kind: delivery
   status: planned
