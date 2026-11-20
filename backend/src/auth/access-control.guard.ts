@@ -12,6 +12,10 @@ import { AccessTokenService } from './access-token.service.js';
 import { AuthorizationService } from './authorization.service.js';
 import { IS_PUBLIC_ROUTE, REQUIRED_PERMISSION } from './auth.decorators.js';
 import { AuditService } from '../audit/audit.service.js';
+import { SystemTokenService } from './system-token.service.js';
+
+/** 浏览器扩展等系统调用方使用的短期令牌请求头（ATS-010） */
+export const SYSTEM_TOKEN_HEADER = 'x-system-token';
 
 @Injectable()
 export class AccessControlGuard implements CanActivate {
@@ -20,6 +24,7 @@ export class AccessControlGuard implements CanActivate {
     private readonly tokens: AccessTokenService,
     private readonly authorization: AuthorizationService,
     private readonly audit: AuditService,
+    private readonly systemTokens: SystemTokenService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,12 +43,21 @@ export class AccessControlGuard implements CanActivate {
       resourceType: request.route?.path?.toString() ?? 'API',
     };
     const authHeader = request.headers.authorization;
-    const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+    const bearer = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
       : '';
+    const systemToken =
+      typeof request.headers[SYSTEM_TOKEN_HEADER] === 'string'
+        ? (request.headers[SYSTEM_TOKEN_HEADER] as string).trim()
+        : '';
     try {
-      if (!token) throw new UnauthorizedException('需要登录后继续');
-      const claims = this.tokens.verify(token);
+      if (!bearer && systemToken) {
+        // 短期系统令牌路径（ATS-010）：扩展端以 X-System-Token 代表签发操作者调用
+        request.user = await this.systemTokens.authenticate(systemToken);
+        return true;
+      }
+      if (!bearer) throw new UnauthorizedException('需要登录后继续');
+      const claims = this.tokens.verify(bearer);
       request.user = await this.authorization.loadUserContext(claims.sub);
       if (metadata.action) {
         request.grantedScopes = this.authorization.scopesFor(request.user, metadata.action);

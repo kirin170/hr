@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuthorizationModule } from './authorization.module.js';
 import { DingTalkIdentityMapper, LocalIdentityAdapter } from './identity.adapters.js';
+import { SystemTokenService } from './system-token.service.js';
 
 @Global()
 @Module({
@@ -16,11 +17,12 @@ import { DingTalkIdentityMapper, LocalIdentityAdapter } from './identity.adapter
   providers: [
     AccessTokenService,
     AuthService,
+    SystemTokenService,
     LocalIdentityAdapter,
     DingTalkIdentityMapper,
     AccessControlGuard,
     { provide: APP_GUARD, useClass: AccessControlGuard },
   ],
-  exports: [AccessTokenService, AuthService],
+  exports: [AccessTokenService, AuthService, SystemTokenService],
 })
 export class AuthModule {}

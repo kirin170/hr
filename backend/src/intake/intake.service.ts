@@ -164,7 +164,19 @@ export interface IntakeResult {
   /** 上传校验或解析失败时的明确错误码（NFR-11） */
   errorCode?: string | null;
   errorMessage?: string | null;
+  /** 查重命中时命中的维度（ATS-010：平台 ID / 附件哈希 / 联系方式） */
+  duplicateDimensions?: DuplicateDimension[];
 }
+
+/** 浏览器导入查重维度 */
+export const DUPLICATE_DIMENSION = {
+  PLATFORM_ID: 'PLATFORM_ID',
+  FILE_HASH: 'FILE_HASH',
+  CONTACT: 'CONTACT',
+} as const;
+
+export type DuplicateDimension =
+  (typeof DUPLICATE_DIMENSION)[keyof typeof DUPLICATE_DIMENSION];
 
 export interface IntakeListQuery {
   status?: string;

@@ -90,6 +90,8 @@ model Candidate {
   source          String?
   channel         String?
   entryMode       String?
+  /// 来源平台候选人 ID（如 BOSS 的 encryptGeekId），用于按平台 ID 查重（ATS-010）
+  sourcePlatformId String?
   browserImportTaskId String?
   intentId        String?
     tags            String?  @db.Text
@@ -117,6 +119,7 @@ model Candidate {
   job             Job? @relation(fields: [jobId], references: [id])
 
   @@index([createdById])
+  @@index([sourcePlatformId])
 
   @@map("candidates")
 }
@@ -375,21 +378,31 @@ enum AiRunStatus {
 
 model BrowserImportTask {
   id                String   @id @default(cuid())
-  requestId         String   @unique
+  requestId         String
   operatorId        String
   sourceSite        String
   sourceCandidateId String?
   sourcePageUrl     String?
+  /// 来源页面仅保留协议 + 主机，路径/查询串不落库（ATS-010 URL 脱敏）
+  sourcePageHost    String?
   targetJobId       String?
   pagePayload       Json?
   resumeFileId      String?
+  fileName          String?
   fileHash          String?
   status            BrowserImportStatus @default(RECEIVED)
   candidateId       String?
   errorCode         String?
   errorMessage      String?
+  /// 失败阶段：VALIDATE / UPLOAD / PARSE / CONFIRM，便于任务审计定位（ATS-010）
+  errorStage        String?
   createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   completedAt       DateTime?
+
+  @@unique([requestId, operatorId])
+  @@index([operatorId])
+  @@index([sourceSite, sourceCandidateId])
 
   @@map("browser_import_tasks")
 }
@@ -879,6 +892,24 @@ model DingTalkSyncEvent {
 
   @@index([status, receivedAt])
   @@map("dingtalk_sync_events")
+}
+
+/// 短期系统令牌：浏览器扩展等系统调用方使用，只存哈希，过期或吊销即失效（ATS-010）
+model SystemToken {
+  id         String    @id @default(cuid())
+  tokenHash  String    @unique
+  /// 令牌代表的操作者，导入任务按此归属并做所有者校验
+  operatorId String
+  purpose    String
+  issuedById String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([operatorId])
+  @@index([expiresAt])
+  @@map("system_tokens")
 }
 
 /// 附件与结构化记录的到期清理批次（NFR-2；保留期限配置化，具体天数上线前确认）

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "work_item": "ATS-010",
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "summary": "通用浏览器导入 API 已实现：短期系统令牌、任务资源与 requestId+操作者幂等、任务所有者查询、平台ID/附件哈希/联系方式三维查重进 DUPLICATE、统一解析管道复用、来源 URL 脱敏与凭据拒收。143 个单测（含 21 个 ATS-010 契约用例）、类型检查、Lint 与构建均通过；真实浏览器扩展与第三方页面样本验证不在本项，归 ATS-011。",
+  "command": "npx prisma generate; npx tsc --noEmit -p tsconfig.json; npx oxlint; npx vitest run (backend: 22 files / 143 tests); npm run build (backend)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261120100000_browser_import_api/migration.sql",
+    "backend/src/intake/browser-import.contract.ts",
+    "backend/src/intake/browser-import.service.ts",
+    "backend/src/intake/browser-import.controller.ts",
+    "backend/src/intake/browser-import-ats010.spec.ts",
+    "backend/src/intake/intake.service.ts",
+    "backend/src/intake/intake.module.ts",
+    "backend/src/auth/system-token.service.ts",
+    "backend/src/auth/access-control.guard.ts",
+    "backend/src/auth/auth.module.ts"
+  ],
+  "verified_at": 1795145600000,
+  "checks": [
+    {
+      "name": "import_task_contract",
+      "passed": true,
+      "criteria": ["POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"],
+      "details": "POST /api/v1/browser-import/tasks 落任务资源后立即返回 taskId/status，与 202 Accepted 语义一致；同操作者同 requestId 重放返回同一任务且不重复建任务（按 requestId+operatorId 唯一约束，复用现有任务）；GET tasks/:id 仅允许任务所有者读取，他人查询统一 TASK_NOT_FOUND 避免探测；短期系统令牌由 SystemTokenService 签发，256 位随机串、只存加盐 SHA-256、默认 30 分钟有效可配置、过期/吊销/未知一律 401，且不作为新权限来源，仍按签发操作者鉴权。"
+    },
+    {
+      "name": "dedup_and_pipeline",
+      "passed": true,
+      "criteria": ["平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"],
+      "details": "三维查重均在任务创建时执行：sourcePlatformId 命中候选人、sha256 命中已有附件经其入场记录回溯候选人、手机号/邮箱归一化后命中联系人。命中即任务置 DUPLICATE 并记录 duplicateOfCandidateId 与 duplicateDimensions，不自动建候选人、不投递解析。未命中走统一入场管道：ResumeFile（sha256+存储键去重）→ Candidate → ResumeIntake → AIRun 并入解析队列；targetJobId 存在时按职位权限校验（无权返回 JOB_NOT_FOUND），候选人直接挂职位（RECOMMENDED），缺失时进未分配人才库（UNASSIGNED）。人工确认与职位分配沿用既有候选人/入场接口，任务状态与解析结果写入时间线（import.received / import.duplicate / import.failed）。"
+    },
+    {
+      "name": "error_contract_cases",
+      "passed": true,
+      "criteria": ["URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"],
+      "details": "21 个契约用例覆盖：来源 URL 只保留协议+主机（查询串中 token 不出现于任何落库字段，sourcePageUrl 恒为 null）；非 http(s) 协议与非法 URL 返回 SOURCE_URL_INVALID；附件仅接受字节上传并经统一校验（类型/大小/魔数），非法格式返回 ATTACHMENT_INVALID，上传中断或内容不可用落 FAILED + ATTACHMENT_UNAVAILABLE + errorStage=UPLOAD；请求体任意深度出现 cookie/authorization/xsrf/password 等凭据字段立即返回 THIRD_PARTY_CREDENTIAL_REJECTED 且不落库、不写审计；缺 requestId、来源站点不支持、无任何载荷分别返回 REQUEST_ID_REQUIRED / SOURCE_SITE_UNSUPPORTED / PAYLOAD_REQUIRED。"
+    },
+    {
+      "name": "regression_suite",
+      "passed": true,
+      "criteria": ["POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。", "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"],
+      "details": "后端全量单测 22 个文件 / 143 个用例全部通过（原有 122 + 新增 21），无失败；tsc --noEmit 对改动文件无错误；oxlint 对 6 个改动文件 0 warning 0 error；nest build 成功。未执行 MySQL 迁移重放与批量数据场景：本机无 MySQL 实例，迁移脚本随代码登记，待有库环境补重放；仓库既有 dingtalk-sync.service.spec.ts 存在 5 个与本项无关的类型告警，未修改。"
+    }
+  ]
+}

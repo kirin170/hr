@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "acceptance": [
+    {
+      "criterion": "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。",
+      "evidence": ["ats010-browser-import-api-v1"]
+    },
+    {
+      "criterion": "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。",
+      "evidence": ["ats010-browser-import-api-v1"]
+    },
+    {
+      "criterion": "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。",
+      "evidence": ["ats010-browser-import-api-v1"]
+    }
+  ]
+}

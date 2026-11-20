@@ -1,0 +1,21 @@
+{
+  "work_item_key": "ATS-010",
+  "external_key": "ats010-browser-import-api-v1",
+  "evidence_type": "verification_report",
+  "summary": "浏览器导入 API 契约、短期系统令牌、requestId 幂等、三维查重与标准错误契约用例；后端 143 个单测、类型检查、Lint 与构建全部通过。",
+  "locator": "docs/verification/ats010-report.json",
+  "level": "locally_verified",
+  "sha256": "95e769da571da1c2b49d8ff6fe605f58ccdc4fe15329fb0314b761fd661197f1",
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "command": "npx tsc --noEmit; npx oxlint; npx vitest run; npm run build",
+  "scope": [
+    "backend/src/intake/browser-import.contract.ts",
+    "backend/src/intake/browser-import.service.ts",
+    "backend/src/intake/browser-import.controller.ts",
+    "backend/src/intake/browser-import-ats010.spec.ts",
+    "backend/src/auth/system-token.service.ts",
+    "backend/src/auth/access-control.guard.ts",
+    "backend/prisma/migrations/20261120100000_browser_import_api/migration.sql"
+  ],
+  "verified_at": 1795145600000
+}

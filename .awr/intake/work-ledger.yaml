@@ -254,18 +254,21 @@ work_items:
   next_action: "已交付并登记本地验证证据。待 ATS-012 完成后复跑后端 typecheck/build；有 MySQL 环境时重放迁移并做接口冒烟；补一次浏览器人工走查 /campus 投递门户、来源记录与校招投递页。真实内推/校招渠道接入不在本期范围。"
 - id: ATS-010
   kind: delivery
-  status: planned
+  status: completed
   owner: Trae
   goal: ats-intake
   priority: P1
   title: "通用浏览器导入 API 与任务审计"
-  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第1批。依据：FR-EXT-6/7/9、NFR-9～12；PRD §5.12 接口契约。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第1批。依据：FR-EXT-6/7/9、NFR-9～12；PRD §5.12 接口契约。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。已完成导入契约、短期系统令牌、requestId 幂等、平台ID/附件哈希/联系方式三维查重与标准错误用例；后端 143 项单测、类型检查、Lint 与构建通过，验收报告 docs/verification/ats010-report.json 已登记证据 ats010-browser-import-api-v1。AWR 写入器对本台账报 quoted scalar marker mismatch，本次状态按用户授权手工登记。"
   acceptance:
   - "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"
   - "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"
   - "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"
+  evidence: [docs/verification/ats010-report.json]
+  verification:
+    evidence_level: locally_verified
   depends_on: [ATS-004, ATS-005, ATS-008]
-  next_action: "已分派给 Trae（第1批，依赖已满足，可立即启动）：先冻结 POST 导入与任务查询契约及脱敏 fixtures，再实现 202 任务、短期系统令牌校验、requestId 幂等、平台ID/附件哈希/联系方式查重与审计；不依赖第三方页面即可完成 API 验证。报告写入 docs/verification/ 后再按 AWR 完成路径回写状态。"
+  next_action: "无；ATS-010 代码与本地验收完成，迁移脚本随代码登记，待有 MySQL 环境补重放。后续适配器与双平台扩展由 ATS-011 承接。"
 - id: ATS-011
   kind: delivery
   status: planned
