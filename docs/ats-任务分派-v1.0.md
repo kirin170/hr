@@ -111,6 +111,7 @@ ATS-012 的代码与静态检查已落地（提交 `9a4f363`，报告 v1/v2/v3 �
 5. **AWR 会话**：执行前 `awr session start --work <KEY> --agent <Codex|CodeBuddy|Trae> --provider generic --model <model> --claim --ttl-ms 3600000 --expected-revision <rev>`；中断用 `session checkpoint` 记录真实进度（checkpoint 不等于完成）；换智能体接手用 `session resume`/`handoff`，不要复用他人会话 ID。
 6. **完成判定**：报告必须含真实 `source_sha`、`command`、`scope`、`checks[].criteria` 与验收条目绑定；`working_tree_dirty` 要如实记录。缺环境、缺凭据的部分写成显式未验证，不得用静态审查冒充接口验收。
 7. **范围红线**（全项目通用）：不存薪资明细；不自建审批流；AI 结果一律人工确认后转正式（高置信度也不例外）；邮箱附件不自动匹配职位；报表真实计数，只有人才库总量 ≥10000 才显示 1w+。
+8. **台账写法**：`.awr/intake/work-ledger.yaml` 里**不要使用 YAML 块标量**（`key: |-` / `|` / `>`）。AWR 0.7.0 的写入器遇到块标量会对**整个文件**报 `MutationUnsupported: quoted scalar marker mismatch`，导致 `work edit` / `work progress` / `work complete` 全部写不进去，完成流程退化成"提案创建→批准→又要求提案"的死循环，状态只能手工改。多行文本写成双引号标量、用 `\n` 转义换行（内容等价），或写成单行。2026-11-20 已把仅有的两处块标量（`ats-delivery.summary`、`INTAKE-002.summary`）按此归一化，写回恢复正常。
 
 ## 6. 需要用户提供的前置条件（阻塞真实验收，不阻塞开工）
 
