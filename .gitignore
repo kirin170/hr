@@ -41,6 +41,8 @@ backend/.env.local
 # Local dev file storage
 .storage/
 backend/.storage/
+# 本地 TLS 根证书（公司代理环境）
+backend/.certs/
 
 .awr-native/
 .awr-native.tgz

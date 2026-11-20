@@ -612,17 +612,61 @@ enum IntakeStatus {
   @@map("intake_status")
 }
 
-/// 接收简历邮箱配置；本期邮件能力为 Mock，配置仅用于记录与自检
+/// 接收简历邮箱配置：ATS-022 起支持真实 IMAP 轮询，凭据只存密文
 model MailInboxConfig {
-  id           String    @id @default(cuid())
-  address      String    @unique
-  provider     String    @default("MOCK")
-  active       Boolean   @default(true)
-  lastPolledAt DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id                  String    @id @default(cuid())
+  address             String    @unique
+  /// MOCK（历史模拟配置）/ IMAP（真实轮询）
+  provider            String    @default("MOCK")
+  active              Boolean   @default(true)
+  host                String?
+  port                Int?
+  secure              Boolean   @default(true)
+  username            String?
+  /// AES-256-GCM 密文（iv.tag.cipher），接口不返回明文、不写日志
+  secretCipher        String?   @db.Text
+  folder              String    @default("INBOX")
+  pollIntervalSeconds Int       @default(300)
+  /// 增量游标：UIDVALIDITY 变化时必须重置游标，避免漏抓或重复建档
+  lastUidValidity     String?
+  lastUid             String?
+  lastPolledAt        DateTime?
+  /// OK / FAILED，供抓取状态与运行监控展示
+  lastPollStatus      String?
+  lastError           String?   @db.Text
+  lastErrorAt         DateTime?
+  consecutiveFailures Int       @default(0)
+  lastFetchedCount    Int       @default(0)
+  lastCreatedCount    Int       @default(0)
+  lastDuplicateCount  Int       @default(0)
+  lastSkippedCount    Int       @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@map("mail_inbox_configs")
+}
+
+/// 邮件处理台账：每封已处理邮件一条，作为断点恢复幂等键与抓取监控口径（FR-ENT-1/8）
+model MailMessageLog {
+  id              String    @id @default(cuid())
+  mailboxAddress  String
+  /// 邮件 Message-ID；缺失时用正文 SHA-256 兜底，保证同一封邮件不重复建档
+  messageId       String
+  uid             String?
+  subject         String?
+  fromAddress     String?
+  receivedAt      DateTime?
+  /// INGESTED / DUPLICATE / NO_ATTACHMENT / UNSUPPORTED / EXCEL / ERROR
+  outcome         String
+  detail          String?   @db.Text
+  attachmentCount Int       @default(0)
+  intakeCount     Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@unique([mailboxAddress, messageId])
+  @@index([mailboxAddress, createdAt])
+  @@index([outcome])
+  @@map("mail_message_logs")
 }
 
 enum UserStatus {

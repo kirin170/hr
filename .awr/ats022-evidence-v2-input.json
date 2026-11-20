@@ -1,0 +1,16 @@
+{
+  "work_item_key": "ATS-022",
+  "external_key": "ats022-mail-fixture-report-v1",
+  "evidence_type": "verification_report",
+  "summary": "ATS-022 补充验证：通过 IMAP APPEND 向真实 163 邮箱投递 3 封夹具邮件，真实轮询得到 fetched=3/created=2/duplicate=2。A 邮件 docx+png+xlsx 建档 2 条且 Excel 明确隔离不建简历；B 邮件重复附件按 sha256 全部跳过（2 条 DUPLICATE，无新候选人）；C 邮件 zip 记为 UNSUPPORTED。验证后夹具邮件已删除。",
+  "locator": "docs/verification/ats022-mail-fixture-report.json",
+  "level": "locally_verified",
+  "sha256": "78392581dfbc91627aa64fad88792fd197c2b1f5c98e53127670746f4d596fb6",
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "command": "npm run build --prefix backend; node backend/scripts/mail-fixture.mjs append; node backend/dist/mail/mail-poll.cli.js; node backend/scripts/mail-status.mjs; node backend/scripts/mail-fixture.mjs clean",
+  "scope": [
+    "backend/src/mail/mail-poll.service.ts",
+    "backend/scripts/mail-fixture.mjs"
+  ],
+  "verified_at": 1795152400000
+}

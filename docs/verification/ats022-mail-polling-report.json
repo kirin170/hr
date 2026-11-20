@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "work_item": "ATS-022",
+  "date": "2026-11-20",
+  "verified_at": 1795152099423,
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "working_tree_dirty": true,
+  "summary": "把邮箱渠道从 Mock 换成真实 IMAP：新增 MailInboxConfig 的 IMAP 连接/游标/失败状态字段与 MailMessageLog 处理台账，授权码用 AES-256-GCM 密文入库且接口只回配置状态；新增邮箱配置 CRUD、连接测试、手动抓取与抓取监控接口；worker 进程按各邮箱 pollIntervalSeconds 轮询，用 UIDVALIDITY+UID 增量游标与 (mailboxAddress, messageId) 唯一键保证断点恢复与并发触发都不重复建档；附件按 PDF/Word/图片走统一 AI 解析、Excel/CSV 走独立表格导入、.eml 先解包再分流；无附件邮件只记台账不建简历；附件一律入待分配池，不自动匹配职位。真实 163 测试邮箱实测：首轮 5 封邮件中 4 封无附件仅记 NO_ATTACHMENT，1 封 BOSS 直聘投递的 5 个 .eml 解包出 5 个 PDF 并建 5 条待分配池记录，次轮抓取 fetched=0/created=0。",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npm run test --prefix backend (24 files, 158 tests); npm run build --prefix backend; npx prisma migrate deploy (local talentflow_local_admin_preview, migration 20261120051308_ats022_mail_polling); node backend/scripts/mail-check.mjs (real 163 IMAP connectivity); node backend/dist/mail/mail-poll.cli.js --test; node backend/dist/mail/mail-poll.cli.js; node backend/scripts/mail-status.mjs",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261120051308_ats022_mail_polling/migration.sql",
+    "backend/src/mail/mail.constants.ts",
+    "backend/src/mail/mail-credential.service.ts",
+    "backend/src/mail/imap.client.ts",
+    "backend/src/mail/mail-attachment.ts",
+    "backend/src/mail/mail-config.service.ts",
+    "backend/src/mail/mail-poll.service.ts",
+    "backend/src/mail/mail-poll.runner.ts",
+    "backend/src/mail/mail-poll.cli.ts",
+    "backend/src/mail/mail-system-actor.service.ts",
+    "backend/src/mail/mail.controller.ts",
+    "backend/src/mail/mail.module.ts",
+    "backend/src/mail/mail.spec.ts",
+    "backend/src/mail/mail-poll.spec.ts",
+    "backend/src/intake/intake.service.ts",
+    "backend/src/app.module.ts",
+    "backend/package.json",
+    "backend/package-lock.json",
+    "backend/.env.example",
+    "backend/scripts/mail-check.mjs",
+    "backend/scripts/tls-probe.mjs",
+    "backend/scripts/mail-status.mjs",
+    ".gitignore"
+  ],
+  "checks": [
+    {
+      "name": "multi_mailbox_imap_polling_and_format_routing",
+      "passed": true,
+      "criteria": [
+        "支持关联多个招聘邮箱，仅轮询已关联邮箱中带简历附件的邮件；PDF/Word/图片走统一 AI 解析，Excel 走独立表格导入；断点恢复不重复建档。"
+      ],
+      "details": "MailInboxConfig 扩展 host/port/secure/username/secretCipher/folder/pollIntervalSeconds/lastUidValidity/lastUid 与失败统计，授权码 AES-256-GCM 加密后入库，GET 接口只返回 hasCredential 布尔值；新增 GET/POST/PATCH/DELETE /api/v1/mail/mailboxes、POST /:id/test-connection、POST /:id/poll、GET /:id/messages，读写分别要求 intake:read / intake:manage 并写审计。轮询由 MailPollRunner 在 APP_PROCESS_ROLE=worker 进程内按邮箱间隔调度（30 秒 tick + 每邮箱 pollIntervalSeconds，失败按连续失败次数退避），只取 active=true 且 provider=IMAP 的已关联邮箱。增量抓取以 UIDVALIDITY+UID 为游标，UIDVALIDITY 变化自动重置并从头回看；每封邮件先写 MailMessageLog 的 (mailboxAddress, messageId) 唯一记录，重复命中直接跳过，Message-ID 缺失时用正文 SHA-256 兜底。附件分流：PDF/Word/图片经 IntakeService.ingestEmailAttachments 复用 ATS-008 的校验/查重/落池/解析排队链路；xls/xlsx/csv 记为 EXCEL 不建简历；.eml 递归解包（最多 2 层）后再分流，解包失败或无可用内嵌附件记为 UNSUPPORTED。真实 163 邮箱（imap.163.com:993 SSL）实测：连接测试 ok=true、messageCount=5、uidValidity=1、691ms；首轮 fetched=5 建 5 条记录，次轮 fetched=0/created=0；处理台账为 4 条 NO_ATTACHMENT + 1 条 INGESTED（5 个 .eml 解包为 5 个 PDF）。"
+    },
+    {
+      "name": "pool_first_assignment_and_duplicate_handling",
+      "passed": true,
+      "criteria": [
+        "无附件邮件不建简历，重复附件查重合并/跳过，解析失败转人工；附件先进待分配池 / 临时待处理区，人事导入时手工选职位，不自动匹配。"
+      ],
+      "details": "邮箱轮询调用 ingestEmailAttachments 时不传 jobId，createFileIntake 因此按 jobId=null 建档，候选人 poolType=UNASSIGNED、stage=UNASSIGNED，只有人事在待分配池手工选职位后才进入 RECOMMENDED/VIRTUAL_POOL 并带出职位负责人。无附件邮件只写 MailMessageLog（outcome=NO_ATTACHMENT），不创建 Candidate/ResumeIntake。重复附件由 ResumeFile.sha256 唯一约束与既有查重分支处理，命中返回 duplicate=true 并记 DUPLICATE 台账，不再新建候选人。解析失败沿用 ATS-008 的 NEEDS_MANUAL 转人工链路，异常在单封邮件粒度捕获并记 ERROR 台账，不阻断同批其他邮件。真实邮箱实测：5 条入场记录全部 jobId=null、poolType=UNASSIGNED、stage=UNASSIGNED，附件为 5 个不同 PDF；4 封网易系统通知邮件均只落 NO_ATTACHMENT 台账，未产生候选人。"
+    },
+    {
+      "name": "automated_checks",
+      "passed": true,
+      "criteria": [],
+      "details": "backend npm run typecheck 通过；npm run lint 0 warning 0 error（112 files）；npm run test 24 files / 158 tests 全通过，其中新增 15 项（mail.spec.ts 9 项：附件分流/.eml 解包/解包失败归因/未知格式/凭据加解密与篡改检测/地址与 IMAP 参数校验/间隔下限夹取；mail-poll.spec.ts 6 项：无附件不建简历、PDF 走统一入库、Message-ID 幂等跳过、UIDVALIDITY 重置游标、MOCK 配置拒绝轮询、失败脱敏并累加连续失败）；npm run build 通过。迁移 20261120051308_ats022_mail_polling 已在本地库 talentflow_local_admin_preview 应用（mail_inbox_configs 增列 + 新建 mail_message_logs），未在临时库重放。"
+    }
+  ],
+  "notes": [
+    "真实邮箱验收使用用户提供的 163 测试邮箱（凭据仅存 backend/.env.local，已 gitignore；库内为 AES-256-GCM 密文）。公司网络存在 TLS 中间人代理（TecSign-Root），Node 不读 Windows 证书库，需通过 MAIL_CA_FILE 指定导出的根证书（backend/.certs/，已 gitignore）；正式接收邮箱上线前应改为直连或代理白名单，否则授权码会经过代理。",
+    "未覆盖项：真实 Word/图片附件样本（仅单测覆盖分类）、真实 Excel 附件（仅单测覆盖分流，未触发 EXCEL 台账）、重复附件重投（依赖 ATS-008 已验证的 sha256 查重分支，本次未重发同一附件）、解析失败转 NEEDS_MANUAL（AI provider 仍为 Mock，由 ATS-021 承接）。多邮箱关联能力已实现并有单测，但本次只接入一个真实邮箱。",
+    "未做前端页面：邮箱关联/连接测试/抓取状态的管理界面归属 ATS-024（FR-ADM-6），本任务只交付领域接口与监控查询。",
+    "工作区包含其他任务未提交改动（ATS-010 的 auth/intake/browser-import 文件与 ATS-012 文档），本次未提交任何代码；source_sha 为 HEAD e9b3138，working_tree_dirty=true。",
+    "AI 解析仍为 Mock provider，5 条入场记录状态停留在 RECEIVED（解析任务已入 BullMQ 队列，未启动 worker 消费）；本机 Redis 为 5.0.14，低于 BullMQ 建议的 6.2。"
+  ]
+}

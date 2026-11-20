@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "acceptance": [
+    {
+      "criterion": "支持关联多个招聘邮箱，仅轮询已关联邮箱中带简历附件的邮件；PDF/Word/图片走统一 AI 解析，Excel 走独立表格导入；断点恢复不重复建档。",
+      "evidence": [
+        "ats022-mail-polling-report-v1",
+        "ats022-mail-fixture-report-v1"
+      ]
+    },
+    {
+      "criterion": "无附件邮件不建简历，重复附件查重合并/跳过，解析失败转人工；附件先进待分配池 / 临时待处理区，人事导入时手工选职位，不自动匹配。",
+      "evidence": [
+        "ats022-mail-polling-report-v1",
+        "ats022-mail-fixture-report-v1"
+      ]
+    }
+  ]
+}

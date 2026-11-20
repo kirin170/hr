@@ -154,6 +154,13 @@ export interface EmailIntakeBody {
   actorId?: string;
 }
 
+/** 已解码的邮件附件；Mock 接口与真实 IMAP 轮询共用同一条入库链路（ATS-022） */
+export interface EmailAttachmentFile {
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
+}
+
 export interface IntakeResult {
   intakeId: string;
   candidateId: string | null;
@@ -466,34 +473,93 @@ export class IntakeService {
       throw new BadRequestException('receivedAt is invalid');
     }
 
-    const results: IntakeResult[] = [];
-    const limits = this.uploadLimits();
-    for (const attachment of attachments) {
+    const files: EmailAttachmentFile[] = attachments.map((attachment) => {
       const fileName = attachment.fileName?.trim();
       if (!fileName || !attachment.contentBase64) {
         throw new BadRequestException(
           'attachment.fileName and attachment.contentBase64 are required',
         );
       }
-
       const buffer = Buffer.from(attachment.contentBase64, 'base64');
       if (buffer.length === 0) {
         throw new BadRequestException(`Attachment ${fileName} is empty`);
       }
-
-      const file: UploadedResumeFile = {
-        originalname: fileName,
-        mimetype: attachment.mimeType ?? 'application/octet-stream',
-        size: buffer.length,
+      return {
+        fileName,
+        mimeType: attachment.mimeType ?? 'application/octet-stream',
         buffer,
+      };
+    });
+
+    return this.ingestEmailFiles(actor, {
+      from: body.from ?? null,
+      subject: body.subject ?? null,
+      mailboxAddress,
+      receivedAt,
+      files,
+      jobId,
+      mockOutcome: body.mockOutcome,
+    });
+  }
+
+  /**
+   * 邮箱附件入库（ATS-022 真实轮询入口）：与 Mock 共用校验、查重、落待分配池与解析排队。
+   * 不传 jobId，附件一律先入待分配池，由人事手工选职位（FR-ENT-10）。
+   */
+  async ingestEmailAttachments(params: {
+    actorId: string;
+    from: string | null;
+    subject: string | null;
+    mailboxAddress: string | null;
+    receivedAt: Date;
+    files: EmailAttachmentFile[];
+    jobId?: string | null;
+    mockOutcome?: MockOutcome;
+  }): Promise<IntakeResult[]> {
+    const actor = await this.requireActor(params.actorId);
+    const jobId = params.jobId?.trim() || null;
+    if (jobId) {
+      await this.assertJobAccessible(jobId, actor, 'intake:manage');
+    }
+    return this.ingestEmailFiles(actor, {
+      from: params.from,
+      subject: params.subject,
+      mailboxAddress: params.mailboxAddress,
+      receivedAt: params.receivedAt,
+      files: params.files,
+      jobId,
+      mockOutcome: params.mockOutcome,
+    });
+  }
+
+  private async ingestEmailFiles(
+    actor: AuthenticatedUser,
+    params: {
+      from: string | null;
+      subject: string | null;
+      mailboxAddress: string | null;
+      receivedAt: Date;
+      files: EmailAttachmentFile[];
+      jobId: string | null;
+      mockOutcome?: MockOutcome;
+    },
+  ): Promise<IntakeResult[]> {
+    const results: IntakeResult[] = [];
+    const limits = this.uploadLimits();
+    for (const attachment of params.files) {
+      const file: UploadedResumeFile = {
+        originalname: attachment.fileName,
+        mimetype: attachment.mimeType,
+        size: attachment.buffer.length,
+        buffer: attachment.buffer,
       };
 
       const validation = validateUpload(
         {
-          fileName,
+          fileName: file.originalname,
           mimeType: file.mimetype,
           size: file.size,
-          buffer,
+          buffer: file.buffer,
         },
         limits,
       );
@@ -502,20 +568,20 @@ export class IntakeService {
           await this.recordRejectedFile(file, {
             source: INTAKE_SOURCE.EMAIL,
             entryMode: ENTRY_MODE.EMAIL_AUTO,
-            jobId,
+            jobId: params.jobId,
             actorId: actor.id,
             errorCode: validation.code,
             errorMessage: validation.message,
-            mailFrom: body.from ?? null,
-            mailSubject: body.subject ?? null,
-            mailboxAddress,
-            receivedAt,
+            mailFrom: params.from,
+            mailSubject: params.subject,
+            mailboxAddress: params.mailboxAddress,
+            receivedAt: params.receivedAt,
           }),
         );
         continue;
       }
 
-      const sha256 = createHash('sha256').update(buffer).digest('hex');
+      const sha256 = createHash('sha256').update(file.buffer).digest('hex');
       results.push(
         await this.createFileIntake({
           file,
@@ -523,15 +589,15 @@ export class IntakeService {
           sha256,
           source: INTAKE_SOURCE.EMAIL,
           entryMode: ENTRY_MODE.EMAIL_AUTO,
-          jobId,
+          jobId: params.jobId,
           intentId: null,
           actor,
-          mockOutcome: body.mockOutcome,
+          mockOutcome: params.mockOutcome,
           mail: {
-            from: body.from ?? null,
-            subject: body.subject ?? null,
-            mailboxAddress,
-            receivedAt,
+            from: params.from,
+            subject: params.subject,
+            mailboxAddress: params.mailboxAddress,
+            receivedAt: params.receivedAt,
           },
         }),
       );

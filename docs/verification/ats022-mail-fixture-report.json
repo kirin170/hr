@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "work_item": "ATS-022",
+  "date": "2026-11-20",
+  "verified_at": 1795152400000,
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "working_tree_dirty": true,
+  "summary": "补验 ATS-022 主报告未覆盖的格式分流与查重分支：通过 IMAP APPEND 向 163 测试邮箱投递 3 封构造邮件（A=docx+png+xlsx，B=与 A 相同的 docx+png，C=zip），再执行一次真实轮询。结果 fetched=3/created=2/duplicate=2：A 建档 2 条且 Excel 明确记入台账不建简历，B 命中 sha256 查重全部跳过不新建候选人，C 记为 UNSUPPORTED。验证后夹具邮件已从邮箱删除。",
+  "command": "npm run build --prefix backend; node backend/scripts/mail-fixture.mjs append; node backend/dist/mail/mail-poll.cli.js; node backend/scripts/mail-status.mjs; node backend/scripts/mail-fixture.mjs clean",
+  "scope": [
+    "backend/src/mail/mail-poll.service.ts",
+    "backend/scripts/mail-fixture.mjs"
+  ],
+  "checks": [
+    {
+      "name": "format_routing_word_image_excel_on_real_imap",
+      "passed": true,
+      "criteria": [
+        "支持关联多个招聘邮箱，仅轮询已关联邮箱中带简历附件的邮件；PDF/Word/图片走统一 AI 解析，Excel 走独立表格导入；断点恢复不重复建档。"
+      ],
+      "details": "邮件 A 含 resume.docx（PK 容器，用于验证格式识别与路由）、photo.png（真实 1x1 PNG 字节）、batch.xlsx（exceljs 生成的真实工作簿）。轮询后台账 outcome=INGESTED、附件=3、建档=2，detail 为「简历附件 2 个：新建 2，重复 0，拒绝 0；另有 Excel 附件 1 个：需走独立表格导入，未进入 AI 解析」，说明 Word/图片进入统一入库与解析链路，Excel 被隔离且不建简历。两条入场记录 file=resume.docx 与 photo.png，均为 poolType=UNASSIGNED、stage=UNASSIGNED、jobId=null。邮件 C 含 archive.zip，台账 outcome=UNSUPPORTED、detail「不支持的附件 1 个：archive.zip」，未产生任何候选人。三次投递均通过 IMAP APPEND 写入真实 163 邮箱收件箱，由真实 IMAP 轮询消费，未使用 Mock 通道。"
+    },
+    {
+      "name": "duplicate_attachment_skip_without_new_candidate",
+      "passed": true,
+      "criteria": [
+        "无附件邮件不建简历，重复附件查重合并/跳过，解析失败转人工；附件先进待分配池 / 临时待处理区，人事导入时手工选职位，不自动匹配。"
+      ],
+      "details": "邮件 B 携带与邮件 A 完全相同的 resume.docx 与 photo.png（不同 Message-ID）。轮询结果 duplicate=2、created=0，台账 outcome=DUPLICATE、detail「简历附件 2 个：新建 0，重复 2，拒绝 0」；对应两条 ResumeIntake 状态为 DUPLICATE 且未新增候选人，证明重复附件按内容哈希跳过而不是重复建档。整轮抓取 created=2/duplicate=2/skipped=0，与预期分支一一对应。"
+    },
+    {
+      "name": "fixture_cleanup",
+      "passed": true,
+      "criteria": [],
+      "details": "验证结束后执行 node backend/scripts/mail-fixture.mjs clean，按信封主题匹配删除 3 封夹具邮件（中文主题在 IMAP SEARCH 下不可靠，改为拉取信封本地匹配）；删除只影响夹具邮件，真实投递样本与处理台账保留。"
+    }
+  ],
+  "notes": [
+    "Word 附件使用 ZIP 容器夹具（PK 魔数 + docx MIME）验证格式识别与路由，文档内容解析质量不在本任务范围，正式解析 provider 由 ATS-021 承接；Excel 使用 exceljs 生成的真实 xlsx。",
+    "夹具通过 IMAP APPEND 直接写入收件箱，未经过 SMTP，不产生外发邮件；运行后已删除。",
+    "主报告 ats022-mail-polling-report.json 中的「未覆盖 Word/图片/Excel 真实样本与重复附件」条目由本补验报告关闭，其余限制（解析失败转 NEEDS_MANUAL、多邮箱真实接入、管理界面）仍成立。"
+  ]
+}

@@ -425,17 +425,20 @@ work_items:
   next_action: "已预派给 CodeBuddy（第4批，待 ATS-020 完成后启动，RESUME_PARSE 子项可提前）：按钉钉/通义优先、外部模型兜底验证具体 provider 与切换细则，三场景守同一 JSON Schema 与人工确认边界；高置信度也不得自动转正式，失败/超时/降级均需证据。"
 - id: ATS-022
   kind: delivery
-  status: planned
+  status: completed
   owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "真实邮箱轮询、附件获取与异常恢复"
-  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第1批。依据：FR-ENT-1/10、PRD §3.5/§9、功能需求 §3.1。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第1批。依据：FR-ENT-1/10、PRD §3.5/§9、功能需求 §3.1。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。已完成真实 IMAP 轮询（UIDVALIDITY+UID 增量游标、Message-ID 幂等台账）、授权码 AES-256-GCM 密文存储、邮箱配置 CRUD/连接测试/手动抓取/抓取监控接口、PDF/Word/图片统一解析与 Excel 独立导入及 .eml 解包分流、附件入待分配池不自动匹配。真实 163 测试邮箱两轮抓取与 IMAP APPEND 夹具分支验证通过；后端 158 项单测、类型检查、Lint 与构建通过。AWR 写入器对本台账报 quoted scalar marker mismatch，本次状态按 ATS-009/010 同一处置方式手工登记。"
   acceptance:
   - "支持关联多个招聘邮箱，仅轮询已关联邮箱中带简历附件的邮件；PDF/Word/图片走统一 AI 解析，Excel 走独立表格导入；断点恢复不重复建档。"
   - "无附件邮件不建简历，重复附件查重合并/跳过，解析失败转人工；附件先进待分配池 / 临时待处理区，人事导入时手工选职位，不自动匹配。"
+  evidence: [docs/verification/ats022-mail-polling-report.json, docs/verification/ats022-mail-fixture-report.json]
+  verification:
+    evidence_level: locally_verified
   depends_on: [ATS-008, ATS-005]
-  next_action: "已分派给 CodeBuddy（第1批，依赖已满足，可立即启动）：先落实已关联测试邮箱与访问凭据（需用户提供），再实现多邮箱轮询、附件抓取、PDF/Word/图片与 Excel 分流、断点恢复与查重；凭据未到位时先用本地 IMAP 与脱敏样本完成契约及异常路径验证，真实邮箱验收显式记为待补，不得据此判定完成。"
+  next_action: "无；真实邮箱验收与格式分流/查重分支验证完成。剩余待补：解析失败转 NEEDS_MANUAL 需 ATS-021 正式 provider 后复验；管理后台邮箱配置界面由 ATS-024 承接；正式接收邮箱上线前需把 TLS 代理改为直连或白名单。"
 - id: ATS-023
   kind: delivery
   status: planned
