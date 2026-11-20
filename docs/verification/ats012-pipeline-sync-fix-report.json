@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "work_item": "ATS-012",
+  "date": "2026-11-20",
+  "verified_at": 1795152420636,
+  "source_sha": "4d8212b69b4d59d68fa6474ce183f3402d25edd1",
+  "working_tree_dirty": true,
+  "summary": "修复 ats012-ui-drawer-fix-v1 中记录的同源问题：简历库批量动作与分配职位成功后，把服务端最新候选人写回全局 store，招聘流程看板不再停留在动作前的阶段。批量接口只返回成功/失败计数、且成功候选人可能已离开当前筛选页，因此按 id 重新取详情而不是复用当前页列表。隔离临时库 + 浏览器实测：批量后看板列与卡片归属正确、失败项留在原列、分配职位后候选人即时出现在人才推荐列，看板计数与 API 逐项一致；请求量有界（2 人批量共 4 次请求），空闲 4 秒无重复拉取。抽屉阶段陈旧修复回归通过。",
+  "command": "npm run build（tsc -b + vite build）; CREATE DATABASE talentflow_ats012_ui_20261120; npm run db:migrate:deploy; npm run db:seed; SQL 写入 5 个部门; 复用既有 backend/dist 快照启动 node backend/dist/main.js; npm run dev:web; 真实 HTTP API 重建 5 职位 61 候选人; Claude Browser 执行批量/分配/抽屉动作并核对看板; performance resource 计数核对请求量; curl 交叉核对 /candidates 计数",
+  "scope": [
+    "src/pages/Candidates.tsx",
+    "src/components/CandidateDrawer.tsx（上一轮修复，本次一并回归）",
+    "talentflow_ats012_ui_20261120（临时数据库，验证后删除）"
+  ],
+  "checks": [
+    {
+      "name": "pipeline_board_sync_after_batch",
+      "passed": true,
+      "criteria": [],
+      "details": "原问题已修复。在简历库人才推荐 Tab 选中 3 人执行「开始初筛」，返回 成功 2 位、失败 1 位（第 3 人为 INOPERABLE 锁定）。切到招聘流程看板：验收候选人35、34 均落在「初筛」列，被拒绝的验收候选人10 仍在「人才推荐」列；列计数 人才推荐 24 / 初筛 9 / 部门筛选 6 / 面试 5 / 沟通 Offer 3，与列表 Tab 及 GET /candidates 的 counts 完全一致。修复前同一操作后看板仍把已推进者显示在人才推荐列。"
+    },
+    {
+      "name": "pipeline_board_sync_after_assign",
+      "passed": true,
+      "criteria": [],
+      "details": "待分配 Tab 对虚拟职位池候选人「分配职位」到前端工程师后，看板立即出现该候选人于「人才推荐」列（计数 24→25），卡片职位显示前端工程师。分配接口返回的候选人被直接写回 store，未额外请求。"
+    },
+    {
+      "name": "drawer_to_board_sync",
+      "passed": true,
+      "criteria": [],
+      "details": "从看板卡片打开抽屉并执行「推进至『用人部门筛选』」后关闭抽屉，卡片即时移动到「部门筛选」列，初筛 11→10、部门筛选 6→7。抽屉→看板方向本来就写 store，本次确认未被破坏。"
+    },
+    {
+      "name": "drawer_stage_freshness_regression",
+      "passed": true,
+      "criteria": [],
+      "details": "上一轮修复仍成立：批量转阶段后不刷新整页打开抽屉，验收候选人11 徽标为「初筛」，阶段动作菜单给出「推进至『用人部门筛选』」。两处修复叠加后行为一致。"
+    },
+    {
+      "name": "request_volume_bounded",
+      "passed": true,
+      "criteria": [],
+      "details": "2 人批量动作期间 /candidates 相关请求共 4 次：1 次批量 POST + 2 次按 id 取详情 + 1 次列表刷新。动作结束后空闲 4 秒，请求数 21→21 无增长，确认写回 store 触发列表 effect 后不会形成反复拉取循环。"
+    },
+    {
+      "name": "counts_match_api_after_fix",
+      "passed": true,
+      "criteria": [],
+      "details": "验证结束时看板、列表与 API 三方一致：总量 61；待分配 8（UNASSIGNED 6 + VIRTUAL_POOL 2）、人才推荐 23、初筛 10、部门筛选 7、面试 5、沟通 Offer 3、待入职/已入职/试用期/结束 0、已归档 5。"
+    },
+    {
+      "name": "frontend_typecheck_and_build",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run build（tsc -b 与 vite build）退出码 0，1606 个模块转换成功。本次未改动后端源码。"
+    }
+  ],
+  "limitations": [
+    "本次只同步简历库页发起的批量动作与分配职位。全局 store 仍由应用启动时的 listCandidates（pageSize=100）装载，超过 100 名候选人或启动后新增的候选人仍可能不在看板中；这是 store 装载方式的既有限制，未在本次处理。看板本身仍读 store 而非服务端分页查询。",
+    "仍未修复：部门名称显示为原始 ID、时间线操作人显示为用户 ID、抽屉内锁定/解锁后时间线不刷新（均在 ats012-ui-walkthrough-v1 与 ats012-ui-drawer-fix-v1 中记录）。",
+    "后端沿用先前构建的 backend/dist 快照（本次未改后端源码）；工作树存在并行 ATS-022 未提交改动（backend/src/mail/、20261120051308_ats022_mail_polling 迁移、schema.prisma 等）与本次两个前端文件的未提交改动。报告绑定 HEAD 4d8212b（Trae 的 ATS-010 提交）。",
+    "验证使用全新临时库与合成数据（5 部门 SQL 直插、5 职位与 61 候选人经真实 API 创建），仅本机 admin 视角；部门数据范围与只读角色的看板表现未单独走查。",
+    "按 id 取详情为每人一次请求，单页最多 20 人；未做合并批量查询接口。若后续批量规模显著增大，应考虑让批量接口直接返回更新后的候选人。",
+    "验证结束后临时库已删除，API 与 Web 进程已停止。"
+  ]
+}

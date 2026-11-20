@@ -42,8 +42,11 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
     })
     return () => { active = false }
   }, [candidateId, toast])
+  // 服务端详情是权威值：全局 store 里的列表副本可能停留在批量动作之前，
+  // 只能用于详情返回前的首屏兜底，不能覆盖已返回的详情，否则阶段徽标与
+  // 阶段动作菜单会按旧阶段计算，正确的下一步动作不可选。（ATS-012）
   const candidate = detailCandidate?.id === candidateId
-    ? { ...detailCandidate, ...candidateFromList }
+    ? { ...candidateFromList, ...detailCandidate }
     : candidateFromList
   if (!candidate) return null
   const job = getCandidateJob(candidate)

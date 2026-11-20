@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "work_item": "ATS-012",
+  "date": "2026-11-20",
+  "verified_at": 1795151691547,
+  "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+  "working_tree_dirty": true,
+  "summary": "修复 ats012-ui-walkthrough-v1 报告的阻断缺陷：CandidateDrawer 合并顺序改为服务端详情覆盖列表副本（src/components/CandidateDrawer.tsx，4 增 1 删）。在新的隔离临时库与全新合成数据上重放原始复现路径：批量转阶段后不刷新整页直接打开抽屉，阶段徽标、进度条与阶段动作菜单均为真实阶段，正确的下一步动作可选；对两名候选人分别复验通过。抽屉→列表同步、撤销、锁定/解锁、部门筛选 PASS 与计数一致性回归通过，前端 tsc+vite build 通过。第一条验收标准的功能项全部通过；两处显示缺陷未修复，另发现同源的招聘流程看板陈旧问题（未修复，超出本次修复范围）。",
+  "command": "npm run build（tsc -b + vite build）; CREATE DATABASE talentflow_ats012_ui_20261120; npm run db:migrate:deploy; npm run db:seed; 直接 SQL 写入 5 个部门; 复用第一次走查的 backend/dist 快照启动 node backend/dist/main.js; npm run dev:web; 通过真实 HTTP API 重建 5 职位 61 候选人; Claude Browser 复现批量→抽屉路径并回归; curl 交叉核对 /candidates 计数",
+  "scope": [
+    "src/components/CandidateDrawer.tsx",
+    "talentflow_ats012_ui_20261120（临时数据库，复验后删除）"
+  ],
+  "checks": [
+    {
+      "name": "drawer_stage_freshness_after_batch",
+      "passed": true,
+      "criteria": [],
+      "details": "原阻断缺陷已修复。复现路径：简历库→人才推荐→勾选 2 人→批量转阶段「开始初筛」（提示 成功 2 位、失败 0 位，人才推荐 25→23、初筛 8→10）→不刷新整页，在初筛 Tab 依次打开 验收候选人35 与 验收候选人34 的抽屉。两人徽标均为「初筛」，进度条高亮第 2 段「初筛」，阶段动作菜单均给出「推进至『用人部门筛选』」——修复前该动作缺失且徽标停留在「人才推荐」。另一次批量选中含 1 名 INOPERABLE 锁定候选人，返回 成功 1 位、失败 1 位，被锁定者留在原阶段，成功者抽屉同样显示新阶段。"
+    },
+    {
+      "name": "candidate_ui_acceptance",
+      "passed": true,
+      "criteria": [
+        "前端六阶段原型迁移为待分配、九主链阶段和归档；职位树、权限内计数、筛选保存、分页、批量动作和锁定可用。"
+      ],
+      "details": "第一次走查中判定未通过的唯一原因是 drawer_stage_freshness，本次已修复并复验；其余功能项在 ats012-ui-walkthrough-v1 中已实测通过，本次回归复核了批量动作、锁定、撤销、抽屉与列表双向同步及计数一致性。仍有两处未修复的显示缺陷（部门显示为原始 ID、时间线操作人显示为用户 ID），本次维持其为非阻断项的判断；是否要求一并修复后再关闭 ATS-012，由业务验收人决定。"
+    },
+    {
+      "name": "drawer_to_list_sync_regression",
+      "passed": true,
+      "criteria": [],
+      "details": "抽屉内「推进至『用人部门筛选』」后徽标即时更新，列表 初筛 8→7、用人部门筛选 6→7；「撤销最近阶段动作」后徽标回到初筛，列表 初筛 7→8、用人部门筛选 7→6，时间线新增撤销事件。修复未破坏原有反向同步。"
+    },
+    {
+      "name": "lock_and_screening_regression",
+      "passed": true,
+      "criteria": [],
+      "details": "锁定为不可操作后按钮变为「恢复为可操作」，阶段动作按钮与撤销按钮 disabled；解锁后恢复。用人部门筛选抽屉仍渲染筛选表单，填写原因与 2026-11-25 14:00–15:00 可约时段后保存，徽标变为面试，列表 用人部门筛选 6→5、面试 5→6。"
+    },
+    {
+      "name": "counts_match_api_after_fix",
+      "passed": true,
+      "criteria": [],
+      "details": "复验结束时 UI 与 GET /candidates 完全一致：总量 61；待分配 9（UNASSIGNED 6 + VIRTUAL_POOL 3）、人才推荐 23、初筛 10、用人部门筛选 5、面试 6、沟通 Offer 3、待入职/已入职/试用期/结束 0、已归档 5。"
+    },
+    {
+      "name": "frontend_typecheck_and_build",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run build（tsc -b 与 vite build）退出码 0，1606 个模块转换成功，产出生产资源。本次未改动后端源码。"
+    },
+    {
+      "name": "pipeline_board_still_stale",
+      "passed": false,
+      "criteria": [],
+      "details": "新发现、同源、未修复（超出本次修复范围）。批量转阶段后切到「招聘流程」看板，验收候选人35 仍落在「人才推荐」列（列计数 25），而服务端已是 HR_SCREENING。根因与已修复缺陷同源：Candidates 页的批量动作只 refresh 本页 rows，不写回全局 store，而 Pipeline 直接读 store。本次修复只让抽屉以服务端详情为权威，未做全局 store 同步。建议后续在批量动作成功后同步 store 或让看板按服务端数据渲染。"
+    },
+    {
+      "name": "timeline_not_refreshed_after_lock",
+      "passed": false,
+      "criteria": [],
+      "details": "新发现、非阻断、未修复。抽屉内锁定/解锁后时间线不刷新：toggleLock 只调用 applyCandidateUpdate，未像 undoStage/recordScreening 那样重新拉取时间线。实测撤销后时间线为 5 条，随后锁定+解锁两条事件未出现，关闭并重开抽屉后变为 7 条。修复方式与 undoStage 一致，补一次 getCandidateTimeline 即可。"
+    }
+  ],
+  "limitations": [
+    "本次只改 src/components/CandidateDrawer.tsx 的合并顺序（4 增 1 删），未同步全局 store，未修复部门名称与时间线操作人两处显示缺陷，也未修复本报告新记录的两项问题。",
+    "后端沿用第一次走查构建的 backend/dist 快照（本次未改后端源码），以便与修复前逐项对照；工作树仍存在并行 ATS-010 未提交改动，ATS-012 相关后端文件无本地 diff。报告绑定 HEAD e9b3138。",
+    "复验使用全新临时库与全新合成数据（5 部门 SQL 直插、5 职位与 61 候选人经真实 API 创建），仅本机 admin 视角；部门数据范围与只读角色的 UI 表现仍未单独走查。",
+    "未制造并发竞态；乐观并发仍只有代码级证据。复验结束后临时库已删除，API 与 Web 进程已停止。",
+    "候选人抽屉在打开期间若其他入口再次改变同一候选人阶段，仍不会自动重取详情；本次只覆盖「批量动作后打开抽屉」这一已报告路径。"
+  ]
+}

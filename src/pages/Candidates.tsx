@@ -8,6 +8,7 @@ import {
   batchUpdateCandidateTags,
   batchUpdateCandidateStage,
   deleteSavedCandidateFilter,
+  getCandidateDetail,
   listCandidatePage,
   listJobs,
   listSavedCandidateFilters,
@@ -48,7 +49,7 @@ const emptyFilters: CandidateFilter = {
 }
 
 export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImport }: CandidatesProps) {
-  const { data, candidatesLoading, candidatesError, apiJobs, toast } = useApp()
+  const { data, setData, candidatesLoading, candidatesError, apiJobs, toast } = useApp()
   const [rows, setRows] = useState<Candidate[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
@@ -149,6 +150,22 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
   }
 
   const refresh = () => setRefreshKey((current) => current + 1)
+  // 本页的批量/分配动作只改服务端状态，必须把结果写回全局 store，
+  // 否则招聘流程看板等直接读 store 的页面会停留在动作前的阶段。（ATS-012）
+  const mergeCandidatesIntoStore = (items: Candidate[]) => {
+    if (!items.length) return
+    setData((current) => {
+      const byId = new Map(items.map((item) => [item.id, item]))
+      return { ...current, candidates: current.candidates.map((item) => byId.get(item.id) ?? item) }
+    })
+  }
+  // 批量接口只返回成功/失败计数，且成功的候选人可能已离开当前筛选页，
+  // 因此按 id 重新取详情，而不是复用当前页列表。
+  const syncCandidatesToStore = async (ids: string[]) => {
+    if (!ids.length) return
+    const results = await Promise.allSettled(ids.map((id) => getCandidateDetail(id)))
+    mergeCandidatesIntoStore(results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []))
+  }
   const runBatch = async () => {
     if (!selected.length) return
     if (bulkAction === 'STATUS') {
@@ -183,6 +200,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
           })
           : await batchUpdateCandidateTags(selected, tags, bulkTagMode)
       toast(`批量动作完成：成功 ${result.updated} 位，失败 ${result.failed} 位`, result.failed ? 'info' : 'success')
+      await syncCandidatesToStore(selected)
       setSelected([])
       setShowStatusSummary(false)
       refresh()
@@ -200,7 +218,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
     if (!assignCandidateId || !assignJobId) return
     setBusy(true)
     try {
-      await assignCandidateJob(assignCandidateId, assignJobId)
+      const updated = await assignCandidateJob(assignCandidateId, assignJobId)
+      mergeCandidatesIntoStore([updated])
       toast('候选人已分配到职位')
       setAssignCandidateId(null)
       refresh()
