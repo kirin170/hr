@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "work_item": "ATS-012",
+  "date": "2026-11-20",
+  "verified_at": 1795144306066,
+  "source_sha": "cd6f3dd7ed6a0f0712552358c64661b940883db9",
+  "working_tree_dirty": true,
+  "summary": "临时 MySQL 迁移、后端全量单测、类型检查/构建、前端构建及 76 项候选人真实 API 检查通过。浏览器人工走查因 Computer Use native pipe 连续两次不可用而未执行，因此前端交互验收未通过，ATS-012 暂不能标记完成。",
+  "command": "npm run db:migrate:deploy --prefix backend (DATABASE_URL 仅指向 talentflow_ats012_20261120_01m7ve0k54); npm run db:migrate:status --prefix backend; npm test --prefix backend; npm run typecheck --prefix backend; npm run build --prefix backend; npm run build; PowerShell Invoke-WebRequest 临时 API 验收脚本（76 assertions）; git diff --check。Computer Use sky.list_apps 首次及重试均返回 native pipe unavailable，未运行浏览器操作。",
+  "scope": [
+    "backend/prisma/migrations/20261118120000_ats012_candidate_state/migration.sql",
+    "backend/src/candidates/candidates.controller.ts",
+    "backend/src/candidates/candidates.service.ts",
+    "backend/src/candidates/candidates.service.spec.ts",
+    "src/pages/Candidates.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/api.ts",
+    "talentflow_ats012_20261120_01m7ve0k54（临时数据库，验收后已删除）"
+  ],
+  "checks": [
+    {
+      "name": "candidate_ui_acceptance",
+      "passed": false,
+      "criteria": [
+        "前端六阶段原型迁移为待分配、九主链阶段和归档；职位树、权限内计数、筛选保存、分页、批量动作和锁定可用。"
+      ],
+      "details": "76 项 API 检查中的权限内计数、部门/职位筛选、分页、保存筛选、逐项批量结果、锁定/解锁均通过；源码静态检查确认 9 个主链阶段及待分配/归档入口、职位树、保存筛选、分页、批量动作和详情时间线代码存在，前端生产构建通过。UI 可用性仍需真实浏览器走查；Computer Use native pipe 在首次调用和重试时均不可用，故本验收项未通过。"
+    },
+    {
+      "name": "department_screening_rules",
+      "passed": true,
+      "criteria": [
+        "初筛原因可空；部门筛选 PASS/HOLD/REJECT、任一 PASS 推进及结构化可约面时间符合规则。"
+      ],
+      "details": "API 实测初筛进入部门筛选无需原因；PASS 缺原因或可约时段被拒；带原因和两个未来结构化时段的 PASS 推进至 INTERVIEWING；HOLD、REJECT 保持 DEPT_SCREENING；批量 PASS 返回逐项结果。"
+    },
+    {
+      "name": "transition_authorization_audit",
+      "passed": true,
+      "criteria": [
+        "条件不满足和越权的流转被拒绝；显式动作、撤销、时间线完整，面试结论不自动进入 Offer。"
+      ],
+      "details": "API 实测非法跳阶段、未分配候选人跳过分配、INOPERABLE 锁定及只读角色改阶段均被拒；撤销恢复原阶段；时间线包含创建、筛选和阶段事件。INTERVIEWING 到 OFFERING 只通过显式阶段动作发生；ATS-012 服务中未发现由面试结论驱动的自动推进处理器。"
+    },
+    {
+      "name": "temporary_mysql_migrations",
+      "passed": true,
+      "criteria": [],
+      "details": "在独立临时 MySQL 库重放 9 项 Prisma 迁移并确认数据库 schema up to date；测试库仅写入合成验收数据，之后已删除，未触碰 talentflow_local_admin_preview。"
+    },
+    {
+      "name": "backend_test_suite",
+      "passed": true,
+      "criteria": [],
+      "details": "npm test --prefix backend：21 个测试文件、122 项测试全部通过。"
+    },
+    {
+      "name": "backend_typecheck_and_build",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run typecheck --prefix backend 与 npm run build --prefix backend 均退出码 0。"
+    },
+    {
+      "name": "frontend_production_build",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run build 通过，tsc -b 与 Vite production build 均成功。"
+    },
+    {
+      "name": "candidate_api_acceptance",
+      "passed": true,
+      "criteria": [],
+      "details": "独立临时数据库、本地管理员与只读面试官角色上运行 76 项 HTTP API 检查，76 通过、0 失败；覆盖阶段流转、权限与数据范围、状态计数、筛选分页、部门 PASS/HOLD/REJECT、锁定/撤销、时间线、批量阶段/筛选/标签和 Offer 边界。"
+    },
+    {
+      "name": "static_review_and_diff_hygiene",
+      "passed": true,
+      "criteria": [],
+      "details": "检查 Candidates 页面、CandidateDrawer、候选人 API 与服务端状态转换矩阵；git diff --check 通过。面试评价服务端尚无独立模块，后续 ATS-014 引入评价 API 时需重跑不自动推进验证。"
+    }
+  ],
+  "limitations": [
+    "浏览器人工走查没有执行：Computer Use native pipe failed to connect（系统找不到指定的文件）；等待 2 秒后重试仍相同。不能以代码静态检查或构建替代 UI 验收。",
+    "验证后工作树出现并行 ATS-010/browser-import 未提交改动：backend/prisma/schema.prisma、backend/src/auth/access-control.guard.ts、backend/src/auth/auth.module.ts、backend/src/auth/system-token.service.ts、backend/src/intake/intake.module.ts、backend/src/intake/intake.service.ts、backend/prisma/migrations/20261120100000_browser_import_api/、backend/src/intake/browser-import.contract.ts、backend/src/intake/browser-import.controller.ts、backend/src/intake/browser-import.service.ts。报告和 API 验收绑定验证时的提交 HEAD cd6f3dd7ed6a0f0712552358c64661b940883db9；ATS-012 文件没有本地 diff，这些并行改动未纳入验证或本次提交。",
+    "OFFERING 到 PENDING_ONBOARD 与 OFFERING/PENDING_ONBOARD 归档仍按设计等待 ATS-015 的书面 Offer、发送/接受时间、入职日期及原因集事实模型；本次确认这些分支继续拒绝。",
+    "乐观并发保护通过代码中的条件 updateMany 与 changed.count 检查确认；没有专门制造并发竞态请求。"
+  ]
+}
