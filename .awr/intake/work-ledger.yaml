@@ -18,6 +18,9 @@ goals:
     历史基线曾为纯前端原型；目前 backend/ 和候选人/职位 API 已存在，ATS-001～003 有历史本地报告；ATS-002 已于 2026-11-13 按用户确认及原验收报告同步为 completed。
     README 的纯前端/localStorage 说明过期，已登记 ATS-026；历史 INTAKE-001 证据不足保留，不能补造旧验收。
     正式需求包括九阶段、权限与运维；原型六阶段、自建审批、试用期绩效并非最终业务范围。功能需求正文为业务基线；剩余待确认项见功能需求 §7.1 和 PRD §11。
+    2026-11-20 用户把任务分派权交给 Claude Code，并说明本机可用编程智能体为 Codex、CodeBuddy、Trae。据此对 ATS-010～026 中 15 个未完成任务登记负责人与批次，分派方案见 docs/ats-任务分派-v1.0.md。
+    分派只改变负责人和下一步，不改变状态：全部仍为 planned，由各智能体在依赖满足后自行领取会话执行；批次是依赖顺序，不是工期或上线日期承诺。
+    第1批（依赖已满足，可立即启动）：ATS-012→Codex、ATS-022→CodeBuddy、ATS-010→Trae。后续批次为预派，依赖未满足前不启动；用户可随时改派。
 - id: ats-foundation
   status: active
   title: "建立可持续开发与受控访问的工程基础"
@@ -252,101 +255,101 @@ work_items:
 - id: ATS-010
   kind: delivery
   status: planned
-  owner: null
+  owner: Trae
   goal: ats-intake
   priority: P1
   title: "通用浏览器导入 API 与任务审计"
-  summary: "仅规划，待用户分配后执行。依据：FR-EXT-6/7/9、NFR-9～12；PRD §5.12 接口契约。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第1批。依据：FR-EXT-6/7/9、NFR-9～12；PRD §5.12 接口契约。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"
   - "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"
   - "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"
   depends_on: [ATS-004, ATS-005, ATS-008]
-  next_action: "等待用户分配；用户分配后先冻结导入/查询契约和脱敏 fixtures，独立于第三方页面完成 API 验证。"
+  next_action: "已分派给 Trae（第1批，依赖已满足，可立即启动）：先冻结 POST 导入与任务查询契约及脱敏 fixtures，再实现 202 任务、短期系统令牌校验、requestId 幂等、平台ID/附件哈希/联系方式查重与审计；不依赖第三方页面即可完成 API 验证。报告写入 docs/verification/ 后再按 AWR 完成路径回写状态。"
 - id: ATS-011
   kind: delivery
   status: planned
-  owner: null
+  owner: Trae
   goal: ats-intake
   priority: P1
   title: "Chrome/Edge MV3 扩展与双平台适配"
-  summary: "仅规划，待用户分配后执行。依据：FR-EXT-1～11、NFR-9～12；功能需求 §7.1 遗留7/8。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第3批。依据：FR-EXT-1～11、NFR-9～12；功能需求 §7.1 遗留7/8。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "短期授权/刷新/撤销、最小域名权限和用户主动点击导入生效；页面打开不自动创建任务。"
   - "先对单平台做灰度验证，再支持 BOSS/猎聘各自适配器；SPA/DOM 变化、附件失败、重复和登录失效有反馈。"
   - "平台访问方式与使用约束先验证；适配器独立开关、版本、灰度和回滚，不影响邮箱与手工入口。"
   depends_on: [ATS-010]
-  next_action: "等待用户分配；用户分配后先验证脱敏页面样本、附件访问及企业分发方案，再实施单平台适配；未通过验证的平台保持显式未交付。"
+  next_action: "已预派给 Trae（第3批，待 ATS-010 完成且平台样本与企业分发方案验证通过后启动）：先验证脱敏页面样本、附件访问与分发方式，再做单平台灰度适配，然后扩展另一平台；未通过验证的平台保持显式未交付，不得默认双平台已支持。"
 - id: ATS-012
   kind: delivery
   status: planned
-  owner: null
+  owner: Codex
   goal: ats-candidate-flow
   priority: P0
   title: "九阶段候选人主链与筛选状态机"
-  summary: "仅规划，待用户分配后执行。依据：FR-CAND-1～8、ST-0～6；PRD §3.4/§4.1/§4.3。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Codex，第1批。依据：FR-CAND-1～8、ST-0～6；PRD §3.4/§4.1/§4.3。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "前端六阶段原型迁移为待分配、九主链阶段和归档；职位树、权限内计数、筛选保存、分页、批量动作和锁定可用。"
   - "初筛原因可空；部门筛选 PASS/HOLD/REJECT、任一 PASS 推进及结构化可约面时间符合规则。"
   - "条件不满足和越权的流转被拒绝；显式动作、撤销、时间线完整，面试结论不自动进入 Offer。"
   depends_on: [ATS-004, ATS-007, ATS-008]
-  next_action: "等待用户分配；用户分配后先制定九阶段迁移映射与状态转换矩阵，再实现服务端规则和前端阶段动作。"
+  next_action: "已分派给 Codex（第1批，P0 关键路径）：代码与静态检查已落地（9a4f363），本次先补验收——在临时 MySQL 库重放 20261118120000_ats012_candidate_state 迁移，执行状态机/权限/批量动作 API 校验与浏览器人工走查，明确 OFFERING/PENDING_ONBOARD 归档分支留给 ATS-015 的边界；出具报告后再回写状态，并通知 ATS-009 复跑后端 typecheck/build。"
 - id: ATS-013
   kind: delivery
   status: planned
-  owner: null
+  owner: Trae
   goal: ats-candidate-flow
   priority: P1
   title: "人才库归档、激活与万级查询"
-  summary: "仅规划，待用户分配后执行。依据：FR-POOL-1～6、NFR-7/14；功能需求 §4.3/§4.7/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第2批。依据：FR-POOL-1～6、NFR-7/14；功能需求 §4.3/§4.7/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "归档自动入池、标签/检索、选择职位激活至 RECOMMENDED 并保留全部历史。"
   - "不设人才容量或后台硬性拉取上限；流式加载、分页和索引支持万级数据；仅人才库统计总量 ≥10000 显示 1w+，阶段 Tab 与报表显示真实数量。"
   - "归档原因含未填写档，人才库总量展示与报表真实计数区分，实测数据规模和查询结果可复核。"
   depends_on: [ATS-012]
-  next_action: "等待用户分配；用户分配后按人才库总量 ≥10000 的展示规则准备万级数据场景，再实现归档/激活、流式加载和查询验证。"
+  next_action: "已预派给 Trae（第2批，待 ATS-012 验收通过后启动）：准备人才库总量 ≥10000 的数据场景，实现归档入池、标签检索、选择职位激活至 RECOMMENDED 与流式加载/索引，实测查询并记录数据规模；仅人才库总量 ≥10000 显示 1w+，阶段 Tab 与报表用真实计数。"
 - id: ATS-014
   kind: delivery
   status: planned
-  owner: null
+  owner: Codex
   goal: ats-interview
   priority: P1
   title: "面试排期、登记表与评价协同"
-  summary: "仅规划，待用户分配后执行。依据：FR-INT-1～11、ST-2；PRD §4.3/§9。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Codex，第2批。依据：FR-INT-1～11、ST-2；PRD §4.3/§9。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "多轮多人排期预读可约面时间；改期/取消原因必填，列表三段分组、筛选和导出可用。"
   - "登记表字段可配置；评价代填记录 PROXY/操作人/时间，同职位同候选人范围内互看，听记链接按轮次追加。"
   - "日历/通知采用接口化 Mock 可演示接受/拒绝/冲突；评价不自动转阶段，实际钉钉验收由 ATS-018/020 承接。"
   depends_on: [ATS-012]
-  next_action: "等待用户分配；用户分配后先统一 Interview/Feedback/Registration/Transcript 契约，再实现协同界面与规则。"
+  next_action: "已预派给 Codex（第2批，待 ATS-012 验收通过后启动，关键路径）：先统一 Interview/Feedback/Registration/Transcript 契约，再实现多轮多人排期、改期/取消原因必填、登记表字段配置、代填 PROXY 标识与同职位同候选人评价互看；日历/通知先用接口化 Mock，评价结论不自动转阶段。"
 - id: ATS-015
   kind: delivery
   status: planned
-  owner: null
+  owner: Codex
   goal: ats-offer-onboarding
   priority: P1
   title: "Offer 状态、OA 材料和背调流程"
-  summary: "仅规划，待用户分配后执行。依据：FR-OFR-1～8、PRD §4.2、SEC-F1～4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Codex，第3批。依据：FR-OFR-1～8、PRD §4.2、SEC-F1～4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "Offer 六阶段（录用审批资料→OA审批中→口头offer→背调信息整理中→背调审批→书面offer）及各阶段待处理/接受/不通过子状态可用；不通过/拒绝须填原因，企业不通过用集 A、候选人拒绝用集 B，OA 单号和手工结果回填可用，每次变更留痕。"
   - "OA 材料预览仅含简历信息/面试登记表/录用职级；AI 建议不作为审批结论，系统无薪资明细存储。"
   - "背调材料私有访问、独立授权和审批结果生效；不通过按集 A 归档，通过可定入职时间并分别记录书面 Offer 发送与候选人接受结果。"
   depends_on: [ATS-012, ATS-014, ATS-005]
-  next_action: "等待用户分配；用户分配后从 Offer 状态矩阵、材料契约与敏感附件访问用例开始。"
+  next_action: "已预派给 Codex（第3批，待 ATS-012/014 完成后启动）：从 Offer 六阶段状态矩阵、集 A/B 原因、OA 材料契约与敏感附件独立授权用例开始；不存薪资明细，书面 Offer 发送与候选人接受结果分别记录，每次变更留痕。"
 - id: ATS-016
   kind: delivery
   status: planned
-  owner: null
+  owner: Codex
   goal: ats-offer-onboarding
   priority: P1
   title: "待入职、确认入职与试用期闭环"
-  summary: "仅规划，待用户分配后执行。依据：FR-ONB-1～6、ST-3～6；PRD §3.4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Codex，第3批。依据：FR-ONB-1～6、ST-3～6；PRD §3.4。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "仅书面 Offer 为接受、入职时间和已发送标记均具备时可入待入职；不通过不可推进，确认入职回写 hiredCount，重复操作不重复累计。"
   - "放弃入职使用集 C 原因必填并归档，「其他·可填写」需说明；保温基准随入职日期更新且仅提醒人事。"
   - "试用期仅记录是否转正和时间，原型绩效/目标/自建审批能力按业务范围收敛；不采集入职花名册、薪资和社保档案。"
   depends_on: [ATS-015]
-  next_action: "等待用户分配；用户分配后先定义入职显式动作、幂等与原型试用期数据迁移范围。"
+  next_action: "已预派给 Codex（第3批，待 ATS-015 完成后启动）：先定义待入职准入条件（书面 Offer 接受+入职时间+已发送）、确认入职幂等与 hiredCount 回写、放弃入职集 C 原因校验，并明确原型试用期绩效与自建审批数据的收敛及迁移范围。"
 - id: ATS-017
   kind: delivery
   status: completed
@@ -364,94 +367,94 @@ work_items:
 - id: ATS-018
   kind: delivery
   status: planned
-  owner: null
+  owner: Codex
   goal: ats-integrations
   priority: P1
   title: "钉钉日历与固定事件通知正式接入"
-  summary: "仅规划，待用户分配后执行。依据：DT-1/DT-3、FR-NTF-1～9、FR-INT-2～5、FR-ONB-2。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Codex，第4批。依据：DT-1/DT-3、FR-NTF-1～9、FR-INT-2～5、FR-ONB-2。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "日历创建/修改/取消、responseStatus 与忙闲查询实接；邀请不等于占用，拒绝提醒改期，冲突只提示。"
   - "面试/评价/超时/保温固定事件通知可追踪、去重、重试；评价结束后30分钟提醒及用户低优先级开关生效。"
   - "只触达需求指定内部人员，通知与 OA 原生待办边界明确；失败不阻断人工业务。"
   depends_on: [ATS-017, ATS-014, ATS-016]
-  next_action: "等待用户分配；用户分配后按授权测试企业验证一个面试日程，再补全固定事件通知与失败路径。"
+  next_action: "已预派给 Codex（第4批，待 ATS-014/016 完成后启动）：在授权测试企业先跑通一个面试日程的创建/改期/取消与 responseStatus、忙闲查询，再补固定事件通知的去重、重试、30分钟评价提醒与低优先级开关；失败不阻断人工业务。"
 - id: ATS-019
   kind: delivery
   status: planned
-  owner: null
+  owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "钉钉 OA 需求同步与录用审批对接"
-  summary: "仅规划，待用户分配后执行。依据：DT-5/DT-6、FR-REQ-1、FR-OFR-2/3、NFR-13。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第4批。依据：DT-5/DT-6、FR-REQ-1、FR-OFR-2/3、NFR-13。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "招聘需求审批通过实接、签名/来源校验、唯一约束与事务保证重复并发回调不重复生成；支持人工触发同步。"
   - "录用审批材料和两级审批对应正式 OA，结果手工回填兜底；录用结果自动回调仅为可选增强，不作为必交付门槛。"
   - "系统不自建审批流、不反向更改 OA 原单，不引入薪资明细。"
   depends_on: [ATS-017, ATS-007, ATS-015]
-  next_action: "等待用户分配；用户分配后确认两类 OA 表单字段映射和测试实例，再分别验证需求幂等与录用回填。"
+  next_action: "已预派给 CodeBuddy（第4批，待 ATS-015 完成后启动）：先确认招聘需求与录用审批两类 OA 表单字段映射和测试实例，再分别验证签名/来源校验、唯一约束与事务下的幂等并发回调，以及录用结果手工回填兜底；不自建审批流、不反向更改 OA 原单。"
 - id: ATS-020
   kind: delivery
   status: planned
-  owner: null
+  owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "钉钉听记素材按权限读取"
-  summary: "仅规划，待用户分配后执行。依据：DT-4、FR-INT-8、AI-7；PRD §6.2/§7。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第3批。依据：DT-4、FR-INT-8、AI-7；PRD §6.2/§7。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。"
   - "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。"
   depends_on: [ATS-017, ATS-014]
-  next_action: "等待用户分配；用户分配后用脱敏听记样本验证权限与能力，再接入素材读取和来源定位。"
+  next_action: "已预派给 CodeBuddy（第3批，待 ATS-014 完成后启动）：用脱敏听记样本验证租户能力与越权拒绝，再按轮次接入原文/摘要读取与来源定位；不覆盖既有链接，素材统一交付 INTERVIEW_EVAL 接口，不以听记内置智能纪要替代 AI 评估结论。"
 - id: ATS-021
   kind: delivery
   status: planned
-  owner: null
+  owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "AI 三场景正式适配与人工复核"
-  summary: "仅规划，待用户分配后执行。钉钉/通义优先 + 外部模型兜底，具体模型、能力与切换细则仍需验证；本期全部结果人工确认后转正式，高置信度也不得直接转正式。依据：功能需求 §4.12、PRD §6、AI-1～8、技术设计 §0.3；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第4批。钉钉/通义优先 + 外部模型兜底，具体模型、能力与切换细则仍需验证；本期全部结果人工确认后转正式，高置信度也不得直接转正式。依据：功能需求 §4.12、PRD §6、AI-1～8、技术设计 §0.3；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "可替换 provider 支持 RESUME_PARSE/RESUME_EVAL/INTERVIEW_EVAL，三套输出符合 JSON Schema，记录依据、缺失项及字段置信度。"
   - "按技术设计 §0.3 执行钉钉/通义优先、外部模型兜底；主选和兜底使用相同契约与责任边界，主选不可用或能力不满足时可按配置兜底，均失败时可降级人工处理并有验证证据。"
   - "草稿标记、人工确认/编辑、职位/系统开关和无招聘要求禁发评估生效；全部结果人工确认后转正式，高置信度不得直接转正式；不自动转阶段、不进入 OA 审批结论。"
   - "PDF/Word/图片、听记样本及失败/超时/重试/降级均有证据；模型成本、耗时和能力评估据实记录。"
   depends_on: [ATS-008, ATS-012, ATS-014, ATS-020]
-  next_action: "等待用户分配；用户分配后按已确认的钉钉/通义优先、外部模型兜底方向验证具体 provider、切换细则和三类脱敏样本，按需分别交付三个场景；解析子项可先于听记接入分配。"
+  next_action: "已预派给 CodeBuddy（第4批，待 ATS-020 完成后启动，RESUME_PARSE 子项可提前）：按钉钉/通义优先、外部模型兜底验证具体 provider 与切换细则，三场景守同一 JSON Schema 与人工确认边界；高置信度也不得自动转正式，失败/超时/降级均需证据。"
 - id: ATS-022
   kind: delivery
   status: planned
-  owner: null
+  owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "真实邮箱轮询、附件获取与异常恢复"
-  summary: "仅规划，待用户分配后执行。依据：FR-ENT-1/10、PRD §3.5/§9、功能需求 §3.1。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第1批。依据：FR-ENT-1/10、PRD §3.5/§9、功能需求 §3.1。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "支持关联多个招聘邮箱，仅轮询已关联邮箱中带简历附件的邮件；PDF/Word/图片走统一 AI 解析，Excel 走独立表格导入；断点恢复不重复建档。"
   - "无附件邮件不建简历，重复附件查重合并/跳过，解析失败转人工；附件先进待分配池 / 临时待处理区，人事导入时手工选职位，不自动匹配。"
   depends_on: [ATS-008, ATS-005]
-  next_action: "等待用户分配；用户分配后落实已关联测试邮箱与访问凭据，使用脱敏样本验证多邮箱、手工选职位、格式分流及正常/重复/异常路径。"
+  next_action: "已分派给 CodeBuddy（第1批，依赖已满足，可立即启动）：先落实已关联测试邮箱与访问凭据（需用户提供），再实现多邮箱轮询、附件抓取、PDF/Word/图片与 Excel 分流、断点恢复与查重；凭据未到位时先用本地 IMAP 与脱敏样本完成契约及异常路径验证，真实邮箱验收显式记为待补，不得据此判定完成。"
 - id: ATS-023
   kind: delivery
   status: planned
-  owner: null
+  owner: Trae
   goal: ats-operations
   priority: P1
   title: "工作台与可下钻招聘报表"
-  summary: "仅规划，待用户分配后执行。依据：FR-RPT-1～9、FR-DSH；功能需求 §1.3/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第4批。依据：FR-RPT-1～9、FR-DSH；功能需求 §1.3/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "工作台待办、今日指标、分类通知/全部已读和职位360均来自真实权限内数据。"
   - "漏斗/渠道/三类原因/转正率与周期报表可下钻；周期按需求级自然日差计算，同日计 1 天，排除未关闭及本期不补录的已关闭存量需求；保留部门/招聘负责人/时间段/需求类型并支持用户自由组合，汇总均值/中位数/最长/最短；报表数量真实展示，不套用 1w+。"
   - "明确分母、时间口径、权限和未填写档；招聘周期等业务指标建立可复算基线，不虚设未确认改善百分比。"
   depends_on: [ATS-007, ATS-013, ATS-014, ATS-016]
-  next_action: "等待用户分配；用户分配后先形成指标字典和可复算样本，再逐项交付报表、下钻与工作台。"
+  next_action: "已预派给 Trae（第4批，待 ATS-013/014/016 完成后启动）：先形成指标字典与可复算样本（分母、时间口径、权限、未填写档），再交付工作台与漏斗/渠道/三类原因/转正率/周期报表及下钻；周期按需求级自然日差、同日计1天，报表不套用 1w+。"
 - id: ATS-024
   kind: delivery
   status: planned
-  owner: null
+  owner: CodeBuddy
   goal: ats-operations
   priority: P1
   title: "业务设置与配置审计"
-  summary: "仅规划，待用户分配后执行。统一管理后台覆盖组织成员、角色权限、招聘基础、表单面试模板、原因、渠道导入、钉钉、AI、通知、安全审计与运行监控十个模块。依据：功能需求 §4.14、PRD §9（FR-ADM-1～10）、技术设计 §5.1；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第2批。统一管理后台覆盖组织成员、角色权限、招聘基础、表单面试模板、原因、渠道导入、钉钉、AI、通知、安全审计与运行监控十个模块。依据：功能需求 §4.14、PRD §9（FR-ADM-1～10）、技术设计 §5.1；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "统一管理入口按 FR-ADM-1～10 提供分类导航与列表/详情；常用与高级配置分层，个人资料与个人通知偏好位于用户菜单；已交付项真实可用，未接入项明确显示状态。"
   - "职位/需求/候选人字段、表单与面试模板、字典、标签和渠道配置持久化并实际生效；集 A/B/C 独立新增、排序、启停，各含其他说明校验；停用或更新不破坏历史显示与统计。"
@@ -460,22 +463,22 @@ work_items:
   - "邮箱、钉钉、插件、AI、通知及异步任务的状态、时间、脱敏失败原因与恢复入口按对应模块接入；重试幂等，不产生重复业务记录；正式集成继续独立验收。"
   - "配置按管理基础、业务配置、集成管理分层交付；复用 ATS-004/017、ATS-005、ATS-010/011、ATS-018/019/020/021/022 的能力，运维验证由 ATS-025 汇总；保留期限具体值沿用上线确认要求，开发默认值不冒充最终结论。"
   depends_on: [ATS-004, ATS-007, ATS-012]
-  next_action: "等待用户分配；用户分配后按 PRD §9 整理配置项、接口归属、权限及验收样本，按管理基础、业务配置、随能力接入补齐集成管理分层交付；不因本次文档更新自动领取或启动任务。"
+  next_action: "已预派给 CodeBuddy（第2批，待 ATS-012 验收通过后启动）：按 PRD §9 整理配置项、接口归属、权限与验收样本，先交付管理基础与业务配置两层，集成管理随 ATS-018～022 能力接入补齐；九阶段/Offer 六阶段/必填条件/周期/AI 人工确认规则不可被配置绕过。"
 - id: ATS-025
   kind: delivery
   status: planned
-  owner: null
+  owner: Claude Code
   goal: ats-operations
   priority: P0
   title: "端到端验收、性能和发布运维准备"
-  summary: "仅规划，待用户分配后执行。依据：PRD §8；技术设计 §11～§16；全量需求追溯。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Claude Code，第5批。依据：PRD §8；技术设计 §11～§16；全量需求追溯。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
   acceptance:
   - "类型/Lint/单元/API/Worker/契约/E2E、各端构建、迁移和密钥检查通过；状态机/权限覆盖分支，有失败降级与并发幂等用例。"
   - "万级候选人/人才库查询、大附件、队列及适配器退化有测量；性能阈值在测试前确认，无实测不得宣称达标。"
   - "测试环境验证 HTTPS/域名白名单、脱敏日志、告警、备份恢复与生命周期；发布、回滚、部署文档及演练证据完整。"
   - "业务验收人和样本已确认，全部必需 FR/NFR 有验收证据，阻断缺陷关闭；排期、环境和生产发布须由用户另行安排。"
   depends_on: [ATS-006, ATS-009, ATS-011, ATS-013, ATS-016, ATS-018, ATS-019, ATS-020, ATS-021, ATS-022, ATS-023, ATS-024, ATS-026]
-  next_action: "等待用户分配；用户分配后先建立需求到测试证据追溯矩阵与上线清单；最后汇总所有模块证据、执行业务验收和测试环境演练。"
+  next_action: "已分派给 Claude Code 统筹（第5批，最后执行）：先建立需求到测试证据的追溯矩阵与上线清单，汇总各任务报告并核对 source_sha 与验收绑定；性能阈值、测试环境、业务验收人与发布排期由用户确认，业务验收本身不由智能体代替。"
 - id: ATS-026
   kind: delivery
   status: completed
