@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "work_item": "ATS-010",
+  "date": "2026-11-20",
+  "verified_at": 1795163844793,
+  "source_sha": "5746e7a15cafa81b1cdd5dcc1c6cb9a016cdba76",
+  "working_tree_dirty": false,
+  "summary": "在当前 HEAD 5746e7a、干净工作树上重跑 ATS-010 的验证命令：Prisma 生成、类型检查、Lint、后端全量单测（24 文件 158 用例）与构建全部通过，其中 browser-import 契约用例单独运行 21 项全通过。三条验收标准均由本次通过的契约用例覆盖。本报告取代 ats010-report.json 作为台账引用的验收报告：原报告内容正确，但其首次证据登记（ats010-browser-import-api-v1）的 command 与 scope 是简写，与报告原文不逐字一致，触发 completion.report.command；AWR 0.7.0 的证据记录只能追加、不能撤回或覆盖，故改为在当前 SHA 重新验证并登记一致绑定。",
+  "command": "npm run db:generate --prefix backend; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npx vitest run src/intake/browser-import-ats010.spec.ts (cwd=backend); npm run build --prefix backend",
+  "scope": [
+    "backend/src/intake/browser-import.contract.ts",
+    "backend/src/intake/browser-import.controller.ts",
+    "backend/src/intake/browser-import.service.ts",
+    "backend/src/intake/browser-import-ats010.spec.ts",
+    "backend/src/auth/system-token.service.ts",
+    "backend/src/auth/access-control.guard.ts",
+    "backend/prisma/migrations/20261120100000_browser_import_api/migration.sql"
+  ],
+  "checks": [
+    {
+      "name": "import_task_contract",
+      "passed": true,
+      "criteria": [
+        "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"
+      ],
+      "details": "browser-import-ats010.spec.ts 单独运行 21 项全通过，覆盖 202 任务返回、X-System-Token 校验与过期/吊销/未知一律 401、任务所有者查询边界，以及按 (requestId, operatorId) 幂等重放返回同一任务。"
+    },
+    {
+      "name": "dedup_and_pipeline",
+      "passed": true,
+      "criteria": [
+        "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"
+      ],
+      "details": "同一契约用例集覆盖平台 ID / 附件哈希 / 联系方式三维查重命中进入 DUPLICATE 待人工选择，以及复用统一解析、人工确认与职位分配管道并写入审计。"
+    },
+    {
+      "name": "error_contract_cases",
+      "passed": true,
+      "criteria": [
+        "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"
+      ],
+      "details": "契约用例覆盖 sourcePageUrl 恒为 null 的 URL 脱敏、附件字节上传校验、第三方凭据与页面敏感字段拒收且不落库，以及附件不可用等标准错误码。"
+    },
+    {
+      "name": "backend_quality_gates",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run db:generate / typecheck / lint / build 退出码均为 0；npm test 全量 24 个测试文件、158 项用例通过（含本次 ATS-010 的 21 项）。工作树在采集本报告时干净，source_sha 为当前 HEAD。"
+    }
+  ],
+  "limitations": [
+    "本次为静态与单元/契约层复验：未连接 MySQL 重放 20261120100000_browser_import_api 迁移，未对运行中的 API 发起真实 HTTP 请求，也未做浏览器插件端联调。与原报告 ats010-report.json 的验证层级相同，未提升证据强度。",
+    "原证据记录 ats010-browser-import-api-v1 仍存在于 AWR 且 command/scope 与报告原文不一致；AWR 0.7.0 无撤回或覆盖证据的命令，追加的 ats010-browser-import-api-v2 虽逐字一致，但同一 locator 分组内的旧记录仍会让全库校验报 completion.report.command。本报告改用新的 locator 并登记一致绑定以消除该冲突。",
+    "真实招聘平台页面样本、企业分发与灰度适配属于 ATS-011，不在本次范围。"
+  ]
+}

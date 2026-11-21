@@ -246,7 +246,7 @@ work_items:
   - "POST 导入返回 202 任务，短期系统令牌校验、任务所有者查询及 requestId 幂等生效。"
   - "平台 ID、附件哈希和联系方式查重进入 DUPLICATE 待人工选择；统一解析、人工确认、职位分配与审计可验证。"
   - "URL 脱敏、附件字节上传、第三方凭据禁止持久化及附件不可用等标准错误均有契约用例。"
-  evidence: [docs/verification/ats010-report.json]
+  evidence: [docs/verification/ats010-reverify-report.json]
   verification:
     evidence_level: locally_verified
   depends_on: [ATS-004, ATS-005, ATS-008]
