@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "work_item": "ATS-012",
+  "date": "2026-11-22",
+  "verified_at": 1795308538422,
+  "source_sha": "2f148a8095963f78093378cd644a52674ff5615d",
+  "working_tree_dirty": false,
+  "summary": "ATS-012 完整验收：在隔离临时库 talentflow_ats012_accept_20261122 重放全部 Prisma 迁移，经真实 HTTP API 建立 5 职位与 61 名合成候选人，运行 20 项 API 断言全部通过（含只读角色 403 与数据范围 61 对 0），并用浏览器完成人工走查。三条验收标准全部覆盖并通过：待分配+九主链+归档共 12 个 Tab、职位树、权限内计数、保存筛选、分页、批量动作与锁定实测可用；部门筛选 PASS/HOLD/REJECT 与结构化可约面时间规则正确；非法与越权流转被拒绝、撤销与时间线完整、面试结论不自动进入 Offer。此前走查发现的抽屉阶段陈旧与看板不同步两处缺陷已修复并在本次复验通过。后端 24 文件 158 单测、类型检查、Lint、前后端构建全部通过。三处非阻断显示问题仍未修复，已在 limitations 列明。",
+  "command": "CREATE DATABASE talentflow_ats012_accept_20261122; npm run db:generate; npm run db:migrate:deploy; npm run db:seed; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build --prefix backend; npm run build; node backend/dist/main.js; npm run dev:web; node ats012-acceptance.mjs（20 项 HTTP API 断言）; Claude Browser 人工走查; curl 交叉核对 /candidates 计数",
+  "scope": [
+    "backend/prisma/migrations/20261118120000_ats012_candidate_state/migration.sql",
+    "backend/src/candidates/candidates.controller.ts",
+    "backend/src/candidates/candidates.service.ts",
+    "src/pages/Candidates.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/pages/Pipeline.tsx",
+    "talentflow_ats012_accept_20261122（临时数据库，验收后删除）"
+  ],
+  "checks": [
+    {
+      "name": "candidate_ui_acceptance",
+      "passed": true,
+      "criteria": [
+        "前端六阶段原型迁移为待分配、九主链阶段和归档；职位树、权限内计数、筛选保存、分页、批量动作和锁定可用。"
+      ],
+      "details": "浏览器实测：Tab 为 全部61/待分配9/人才推荐26/初筛6/用人部门筛选5/面试6/沟通Offer4/待入职0/已入职0/试用期0/结束0/已归档5，共 12 个入口，六阶段原型已迁移为待分配+九主链+归档。职位树点击 Go 工程师后 UI 显示 全部14/人才推荐7/初筛2/用人部门筛选2/面试1/沟通Offer1/已归档1，与 API 对同一 jobId 的 counts 逐项相同。分页：人才推荐 26 条第 1 页 20 行，第 2 页显示「显示 21-26，共 26 条」6 行。保存筛选「验收-Go工程师」后整页刷新，下拉仍在，选中后职位树高亮 dep-backend/Go 工程师并显示 7 条。批量转阶段 2 人提示「成功 2 位、失败 0 位」，人才推荐 26→24、初筛 6→8；随后不刷新整页打开两名候选人抽屉，徽标均为「初筛」且阶段动作给出「推进至『用人部门筛选』」（修复前该动作缺失）；招聘流程看板两人均落在初筛列，列计数与列表一致（修复前停留在原列）。锁定为不可操作后阶段动作与撤销按钮 disabled，解锁后恢复。待分配 Tab 的分配职位对话框只列 4 个在招真实职位，排除虚拟与已关闭职位，确认后待分配 9→8、人才推荐 25→26。"
+    },
+    {
+      "name": "department_screening_rules",
+      "passed": true,
+      "criteria": [
+        "初筛原因可空；部门筛选 PASS/HOLD/REJECT、任一 PASS 推进及结构化可约面时间符合规则。"
+      ],
+      "details": "API 断言 8 项全通过：初筛→用人部门筛选不带原因返回 200；PASS 缺原因 400；PASS 缺可约时段 400；PASS 带过去时段 400；PASS 带原因与两个未来结构化时段推进至 INTERVIEWING；HOLD 与 REJECT 均留在 DEPT_SCREENING；批量部门筛选返回逐项结果 {updated:1,failed:1,results:[{ok:true},{ok:false,error:'候选人当前不在用人部门筛选阶段'}]}。浏览器侧：用人部门筛选阶段抽屉渲染结论/原因/可约时段表单，填写原因与 2026-11-26 10:00–11:00 后保存，提示「部门筛选通过，候选人已进入面试阶段」，徽标变为面试，列表 用人部门筛选 5→4、面试 6→7；该阶段不提供直接推进至面试的按钮。"
+    },
+    {
+      "name": "transition_authorization_audit",
+      "passed": true,
+      "criteria": [
+        "条件不满足和越权的流转被拒绝；显式动作、撤销、时间线完整，面试结论不自动进入 Offer。"
+      ],
+      "details": "API 断言全通过：人才推荐→面试非法跳阶段 409；待分配候选人跳过职位分配 409；沟通Offer→待入职 409（ATS-015 边界）；已归档候选人经阶段动作恢复 409；INOPERABLE 锁定候选人改阶段 409；撤销恢复原阶段并写入时间线；时间线含创建、阶段变更与撤销事件。面试结论不自动推进：对 INTERVIEWING 候选人再次记录部门筛选 PASS 返回 409 且阶段保持 INTERVIEWING，只有显式阶段动作才进入 OFFERING。越权：新建 LOCAL 只读用户并赋 INTERVIEWER 角色（candidate:read/job:read/ai:read），其 GET /candidates 返回 200，PATCH 阶段返回 403；数据范围 PARTICIPATING 使其列表 total=0，而管理员为 61。浏览器侧撤销后徽标回到人才推荐，时间线按倒序完整呈现创建、阶段变更、锁定、解锁与撤销共 6 条并带操作时间。"
+    },
+    {
+      "name": "isolated_database_and_migrations",
+      "passed": true,
+      "criteria": [],
+      "details": "新建 talentflow_ats012_accept_20261122 并重放全部已提交 Prisma 迁移，migrate deploy 报告全部成功；db:seed 建立 21 权限、4 角色与本机 admin。全程未连接 talentflow 与 talentflow_local_admin_preview。验收结束后删除该临时库。"
+    },
+    {
+      "name": "quality_gates",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run typecheck / lint / build（backend）与 npm run build（web，tsc -b + vite）退出码均为 0；npm test --prefix backend 全量 24 个测试文件、158 项用例通过。采集报告时工作树干净，source_sha 为当前 HEAD 2f148a8。"
+    },
+    {
+      "name": "ui_api_count_consistency",
+      "passed": true,
+      "criteria": [],
+      "details": "验收结束时 UI 与 GET /candidates 完全一致：总量 61；待分配 8（UNASSIGNED 6 + VIRTUAL_POOL 2）、人才推荐 26、初筛 7、用人部门筛选 4、面试 7、沟通 Offer 4、待入职/已入职/试用期/结束 0、已归档 5。"
+    }
+  ],
+  "limitations": [
+    "三处非阻断显示问题仍未修复，本次不作为关闭前置：职位树/列表/筛选/分配对话框显示原始部门 ID 而非部门名称（服务端 departmentName 固定为空串）；时间线操作人显示用户 ID 而非姓名；抽屉内锁定/解锁后时间线不自动刷新（toggleLock 未重新拉取，关闭重开即正确）。后续如需修复应另立任务或并入 ATS-024。",
+    "部门数据（5 个，两级树）以 SQL 直接写入临时库作为夹具；职位与 61 名候选人全部经真实 HTTP API 创建，阶段推进、部门筛选、锁定、撤销、分配均走真实接口。全部为合成数据，不含真实个人信息。",
+    "UI 走查覆盖本机 admin 与只读 INTERVIEWER 两个角色的接口行为；只读角色的页面级视觉走查未单独进行，其服务端拒绝分支已由 403 与数据范围断言覆盖。",
+    "未制造并发竞态请求；乐观并发保护仍只有代码级条件更新证据。撤销、锁定、批量动作均为顺序操作。",
+    "待入职/已入职/试用期/结束四个阶段按设计等待 ATS-015 的书面 Offer、发送/接受时间与入职日期事实，本次只确认 UI 与 API 均无法绕过，未验证其正向流转。",
+    "本次为本地验收（locally_verified），不等于业务验收人或生产环境验收；工作台、面试安排、报表等仍为演示数据的页面不属于 ATS-012 范围。"
+  ]
+}

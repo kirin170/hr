@@ -267,7 +267,7 @@ work_items:
   next_action: "已预派给 Trae（第3批，待 ATS-010 完成且平台样本与企业分发方案验证通过后启动）：先验证脱敏页面样本、附件访问与分发方式，再做单平台灰度适配，然后扩展另一平台；未通过验证的平台保持显式未交付，不得默认双平台已支持。"
 - id: ATS-012
   kind: delivery
-  status: planned
+  status: completed
   owner: Codex
   goal: ats-candidate-flow
   priority: P0
@@ -278,7 +278,9 @@ work_items:
   - "初筛原因可空；部门筛选 PASS/HOLD/REJECT、任一 PASS 推进及结构化可约面时间符合规则。"
   - "条件不满足和越权的流转被拒绝；显式动作、撤销、时间线完整，面试结论不自动进入 Offer。"
   depends_on: [ATS-004, ATS-007, ATS-008]
-  next_action: "已修复浏览器走查发现的两处阻断/同源缺陷（抽屉阶段陈旧、看板不同步），证据 ats012-ui-drawer-fix-v1 与 ats012-pipeline-sync-fix-v1。剩余：部门显示为原始ID、时间线操作人显示为用户ID、锁定后时间线不刷新（均非阻断）。关闭前需一份覆盖全部三条验收标准的报告——单报告预检会按 completion.report.coverage 拒绝只覆盖部分标准的报告。"
+  next_action: "无；ATS-012 已按 ats012-acceptance-v1 完成本地验收并关闭（隔离库迁移、20 项 API 断言、浏览器人工走查、158 单测与前后端构建全部通过）。下游 ATS-013/014/024 依赖已解除。遗留三处非阻断显示问题：部门显示为原始ID、时间线操作人显示为用户ID、抽屉锁定后时间线不刷新；如需修复另立任务或并入 ATS-024。待入职及之后阶段仍等 ATS-015 事实模型。"
+  "evidence": ["docs/verification/ats012-acceptance-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-013
   kind: delivery
   status: planned
