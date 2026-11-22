@@ -2,9 +2,9 @@
 
 | 项 | 内容 |
 |---|---|
-| 文档版本 | v1.1 |
+| 文档版本 | v1.1（文件名保留 `ats-PRD-v1.0.md` 供既有文档引用兼容） |
 | 编写日期 | 2026-11-10 |
-| 最近修订 | 2026-11-11：合并功能需求 v1.2；新增招聘需求 OA 同步与招聘周期、人才库 1w+ 展示、邮箱附件导入 |
+| 最近修订 | 2026-11-21：同步 `ATS-010` 已实现浏览器导入路径、修正笔误并对齐遗留待确认编号 |
 | 需求基线 | 2026-11-10 已确认业务事实 + 《招聘系统功能需求文档 v1.2》 |
 | 适用读者 | 研发、测试、实施 |
 | 需求编号规则 | FR-<模块>-<序号>；NFR-<序号>（非功能） |
@@ -322,7 +322,7 @@ WRITTEN_OFFER + ACCEPTED + offerSentAt + onboardDate → [ST-3] 待入职
 | FR-ENT-2 | 投递带职位（门户/校招）直接创建 RECOMMENDED 候选人；内推仅记录来源 | jobId 非空 |
 | FR-ENT-3 | 批量上传 / 单个上传 / 手工录入 | 支持多文件；手工录入表单完整字段 |
 | FR-ENT-4 | Excel 表格批量导入（独立于解析链路，一行一候选人） | 模板下载、校验报告、失败行可导出 |
-| FR-ENT-5 | 待分配池 / 虚拟职位双容器列表，人事分配职位（只选职位） | 分配后 poolType=NONE、recruider 带出、写时间线 |
+| FR-ENT-5 | 待分配池 / 虚拟职位双容器列表，人事分配职位（只选职位） | 分配后 poolType=NONE、recruiter 带出、写时间线 |
 | FR-ENT-6 | 校招投递填个人意愿表单（简历字段，分配后不覆盖） | intentId 保存，分配不改写 |
 | FR-ENT-7 | 简历查重与合并提示 | 命中提示；合并保留全部来源与附件 |
 | FR-ENT-8 | 简历监控页：总量 / 进入系统 / 未进入，未进入可归因（解析失败/格式不支持/重复） | 列表含渠道、接收邮箱、接收时间、处理时延、去向 |
@@ -473,12 +473,13 @@ BOSS/猎聘内容脚本（识别当前页 + 用户点击）
 → HR 确认草稿 → 指定职位 RECOMMENDED / 未指定 UNASSIGNED
 ```
 
-**接口契约**
+**接口契约**（实际已落地路径与错误码见 [ats-API契约与错误码参考-v1.0.md](ats-API契约与错误码参考-v1.0.md)）
 
 | 接口 | 约束 |
 |---|---|
-| `POST /api/imports/browser-extension` | HTTPS + 本系统短期令牌；`Idempotency-Key=requestId`；multipart 提交 sourceSite、sourceCandidateId?、脱敏 sourcePageUrl、targetJobId?、pagePayload、附件；返回 `202 { taskId, status }` |
-| `GET /api/imports/browser-extension/{taskId}` | 仅任务所有者可查；返回状态、候选人 ID、查重结果及标准化 errorCode |
+| `POST /api/v1/browser-import/token` | 仅登录会话调用，签发扩展用短期系统令牌（`X-System-Token`），明文仅返回一次 |
+| `POST /api/v1/browser-import/tasks` | HTTPS + Bearer 或 `X-System-Token`；按操作者 + `requestId` 幂等；multipart 提交 sourceSite、sourceCandidateId?、脱敏 sourcePageUrl、targetJobId?、pagePayload、附件 `resume`；返回任务资源（202 语义，不在请求内完成解析） |
+| `GET /api/v1/browser-import/tasks/:taskId` | 仅任务所有者可查（非所有者统一返回 `TASK_NOT_FOUND`）；返回状态、候选人 ID、查重结果及标准化 errorCode |
 | 附件传输 | 优先由扩展将当前用户有权访问的文件字节直传本系统；不得把第三方 Cookie 交给后端代取，不持久化临时签名 URL |
 
 | 编号 | 需求 | 验收要点 |
@@ -652,10 +653,12 @@ ATS-024 负责统一管理入口、通用配置及配置审计；组织权限能
 
 ---
 
-## 11. 遗留待确认（不阻塞 1–3 步开发）
+## 11. 遗留待确认（不阻塞开发，编号与功能需求文档 §7.1 对齐）
+
+> 早期编号 `#1`～`#6` 已在需求基线评审中闭环并并入正文；以下保留当前尚未定稿项：
 
 | # | 事项 | 影响 |
 |---|---|---|
-| 7 | 数据保留期限具体值 | NFR-2 配置化，先留默认 |
-| 8 | BOSS/猎聘页面结构、附件访问方式、平台服务条款及官方合作渠道评估 | 适配器开发前验证；不阻塞通用 Browser Import API 与数据模型 |
-| 9 | 插件企业分发、浏览器白名单、签名、灰度与升级策略 | 上线前确定；开发期使用受控测试包 |
+| OQ-1（原 #7） | 数据保留期限具体值（当前代码默认值：简历 365 天、敏感材料 180 天） | NFR-2 配置化，上线验收前由业务确认最终口径 |
+| OQ-2（原 #8） | BOSS/猎聘页面结构、附件访问方式、平台服务条款及官方合作渠道评估 | 适配器开发前验证（`ATS-011`）；不阻塞通用 Browser Import API 与数据模型 |
+| OQ-3（原 #9） | 插件企业分发、浏览器白名单、签名、灰度与升级策略 | 上线前确定（`ATS-011` / `ATS-025`）；开发期使用受控测试包 |

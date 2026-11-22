@@ -4,7 +4,7 @@
 |---|---|
 | 文档版本 | v1.0 |
 | 编写日期 | 2026-11-11 |
-| 最近修订 | 2026-11-11：本地开发改为 Windows 原生服务，不使用 Docker |
+| 最近修订 | 2026-11-21：同步当前实际仓库结构、`dev` 分支流程、环境变量名、钉钉回调路径、排序规则与检查清单 |
 | 配套文档 | `ats-功能需求文档-v1.2.md`、`ats-PRD-v1.0.md` |
 | 适用读者 | 研发、测试、运维、实施 |
 | 文档性质 | 开发基线；前后端技术栈已于 2026-11-11 确认冻结，后续变更需走技术决策记录 |
@@ -125,42 +125,38 @@ Chrome/Edge MV3 扩展 ────────────┘
 
 ---
 
-## 4. 目标仓库结构
+## 4. 仓库结构
+
+> 说明：早期曾规划 `apps/web` + `apps/api` + `apps/worker` 的 monorepo 结构；实际演进中确定采用**根目录前端 + `backend/` 独立工程**的扁平布局，以避免迁移中断。当前仓库权威结构如下：
 
 ```text
 d:/hr/
-├─ apps/
-│  ├─ web/                 # 现有 React 应用迁移至此
-│  ├─ api/                 # NestJS HTTP 服务
-│  ├─ worker/              # BullMQ 消费者与定时任务
-│  └─ extension/           # MV3 浏览器插件
+├─ src/                    # React 18 + Vite 前端应用
+├─ public/                 # 前端静态资源
+├─ backend/                # NestJS 模块化单体 API 与 Worker（含独立 package.json）
+│  ├─ prisma/
+│  │  ├─ schema.prisma     # 数据库模型（唯一权威 Schema）
+│  │  ├─ migrations/       # Prisma 迁移历史（只追加，不改旧文件）
+│  │  └─ seed.mjs          # 默认权限/角色与本地开发管理员种子
+│  ├─ scripts/             # 运维与联调辅助脚本（如邮箱探测）
+│  ├─ src/                 # 业务模块（auth/candidates/jobs/requisitions/intake/mail/ai/dingtalk/attachments/retention/storage/audit/timeline）
+│  ├─ test/                # 端到端测试
+│  └─ .env.example         # 环境变量唯一权威模板
 ├─ packages/
-│  ├─ contracts/           # DTO、Zod Schema、稳定枚举、错误码
-│  ├─ database/            # Prisma Client、事务与仓储公共代码
-│  └─ shared/              # 纯工具函数，不含业务单例
-├─ prisma/
-│  ├─ schema.prisma
-│  ├─ migrations/
-│  └─ seed.ts
-├─ deploy/
-│  ├─ docker-compose.prod.yml  # 测试/生产可选容器编排，本地不使用
-│  └─ nginx/                   # Web 托管与 API 反向代理
-├─ fixtures/
-│  ├─ resumes/             # 脱敏简历样本
-│  └─ extension/           # 脱敏平台 HTML/附件样本
-├─ docs/
-├─ scripts/
-├─ .env.example
-├─ .nvmrc
-└─ package.json            # npm workspaces
+│  └─ domain/              # 跨端共享领域契约/辅助代码
+├─ docs/                   # 文档中心与 verification/ 验收报告
+├─ scripts/                # 仓库级工程脚本
+├─ .github/workflows/      # GitHub Actions CI 门禁
+└─ package.json            # 前端构建与根目录常用代理脚本（dev:web/dev:api/dev:worker/db:*）
 ```
+
+> 注：浏览器扩展（`ATS-011`）尚未纳入仓库，后续可独立置于 `extension/` 目录并补入 CI 构建；根目录若存在空 `prisma/` 占位目录，不作为 Schema 来源，一律以 `backend/prisma/` 为准。
 
 ### 4.1 迁移原则
 
-- 不做一次性重写；先将现有页面移入 `apps/web`，再逐页替换 `localStorage`。
-- `packages/contracts` 只放稳定枚举和接口契约，不复制后端实体实现。
-- 业务规则放在 API 的领域服务中，前端不得自行判断状态能否流转。
-- 现有 `src/types.ts` 按 PRD 重构，不在原类型上继续堆可选字段。
+- 不做一次性重写；保留根目录 `src/`，逐页替换原型演示数据（`src/data.ts`）为真实 API。
+- 业务规则放在 `backend/src/` 的领域服务中，前端不得自行判断状态能否流转。
+- 现有 `src/types.ts` 按 PRD 演进，不以原型六阶段覆盖服务端规范状态枚举。
 
 ---
 
@@ -265,7 +261,7 @@ ATS-024 交付统一入口、通用配置及配置审计；领域能力按 PRD �
 
 - 内部用户优先通过钉钉 OAuth 登录，后端使用授权码换取身份。
 - `dingtalkUserId ↔ systemUserId` 一对一映射。
-- 访问令牌采用 JWT，有效期 15 分钟，值为 `[redacted]`，保存在前端内存。
+- 访问令牌采用 JWT，有效期 15 分钟，保存在前端内存，不落盘且不写入 URL 或日志。
 - 刷新令牌使用轮换机制和 HttpOnly、Secure、SameSite=Lax Cookie，数据库仅存哈希。
 - 首次管理员通过 `POST /api/v1/auth/bootstrap` 一次性创建；服务端要求至少 32 字节的 `INITIAL_ADMIN_SECRET`，并以数据库唯一初始化标记拒绝重复创建。完成后移除环境中的初始化密钥。
 - 本地身份适配仅在 `APP_ENV=local` 且显式设置 `LOCAL_AUTH_ENABLED=true` 时启用；生产环境拒绝本地登录。
@@ -436,29 +432,28 @@ redis-cli -h 127.0.0.1 -p 6379 ping
 
 `mysql` 当前不在 PATH，使用上述完整路径；`redis-cli` 已在 PATH。Redis 返回 `PONG`、MySQL 返回版本号即视为本地依赖就绪。
 
-创建本地数据库（库名可按实际调整）：
+创建本地数据库（库名可按实际调整，统一使用 MySQL 8 默认排序规则 `utf8mb4_0900_ai_ci`）：
 
 ```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS talentflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS talentflow CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 ```
 
 > Windows 下统一使用 `127.0.0.1`，避免 `localhost` 被解析为 IPv6 导致 MySQL/Redis 连接失败。
 
 ### 9.4 环境变量
 
-仓库只提交 `backend/.env.example`。本地将其复制为被 Git 忽略的 `backend/.env`，并替换示例值；Nest 启动器也支持优先读取 `backend/.env.local`。生产环境通过部署密钥管理注入真实密钥。Prisma CLI 使用 `.env`，因此执行数据库命令时应确保该文件存在。
+仓库只提交 `backend/.env.example`（唯一权威变量清单）。本地将其复制为被 Git 忽略的 `backend/.env`，并替换示例值；Nest 启动器也支持优先读取 `backend/.env.local`。生产环境通过部署密钥管理注入真实密钥。Prisma CLI 使用 `.env`，因此执行数据库命令时应确保该文件存在。
 
-| 分组 | 主要变量 |
+| 分组 | 主要变量（完整列表见 `backend/.env.example`） |
 |---|---|
-| 应用 | `APP_ENV`、`APP_PORT`、`WEB_BASE_URL`、`API_BASE_URL` |
+| 应用 | `APP_ENV`、`APP_PORT`、`API_BASE_URL` |
 | 数据库 | `DATABASE_URL`、`REDIS_URL` |
-| 鉴权 | `JWT_ACCESS_SECRET`、`REFRESH_TOKEN_PEPPER`、`TOKEN_TTL`、`INITIAL_ADMIN_SECRET`、`LOCAL_AUTH_ENABLED`、`LOCAL_AUTH_SECRET` |
-| 文件 | `STORAGE_DRIVER`、`LOCAL_STORAGE_DIR`、`OSS_BUCKET`、`OSS_REGION` |
-| AI | `AI_PROVIDER`、`AI_MODEL`、`AI_API_KEY`、`AI_TIMEOUT_MS` |
-| 钉钉 | `DINGTALK_PROVIDER`、`DINGTALK_APP_KEY`、`DINGTALK_APP_SECRET`、`DINGTALK_CALLBACK_URL` |
-| 邮件 | `MAIL_PROVIDER`、`MAIL_INBOX_HOST`、`MAIL_INBOX_USER`、`MAIL_INBOX_PASSWORD` |
-| 插件 | `EXTENSION_ALLOWED_ORIGINS`、`EXTENSION_TOKEN_TTL` |
-| 限制 | `RESUME_MAX_MB`、`QUEUE_CONCURRENCY`、`SIGNED_URL_TTL_SECONDS` |
+| 鉴权 | `JWT_ACCESS_SECRET`、`REFRESH_TOKEN_PEPPER`、`TOKEN_TTL`、`REFRESH_TOKEN_TTL_DAYS`、`INITIAL_ADMIN_SECRET`、`LOCAL_AUTH_ENABLED`、`LOCAL_ADMIN_IDENTIFIER`、`LOCAL_AUTH_SECRET` |
+| 文件与保留 | `STORAGE_DRIVER`、`LOCAL_STORAGE_DIR`、`STORAGE_SIGNING_SECRET`、`OSS_BUCKET`、`OSS_REGION`、`OSS_ENDPOINT`、`RETENTION_RESUME_DAYS`、`RETENTION_SENSITIVE_DAYS` |
+| AI | `AI_PROVIDER`（正式接入后补齐模型与密钥项） |
+| 钉钉 | `DINGTALK_CLIENT_ID`、`DINGTALK_CLIENT_SECRET`、`DINGTALK_CORP_ID`、`DINGTALK_REDIRECT_URI`、`DINGTALK_LOGIN_SUCCESS_REDIRECT`、`DINGTALK_CALLBACK_TOKEN`、`DINGTALK_CALLBACK_AES_KEY`、`DINGTALK_SYNC_ROOT_DEPARTMENT_ID` |
+| 邮件 | `MAIL_PROVIDER`、`MAIL_INBOX_HOST`、`MAIL_INBOX_PORT`、`MAIL_INBOX_SECURE`、`MAIL_INBOX_USER`、`MAIL_INBOX_PASSWORD`、`MAIL_POLL_INTERVAL_SECONDS` |
+| 限制与队列 | `RESUME_MAX_MB`、`SIGNED_URL_TTL_SECONDS`、`PARSE_MAX_ATTEMPTS`、`QUEUE_CONCURRENCY` |
 
 本地 `backend/.env` 示例由 `backend/.env.example` 提供。设置本机数据库密码、随机访问令牌密钥和刷新令牌 pepper；首次管理员创建前配置一次性初始化密钥。默认关闭本地身份登录：
 
@@ -492,7 +487,7 @@ npm run db:setup
 按需替换 `backend/.env` 中的本机 MySQL 密码和随机开发密钥。新环境创建数据库：
 
 ```powershell
-& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS talentflow CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+& "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysql.exe" -h 127.0.0.1 -P 3306 -u root -p -e "CREATE DATABASE IF NOT EXISTS talentflow CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"
 ```
 
 在三个终端分别启动 Web、API 和解析 Worker：
@@ -577,7 +572,7 @@ CI 平台：**GitHub Actions**，工作流见 `.github/workflows/ci.yml`。合�
 
 当前仓库尚无浏览器扩展工程，因此 CI 不构建扩展；扩展纳入仓库后应在此工作流增加对应构建门禁。CI 迁移仅操作临时 MySQL 服务，不连接开发或生产数据库。
 
-数据库迁移不得直接修改已部署迁移文件；通过新迁移演进。
+数据库迁移不得直接修改已部署迁移文件；通过新迁移演进，并统一通过 `npx prisma migrate dev --create-only` 生成精确到秒的时间戳目录名（禁止手工构造整点时间戳，避免并行开发出现同前缀迁移碰撞）。
 
 ---
 
@@ -594,7 +589,7 @@ SLB / Nginx
                  ├─ OSS
                  └─ SLS
 Worker ECS（可独立扩缩容）
-钉钉回调 → HTTPS → API /integrations/dingtalk/callback
+钉钉回调 → HTTPS → API /api/v1/dingtalk/events
 ```
 
 - 构建统一容器镜像，环境差异只通过配置注入。
@@ -679,18 +674,17 @@ Worker ECS（可独立扩缩容）
 - Offer 按 PRD §4.2 六阶段及子状态建模；不通过/拒绝归档须保存发生阶段、结果及原因。集 A 企业淘汰/归档、集 B 候选人拒绝、集 C 放弃入职独立配置和统计，各含「其他·可填写」及说明，默认初稿见 PRD §3.2。
 - 内推本期仅保留推荐人/来源标识及合并后的来源关联；不建内推门户、不判定有效推荐、不自动结算。
 
-### 15.3 仓库与 CI 基线（2026-11-11 确认）
+### 15.3 仓库与 CI 基线（已与 `AGENTS.md` 对齐）
 
 | 项 | 约定 |
 |---|---|
 | 仓库 | `https://github.com/kirin170/hr.git` |
 | 唯一开发目录 | `d:/hr` |
-| 默认分支 | `master`（保持现状，不强制改名） |
-| 功能分支 | `feature/<模块>-<简述>`；缺陷分支 `fix/<简述>` |
-| 合并方式 | Pull Request → `master`；至少 1 人评审；CI 通过后合并 |
-| 直接推送 | 禁止直接推送 `master`；初始化脚手架的首个提交除外 |
+| 发布分支 | `master`（受保护，禁止直接提交或推送） |
+| 开发分支 | 共享 `dev` 分支（开发前 `git switch dev && git pull --ff-only origin dev`，禁止 force-push 或改写历史） |
+| 合并方式 | Pull Request：`dev` → `master`；至少 1 人评审；两项状态检查（`quality`、`secret-scan`）通过后由仓库所有者合并 |
 | CI 平台 | **GitHub Actions**（仓库托管于 GitHub） |
-| CI 必跑 | 类型检查、Lint、单元/接口测试、前后端与插件构建、Prisma migration 校验、密钥扫描 |
+| CI 必跑 | 类型检查、Lint、单元/接口测试、前后端构建（扩展纳入后补扩展构建）、Prisma migration 校验、密钥扫描 |
 | 版本标签 | 发布使用 `v<主>.<次>.<修订>` 标签，与文档版本区分 |
 
 CI 工作流文件位置：`.github/workflows/ci.yml`。分支保护规则在 GitHub 仓库设置中启用，要求状态检查通过后方可合并。
@@ -699,17 +693,17 @@ CI 工作流文件位置：`.github/workflows/ci.yml`。分支保护规则在 Gi
 
 ## 16. 开发启动检查清单
 
-完成以下项目即可开始第一阶段编码：
+截至 2026-11-21 基线状态（已完成脚手架与早期主链交付）：
 
 - [x] 前后端技术栈已确认并冻结。
 - [x] 仓库与目录唯一：`d:/hr` 为唯一开发目录，PRD 历史路径已清理。
 - [x] Node.js 22 与依赖安装方式统一（v22.20.0 / npm 10.9.3）。
 - [x] API、Worker、Web 的目录和启动方式确定。
-- [x] 本机 MySQL/Redis 服务已启动；Redis 连接验证通过，MySQL 待凭据连接验证。
+- [x] 本机 MySQL/Redis 服务已启动并完成隔离临时库迁移验证。
 - [x] GitHub Actions CI 工作流已提交；`master` 分支保护已启用，要求 `quality`、`secret-scan` 通过及至少 1 人 PR 评审，并对管理员生效（2026-11-16）。
-- [ ] Prisma 初版 Schema 覆盖 PRD 核心实体。
-- [ ] 状态机、权限、审计的归属模块明确。
-- [ ] AI、钉钉、招聘平台均有 Mock 接口。
+- [x] Prisma Schema 与已提交迁移覆盖当前核心实体（见 `backend/prisma/schema.prisma`）。
+- [x] 状态机、三维权限、审计与附件生命周期模块归属明确并已交付（`ATS-004/005/007/008/009/010/012/017/022`）。
+- [x] AI、钉钉 OA、邮箱 Mock 接口及部分正式适配器（钉钉组织同步、IMAP 邮箱）已落地。
 - [x] `backend/.env.example` 含本地占位值且不含真实密钥。
 - [x] CI 配置执行类型检查、Lint、单元/API 测试、构建、迁移与密钥扫描。
-- [ ] 业务验收人及脱敏测试样本已指定。
+- [ ] 业务验收人及脱敏测试样本已指定（上线验收 `ATS-025` 前落实）。

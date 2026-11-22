@@ -122,33 +122,33 @@ Mock 适配器是阶段性交付及测试手段，不是正式集成完成证明
 
 ## 4. 可供分配的工作包
 
-P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代表允许跳过依赖。下表负责人均未分配，不设未经确认的开始/截止日期。
+P0 为关键基础或最终门槛，P1 为本期必需交付；优先级不代表允许跳过依赖。**任务实时状态、负责人与验收证据以 `.awr/intake/work-ledger.yaml` 为唯一事实源**（最新分派详见 [ats-任务分派-v1.0.md](ats-任务分派-v1.0.md)）；下表为截至 2026-11-21 的同步快照，不设未经确认的开始/截止日期。
 
-| 编号 | 工作包 | 目标 | 优先级 | 前置任务 | 状态/负责人 |
+| 编号 | 工作包 | 目标 | 优先级 | 前置任务 | 状态/负责人（以台账为准） |
 |---|---|---|---|---|---|
-| ATS-004 | 身份鉴权与三维权限基础 | ats-foundation | P0 | ATS-002 | 待分配 / 未指定 |
-| ATS-005 | 附件私有存储、上传防护与生命周期 | ats-foundation | P0 | ATS-004 | 本次用户分配，已完成；验收报告见 `docs/verification/ats005-attachment-storage-report.json` |
-| ATS-006 | 工程运行约定、数据库迁移与 CI 门禁 | ats-foundation | P0 | ATS-001 | 进行中 / Codex |
-| ATS-007 | 职位、HC、招聘需求与周期闭环 | ats-requisition | P0 | ATS-002、ATS-004 | 待分配 / 未指定 |
-| ATS-008 | 补齐简历入场 UI、批量导入与监控 | ats-intake | P0 | ATS-002、ATS-003、ATS-004、ATS-005、ATS-007 | 本次用户分配，已完成；验收报告见 `docs/verification/ats008-intake-ui-monitor-report.json` |
-| ATS-009 | 简历来源记录与校园招聘投递门户 | ats-intake | P1 | ATS-007、ATS-008 | 本次用户分配，已完成；验收报告见 `docs/verification/ats009-source-campus-report.json` |
-| ATS-010 | 通用浏览器导入 API 与任务审计 | ats-intake | P1 | ATS-004、ATS-005、ATS-008 | 待分配 / 未指定 |
-| ATS-011 | Chrome/Edge MV3 扩展与双平台适配 | ats-intake | P1 | ATS-010 | 待分配 / 未指定 |
-| ATS-012 | 九阶段候选人主链与筛选状态机 | ats-candidate-flow | P0 | ATS-004、ATS-007、ATS-008 | 待分配 / 未指定 |
-| ATS-013 | 人才库归档、激活与万级查询 | ats-candidate-flow | P1 | ATS-012 | 待分配 / 未指定 |
-| ATS-014 | 面试排期、登记表与评价协同 | ats-interview | P1 | ATS-012 | 待分配 / 未指定 |
-| ATS-015 | Offer 状态、OA 材料和背调流程 | ats-offer-onboarding | P1 | ATS-012、ATS-014、ATS-005 | 待分配 / 未指定 |
-| ATS-016 | 待入职、确认入职与试用期闭环 | ats-offer-onboarding | P1 | ATS-015 | 待分配 / 未指定 |
-| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 已完成 / Codex（用户确认初步验证并要求关闭以解除下游依赖；后续验证项见报告） |
-| ATS-018 | 钉钉日历与固定事件通知正式接入 | ats-integrations | P1 | ATS-017、ATS-014、ATS-016 | 待分配 / 未指定 |
-| ATS-019 | 钉钉 OA 需求同步与录用审批对接 | ats-integrations | P1 | ATS-017、ATS-007、ATS-015 | 待分配 / 未指定 |
-| ATS-020 | 钉钉听记素材按权限读取 | ats-integrations | P1 | ATS-017、ATS-014 | 待分配 / 未指定 |
-| ATS-021 | AI 三场景正式适配与人工复核 | ats-integrations | P1 | ATS-008、ATS-012、ATS-014、ATS-020 | 待分配 / 未指定 |
-| ATS-022 | 真实邮箱轮询、附件获取与异常恢复 | ats-integrations | P1 | ATS-008、ATS-005 | 待分配 / 未指定 |
-| ATS-023 | 工作台与可下钻招聘报表 | ats-operations | P1 | ATS-007、ATS-013、ATS-014、ATS-016 | 待分配 / 未指定 |
-| ATS-024 | 业务设置与配置审计 | ats-operations | P1 | ATS-004、ATS-007、ATS-012 | 待分配 / 未指定 |
-| ATS-025 | 端到端验收、性能和发布运维准备 | ats-operations | P0 | ATS-006、ATS-009、ATS-011、ATS-013、ATS-016、ATS-018、ATS-019、ATS-020、ATS-021、ATS-022、ATS-023、ATS-024、ATS-026 | 待分配 / 未指定 |
-| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 文档已交付并验收；台账状态为 completed，AWR 自动完成回执未生成 |
+| ATS-004 | 身份鉴权与三维权限基础 | ats-foundation | P0 | ATS-002 | 已完成；验收报告见 `docs/verification/ats004-auth-authorization-report.json` |
+| ATS-005 | 附件私有存储、上传防护与生命周期 | ats-foundation | P0 | ATS-004 | 已完成 / CodeBuddy；验收报告见 `docs/verification/ats005-attachment-storage-report.json` |
+| ATS-006 | 工程运行约定、数据库迁移与 CI 门禁 | ats-foundation | P0 | ATS-001 | 已完成 / Codex；验收报告见 `docs/verification/ats006-engineering-ci-report.json` |
+| ATS-007 | 职位、HC、招聘需求与周期闭环 | ats-requisition | P0 | ATS-002、ATS-004 | 已完成 / CodeBuddy；验收报告见 `docs/verification/ats007-requisition-cycle-report.json` |
+| ATS-008 | 补齐简历入场 UI、批量导入与监控 | ats-intake | P0 | ATS-002、ATS-003、ATS-004、ATS-005、ATS-007 | 已完成 / CodeBuddy；验收报告见 `docs/verification/ats008-intake-ui-monitor-report.json` |
+| ATS-009 | 简历来源记录与校园招聘投递门户 | ats-intake | P1 | ATS-007、ATS-008 | 已完成 / CodeBuddy；验收报告见 `docs/verification/ats009-source-campus-report.json` |
+| ATS-010 | 通用浏览器导入 API 与任务审计 | ats-intake | P1 | ATS-004、ATS-005、ATS-008 | 已完成 / Trae；验收报告见 `docs/verification/ats010-report.json` |
+| ATS-011 | Chrome/Edge MV3 扩展与双平台适配 | ats-intake | P1 | ATS-010 | 已预派（planned）/ Trae |
+| ATS-012 | 九阶段候选人主链与筛选状态机 | ats-candidate-flow | P0 | ATS-004、ATS-007、ATS-008 | 已分派收尾中（planned）/ Codex（见 `ats012-*` 报告） |
+| ATS-013 | 人才库归档、激活与万级查询 | ats-candidate-flow | P1 | ATS-012 | 已预派（planned）/ Trae |
+| ATS-014 | 面试排期、登记表与评价协同 | ats-interview | P1 | ATS-012 | 已预派（planned）/ Codex |
+| ATS-015 | Offer 状态、OA 材料和背调流程 | ats-offer-onboarding | P1 | ATS-012、ATS-014、ATS-005 | 已预派（planned）/ Codex |
+| ATS-016 | 待入职、确认入职与试用期闭环 | ats-offer-onboarding | P1 | ATS-015 | 已预派（planned）/ Codex |
+| ATS-017 | 钉钉集成设计与组织身份正式接入 | ats-integrations | P0 | ATS-004 | 已完成 / Codex（用户确认初验并关闭以解除下游依赖；后续验证项见 `ats017-dingtalk-integration-report.json`） |
+| ATS-018 | 钉钉日历与固定事件通知正式接入 | ats-integrations | P1 | ATS-017、ATS-014、ATS-016 | 已预派（planned）/ Codex |
+| ATS-019 | 钉钉 OA 需求同步与录用审批对接 | ats-integrations | P1 | ATS-017、ATS-007、ATS-015 | 已预派（planned）/ CodeBuddy |
+| ATS-020 | 钉钉听记素材按权限读取 | ats-integrations | P1 | ATS-017、ATS-014 | 已预派（planned）/ CodeBuddy |
+| ATS-021 | AI 三场景正式适配与人工复核 | ats-integrations | P1 | ATS-008、ATS-012、ATS-014、ATS-020 | 已预派（planned）/ CodeBuddy |
+| ATS-022 | 真实邮箱轮询、附件获取与异常恢复 | ats-integrations | P1 | ATS-008、ATS-005 | 已完成 / CodeBuddy；验收报告见 `docs/verification/ats022-mail-polling-report.json`、`ats022-mail-fixture-report.json` |
+| ATS-023 | 工作台与可下钻招聘报表 | ats-operations | P1 | ATS-007、ATS-013、ATS-014、ATS-016 | 已预派（planned）/ Trae |
+| ATS-024 | 业务设置与配置审计 | ats-operations | P1 | ATS-004、ATS-007、ATS-012 | 已预派（planned）/ CodeBuddy |
+| ATS-025 | 端到端验收、性能和发布运维准备 | ats-operations | P0 | ATS-006、ATS-009、ATS-011、ATS-013、ATS-016、ATS-018、ATS-019、ATS-020、ATS-021、ATS-022、ATS-023、ATS-024、ATS-026 | 已预派（planned）/ Claude Code（统筹） |
+| ATS-026 | README、运行手册与原型范围校正 | ats-foundation | P1 | ATS-002 | 已完成；验收报告见 `docs/verification/ats026-readme-runbook-report.json` |
 
 既有 ATS-002 已完成，验收条件为：候选人列表/详情使用后端；阶段推进后端持久化；关键操作写入时间线/审计。本次仅同步状态，未重新运行开发测试；后续新增任务仍由用户明确分配。
 
