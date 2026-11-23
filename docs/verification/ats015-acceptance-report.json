@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "work_item": "ATS-015",
+  "date": "2026-11-23",
+  "verified_at": 1795420685730,
+  "source_sha": "b866f7cce43071f3911770d34eae3370a99f0994",
+  "working_tree_dirty": true,
+  "working_tree_note": "验证时仅 AWR 台账有未提交变动；代码和测试文件均与 source_sha 一致。",
+  "summary": "ATS-015 在提交 b866f7c 验证：六阶段 Offer、原因归档、OA 材料、敏感材料独立授权与回流历史；后端 187 项常规测试、ATS-015 隔离库 9 项及 ATS-014 回归 4 项通过，含 HTTP 和无头浏览器；临时 MySQL 库均已删除。",
+  "command": "npm run build (D:/hr); npm run typecheck (D:/hr/backend); npm run lint (D:/hr/backend); npm test (D:/hr/backend); node scripts/ats015-isolated-check.mjs (D:/hr/backend); node scripts/ats014-isolated-check.mjs (D:/hr/backend)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261123200000_ats015_offer_workflow/migration.sql",
+    "backend/src/offers/",
+    "backend/src/attachments/attachments.service.ts",
+    "backend/src/app.module.ts",
+    "backend/scripts/ats015-isolated-check.mjs",
+    "backend/scripts/ats015-ui-check.mjs",
+    "backend/scripts/ats014-isolated-check.mjs",
+    "src/components/OfferPanel.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "src/api.ts",
+    "隔离临时 MySQL 库 ats015_tmp_dab13aefcfff、ats014_tmp_f2738d6c2962（测试后删除）"
+  ],
+  "checks": [
+    {
+      "name": "offer_stages_and_reasons",
+      "passed": true,
+      "criteria": [
+        "Offer 六阶段（录用审批资料→OA审批中→口头offer→背调信息整理中→背调审批→书面offer）及各阶段待处理/接受/不通过子状态可用；不通过/拒绝须填原因，企业不通过用集 A、候选人拒绝用集 B，OA 单号和手工结果回填可用，每次变更留痕。"
+      ],
+      "details": "隔离库逐阶段记录通过并显式推进；验证非法推进、并发、企业集 A 与候选人集 B、其他原因必填、归档事务、旧记录显式核对及回流快照。HTTP 验证未授权访问和错误推进被拒；浏览器验证创建、填报 OA 单号与职级、通过和推进。"
+    },
+    {
+      "name": "oa_materials_and_salary",
+      "passed": true,
+      "criteria": [
+        "OA 材料预览仅含简历信息/面试登记表/录用职级；AI 建议不作为审批结论，系统无薪资明细存储。"
+      ],
+      "details": "预览只返回简历信息、当前候选人与职位的登记表和录用职级；测试字段过滤 AI 建议、薪资字段及无独立授权联系方式，额外薪资字段被请求白名单拒绝。数据库和新接口没有薪资数值字段。"
+    },
+    {
+      "name": "background_and_written_offer",
+      "passed": true,
+      "criteria": [
+        "背调材料私有访问、独立授权和审批结果生效；不通过按集 A 归档，通过可定入职时间并分别记录书面 Offer 发送与候选人接受结果。"
+      ],
+      "details": "隔离库验证背调材料写入需独立授权、候选人范围控制、签发短期私有链接、撤销授权拒绝新链接及到期清理；背调通过后书面发送和接受分别记录，缺发送或入职时间无法推进。"
+    },
+    {
+      "name": "regression_and_validation",
+      "passed": true,
+      "criteria": [
+        "Offer 六阶段（录用审批资料→OA审批中→口头offer→背调信息整理中→背调审批→书面offer）及各阶段待处理/接受/不通过子状态可用；不通过/拒绝须填原因，企业不通过用集 A、候选人拒绝用集 B，OA 单号和手工结果回填可用，每次变更留痕。",
+        "OA 材料预览仅含简历信息/面试登记表/录用职级；AI 建议不作为审批结论，系统无薪资明细存储。",
+        "背调材料私有访问、独立授权和审批结果生效；不通过按集 A 归档，通过可定入职时间并分别记录书面 Offer 发送与候选人接受结果。"
+      ],
+      "details": "重放 15 项迁移，ATS-015 集成 9 项、ATS-014 集成 4 项通过，临时库均删除；常规套件 187 通过，20 项隔离测试默认跳过；后端 typecheck、lint、前端构建通过。ATS-014 回归测试确认面试评价不自动推进候选人阶段。"
+    }
+  ],
+  "limitations": [
+    "业务测试通过无头浏览器执行，未进行人工业务验收。",
+    "OA 为人工回填；真实钉钉 OA 接入由 ATS-019 承接。",
+    "已签发的对象存储短期链接在到期前为持有者凭证；权限撤销会阻止再次签发。"
+  ]
+}

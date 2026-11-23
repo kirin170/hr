@@ -313,7 +313,7 @@ work_items:
   "verification": {"evidence_level":"locally_verified"}
 - id: ATS-015
   kind: delivery
-  status: planned
+  status: completed
   owner: Codex
   goal: ats-offer-onboarding
   priority: P1
@@ -324,7 +324,9 @@ work_items:
   - "OA 材料预览仅含简历信息/面试登记表/录用职级；AI 建议不作为审批结论，系统无薪资明细存储。"
   - "背调材料私有访问、独立授权和审批结果生效；不通过按集 A 归档，通过可定入职时间并分别记录书面 Offer 发送与候选人接受结果。"
   depends_on: [ATS-012, ATS-014, ATS-005]
-  next_action: "已预派给 Codex（第3批，待 ATS-012/014 完成后启动）：从 Offer 六阶段状态矩阵、集 A/B 原因、OA 材料契约与敏感附件独立授权用例开始；不存薪资明细，书面 Offer 发送与候选人接受结果分别记录，每次变更留痕。"
+  next_action: "按报告 b866f7c 和已登记证据完成 ATS-015；真实 OA 对接由 ATS-019 承接。"
+  "evidence": ["docs/verification/ats015-acceptance-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-016
   kind: delivery
   status: planned
