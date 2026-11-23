@@ -24,3 +24,15 @@ SELECT x.id, 'OFFER_REJECT', x.label, true FROM (
   UNION ALL SELECT 'ats015_b3','岗位/发展方向不匹配' UNION ALL SELECT 'ats015_b4','工作地点/通勤不合适'
   UNION ALL SELECT 'ats015_b5','个人原因' UNION ALL SELECT 'ats015_b6','其他·可填写'
 ) x WHERE NOT EXISTS (SELECT 1 FROM `reason_options` r WHERE r.type = 'OFFER_REJECT');
+
+CREATE TABLE `offer_record_history` (
+  `id` VARCHAR(191) NOT NULL,
+  `candidateId` VARCHAR(191) NOT NULL,
+  `jobId` VARCHAR(191) NOT NULL,
+  `materials` TEXT NULL,
+  `snapshot` JSON NOT NULL,
+  `recordedBy` VARCHAR(191) NOT NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  INDEX `offer_record_history_candidateId_jobId_idx`(`candidateId`, `jobId`),
+  PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

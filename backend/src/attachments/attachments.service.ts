@@ -183,7 +183,9 @@ export class AttachmentsService {
     const offer = await this.prisma.offerRecord.findFirst({
       where: { materials: { contains: `|${fileId}|` } },
       select: { candidateId: true, jobId: true },
-    });
+    }) ?? (storageKey.startsWith('offer-materials/') ? await this.prisma.offerRecordHistory.findFirst({
+      where: { materials: { contains: `|${fileId}|` } }, select: { candidateId: true, jobId: true },
+    }) : null);
     if (offer) {
       const candidate = await this.prisma.candidate.findFirst({
         where: { AND: [{ id: offer.candidateId, jobId: offer.jobId }, this.authorization.candidateWhere(actor, 'candidate:read')] }, select: { id: true },

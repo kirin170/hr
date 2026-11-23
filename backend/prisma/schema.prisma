@@ -406,6 +406,19 @@ model OfferRecord {
   @@map("offer_records")
 }
 
+/// 换职位或人才库回流时保留旧 Offer 的业务快照及材料归属。
+model OfferRecordHistory {
+  id          String @id @default(cuid())
+  candidateId String
+  jobId       String
+  materials   String? @db.Text
+  snapshot    Json
+  recordedBy  String
+  createdAt   DateTime @default(now())
+  @@index([candidateId, jobId])
+  @@map("offer_record_history")
+}
+
 enum OfferStage {
   MATERIAL_PENDING
   OA_PENDING

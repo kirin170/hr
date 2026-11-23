@@ -34,8 +34,7 @@ export class OffersService {
     const candidate = await this.db.candidate.findFirst({ where: { AND: [{ id }, this.auth.candidateWhere(actor, 'candidate:stage:update')] } });
     if (!candidate) throw new NotFoundException('候选人不存在');
     const offer = await this.db.offerRecord.findUnique({ where: { candidateId: id } });
-    if (offer && offer.jobId !== candidate.jobId) throw new ConflictException('历史 Offer 对应其他职位，需人工核对');
-    if (!offer) return null;
+    if (!offer || offer.jobId !== candidate.jobId || (candidate.stage === 'OFFERING' && offer.stageStatus === 'NOT_PASSED')) return null;
     return publicOffer(offer);
   }
   async reasons(actor: AuthenticatedUser) {
@@ -44,12 +43,34 @@ export class OffersService {
   }
   async create(id: string, actor: AuthenticatedUser) {
     const candidate = await this.candidate(id, actor, true);
-    if (await this.db.offerRecord.findUnique({ where: { candidateId: id } })) throw new ConflictException('Offer 已存在，历史记录须先核对');
     const created = await this.db.$transaction(async tx => {
+      // 更新候选人行取得锁；并发开始时第二个请求必须看到第一个请求创建的 Offer。
       const guard = await tx.candidate.updateMany({ where: { id, jobId: candidate.jobId, stage: 'OFFERING', lockedState: { not: 'INOPERABLE' } }, data: { stage: 'OFFERING' } });
       if (!guard.count) throw new ConflictException('候选人状态已变化');
-      const offer = await tx.offerRecord.create({ data: { candidateId: id, jobId: candidate.jobId!, workflowStage: 'APPROVAL_MATERIALS', stageStatus: 'PENDING' } });
-      await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'offer.created', payload: { stage: offer.workflowStage, status: offer.stageStatus } } });
+      const previous = await tx.offerRecord.findUnique({ where: { candidateId: id } });
+      if (previous && previous.jobId === candidate.jobId && previous.stageStatus !== 'NOT_PASSED') throw new ConflictException('Offer 已存在，历史记录须先核对');
+      let offer: OfferRecord;
+      if (previous) {
+        await tx.offerRecordHistory.create({ data: {
+          candidateId: id, jobId: previous.jobId, materials: previous.materials, recordedBy: actor.id,
+          snapshot: { id: previous.id, legacyStage: previous.stage, workflowStage: previous.workflowStage, stageStatus: previous.stageStatus,
+            workflowVersion: previous.workflowVersion, oaApprovalId: previous.oaApprovalId, hireLevel: previous.hireLevel,
+            salaryReturned: previous.salaryReturned, oralResult: previous.oralResult, writtenResult: previous.writtenResult,
+            rejectReasonId: previous.rejectReasonId, failureInitiator: previous.failureInitiator, failureReasonType: previous.failureReasonType,
+            failureReasonLabel: previous.failureReasonLabel, failureReasonText: previous.failureReasonText,
+            backgroundCheckStatus: previous.backgroundCheckStatus, onboardDate: previous.onboardDate?.toISOString() ?? null,
+            offerSentAt: previous.offerSentAt?.toISOString() ?? null, createdAt: previous.createdAt.toISOString(), updatedAt: previous.updatedAt.toISOString() },
+        } });
+        offer = await tx.offerRecord.update({ where: { id: previous.id }, data: {
+          jobId: candidate.jobId!, stage: 'MATERIAL_PENDING', workflowStage: 'APPROVAL_MATERIALS', stageStatus: 'PENDING', workflowVersion: { increment: 1 },
+          oaApprovalId: null, hireLevel: null, salaryReturned: false, oralResult: null, writtenResult: null, rejectReasonId: null,
+          failureInitiator: null, failureReasonType: null, failureReasonLabel: null, failureReasonText: null,
+          backgroundCheckStatus: 'PENDING', materials: null, onboardDate: null, offerSentAt: null,
+        } });
+      } else {
+        offer = await tx.offerRecord.create({ data: { candidateId: id, jobId: candidate.jobId!, workflowStage: 'APPROVAL_MATERIALS', stageStatus: 'PENDING' } });
+      }
+      await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'offer.created', payload: { stage: offer.workflowStage, status: offer.stageStatus, jobId: offer.jobId, priorJobId: previous?.jobId ?? null } } });
       return offer;
     });
     return publicOffer(created);

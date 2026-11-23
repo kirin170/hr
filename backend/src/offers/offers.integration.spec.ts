@@ -58,6 +58,25 @@ describe.skipIf(!isolated)('ATS-015 isolated MySQL', () => {
   const event=await db.timelineEvent.findFirstOrThrow({where:{entityId:'ats015_legacy',action:'offer.legacy_reconciled'}});
   expect(event.payload).toMatchObject({previousStage:legacy.stage,previousOralResult:'REJECTED'});
  });
+ it('preserves the previous Offer on job change and denies its sensitive file under the new job',async()=>{
+  await db.job.create({data:{id:'ats015_newjob',code:'ats015_newjob',title:'新职位',departmentId:'d'}});
+  await db.candidate.create({data:{id:'ats015_return',name:'回流候选人',jobId:'ats015_j',stage:'OFFERING'}});
+  await offers.create('ats015_return',hr);
+  await db.offerRecord.update({where:{candidateId:'ats015_return'},data:{workflowStage:'BACKGROUND_MATERIALS',stageStatus:'PENDING',hireLevel:'旧职级'}});
+  await db.fieldAccessGrant.create({data:{userId:hr.id,field:SensitiveField.BACKGROUND_MATERIALS,canRead:true,canWrite:true}});
+  const file=await materials.upload('ats015_return',SensitiveField.BACKGROUND_MATERIALS,{originalname:'old.pdf',mimetype:'application/pdf',buffer:Buffer.from('%PDF-1.4 old')},hr);
+  await db.candidate.update({where:{id:'ats015_return'},data:{jobId:'ats015_newjob'}});
+  expect(await offers.read('ats015_return',hr)).toBeNull();
+  const restarted=await offers.create('ats015_return',hr);expect(restarted).toMatchObject({jobId:'ats015_newjob',workflowStage:'APPROVAL_MATERIALS',stageStatus:'PENDING',hireLevel:null});
+  const history=await db.offerRecordHistory.findFirstOrThrow({where:{candidateId:'ats015_return'}});expect(history.jobId).toBe('ats015_j');expect(history.materials).toContain(file.id);expect(history.snapshot).toMatchObject({hireLevel:'旧职级'});
+  await expect(attachments.issueReadUrl(file.id,hr,{requestId:'req'})).rejects.toThrow();
+ });
+ it('serializes concurrent starts for the same candidate',async()=>{
+  await db.candidate.create({data:{id:'ats015_concurrent',name:'并发',jobId:'ats015_j',stage:'OFFERING'}});
+  const results=await Promise.allSettled([offers.create('ats015_concurrent',hr),offers.create('ats015_concurrent',hr)]);
+  expect(results.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+  expect(await db.offerRecord.count({where:{candidateId:'ats015_concurrent'}})).toBe(1);
+ });
  it('enforces route authentication and Offer permission over HTTP',async()=>{
   process.env.JWT_ACCESS_SECRET='ats015-isolated-test-secret-at-least-32-bytes';
   const read=await db.permission.create({data:{code:'candidate:read',description:'test'}});
