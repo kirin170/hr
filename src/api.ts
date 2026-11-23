@@ -708,3 +708,10 @@ export function batchAssignCampusApplications(
     body: JSON.stringify({ applicationIds, jobId }),
   })
 }
+
+export function uploadOfferMaterial(candidateId: string, category: string, file: File): Promise<unknown> {
+  const form = new FormData()
+  form.append('category', category)
+  form.append('file', file)
+  return requestForm(`/v1/candidates/${encodeURIComponent(candidateId)}/offer/materials`, form)
+}

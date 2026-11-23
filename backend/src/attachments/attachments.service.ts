@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { expiryFor, isExpired } from '../retention/retention.config.js';
 import { StorageService, resolveSignedUrlTtlSeconds } from '../storage/storage.service.js';
 
 export interface AttachmentAuditContext {
@@ -61,18 +62,27 @@ export class AttachmentsService {
         size: true,
         storageKey: true,
         category: true,
+        createdAt: true,
+        expiresAt: true,
       },
     });
     if (!file) {
       throw new NotFoundException('附件不存在');
     }
 
-    await this.assertFileAccessible(file.id, actor);
+    if (file.storageKey.startsWith('offer-materials/') && isExpired(file, new Date())) throw new NotFoundException('材料已到期');
+    await this.assertFileAccessible(file.id, actor, file.storageKey);
     if (file.category) {
       await this.authorization.assertSensitiveFieldAccess(actor, file.category, 'READ');
     }
 
-    const ttlSeconds = resolveSignedUrlTtlSeconds();
+    let ttlSeconds = resolveSignedUrlTtlSeconds();
+    if (file.storageKey.startsWith('offer-materials/')) {
+      const configured = expiryFor(file.createdAt, file.category);
+      const due = file.expiresAt && file.expiresAt < configured ? file.expiresAt : configured;
+      ttlSeconds = Math.min(ttlSeconds, Math.floor((due.getTime() - Date.now()) / 1000));
+      if (ttlSeconds < 1) throw new NotFoundException('材料已到期');
+    }
     const signed = await this.storage.createReadUrl({
       key: file.storageKey,
       ttlSeconds,
@@ -131,9 +141,9 @@ export class AttachmentsService {
 
     const file = await this.prisma.resumeFile.findFirst({
       where: { storageKey: key },
-      select: { id: true, fileName: true, mimeType: true, size: true, category: true },
+      select: { id: true, fileName: true, mimeType: true, size: true, category: true, createdAt: true, expiresAt: true },
     });
-    if (!file || !(await this.storage.objectExists(key))) {
+    if (!file || (key.startsWith('offer-materials/') && isExpired(file, new Date())) || !(await this.storage.objectExists(key))) {
       throw new NotFoundException('附件不存在');
     }
 
@@ -167,7 +177,21 @@ export class AttachmentsService {
   private async assertFileAccessible(
     fileId: string,
     actor: AuthenticatedUser,
+    storageKey: string,
   ): Promise<void> {
+    // Offer 材料不依赖简历入场权限：必须同时满足该候选人的数据范围与独立敏感授权。
+    const offer = await this.prisma.offerRecord.findFirst({
+      where: { materials: { contains: `|${fileId}|` } },
+      select: { candidateId: true, jobId: true },
+    });
+    if (offer) {
+      const candidate = await this.prisma.candidate.findFirst({
+        where: { AND: [{ id: offer.candidateId, jobId: offer.jobId }, this.authorization.candidateWhere(actor, 'candidate:read')] }, select: { id: true },
+      });
+      if (!candidate) throw new NotFoundException('附件不存在');
+      return;
+    }
+    if (storageKey.startsWith('offer-materials/')) throw new NotFoundException('附件不存在');
     if (this.authorization.scopesFor(actor, 'intake:read').includes(DataScope.ALL)) {
       return;
     }

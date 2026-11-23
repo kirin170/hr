@@ -9,6 +9,7 @@ import { InterviewsModule } from './interviews/interviews.module.js';
 import { IntakeModule } from './intake/intake.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { MailModule } from './mail/mail.module.js';
+import { OffersModule } from './offers/offers.module.js';
 import { RequisitionsModule } from './requisitions/requisitions.module.js';
 import { RetentionModule } from './retention/retention.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -36,6 +37,7 @@ import { AuditModule } from './audit/audit.module.js';
     RetentionModule,
     DingTalkModule,
     MailModule,
+    OffersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

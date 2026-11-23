@@ -382,11 +382,22 @@ model OfferRecord {
   candidateId     String   @unique
   jobId           String
   stage           OfferStage @default(MATERIAL_PENDING)
+  /// 新工作流独立于旧原型值；空值表示历史记录待人工核对
+  workflowStage   String?
+  stageStatus     String?
+  workflowVersion Int @default(0)
+  hireLevel       String?
+  salaryReturned  Boolean @default(false)
+  writtenResult   OralResult?
+  failureInitiator String?
+  failureReasonType String?
+  failureReasonLabel String?
+  failureReasonText String? @db.Text
   oaApprovalId    String?
   oralResult      OralResult?
   rejectReasonId  String?
   backgroundCheckStatus BgStatus @default(PENDING)
-  materials       String?
+  materials       String? @db.Text
   onboardDate     DateTime?
   offerSentAt     DateTime?
   createdAt       DateTime @default(now())

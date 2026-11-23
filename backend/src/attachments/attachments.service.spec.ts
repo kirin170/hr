@@ -36,6 +36,7 @@ const makeService = () => {
       update: vi.fn().mockResolvedValue({}),
     },
     resumeIntake: { findMany: vi.fn().mockResolvedValue([]) },
+    offerRecord: { findFirst: vi.fn().mockResolvedValue(null) },
   };
   const storage = {
     driverName: 'local',
