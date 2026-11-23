@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "work_item": "ATS-020",
+  "date": "2026-11-23",
+  "verified_at": 1795419311027,
+  "source_sha": "5c80a8a0c1f026139014fbd1d7ab6d4e46119aaa",
+  "working_tree_dirty": false,
+  "summary": "ATS-020 在提交 5c80a8a 的独立快照验收：听记链接解析、按操作者钉钉身份读取原文/摘要、ATS 数据范围与钉钉侧越权拒绝、未开通时人工录入降级、素材按轮次追加并以内容哈希去重、来源可追溯且不改写既有链接；素材按 interview-eval.v1 契约交付 INTERVIEW_EVAL 草稿任务，输入只存素材引用且写死不使用内置智能纪要作结论。快照上类型检查、lint、前后端构建通过，183 项单元测试通过；临时 MySQL 重放 13 个迁移，7 项隔离集成测试（含真实 HTTP 鉴权）通过，临时库已删除。真实租户听记读取能力未验证。",
+  "command": "git archive 5c80a8a; 复用已安装依赖; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build --prefix backend; npm run build; node scripts/ats020-isolated-check.mjs (在快照 backend 目录运行)",
+  "scope": [
+    "backend/prisma/migrations/20261123190000_ats020_interview_minutes/migration.sql",
+    "backend/prisma/schema.prisma",
+    "backend/src/dingtalk/dingtalk-minutes.client.ts",
+    "backend/src/interviews/interview-eval.contract.ts",
+    "backend/src/interviews/interview-transcripts.service.ts",
+    "backend/src/interviews/interviews.controller.ts",
+    "backend/src/interviews/interviews.service.ts",
+    "backend/src/interviews/interviews.module.ts",
+    "backend/scripts/ats020-isolated-check.mjs",
+    "backend/src/**/*.spec.ts",
+    "src/pages/Interviews.tsx",
+    "docs/ats-钉钉集成技术设计-v1.0.md",
+    "隔离临时数据库 ats020_tmp_*（验证后删除）"
+  ],
+  "checks": [
+    {
+      "name": "transcript_material_permission_and_traceability",
+      "passed": true,
+      "criteria": [
+        "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。"
+      ],
+      "details": "隔离库验证：按操作者钉钉身份读取后素材按轮次写入 interview_transcript_materials，来源为 DINGTALK 且 sourceRef 形如 dingtalk-minutes:<minutesId>#<hash12>；同一素材重复读取返回 deduplicated 且不新增记录；链接表仅补齐 minutesId/source，url 不变；同轮次追加第二条链接后两条并存。越权拒绝三路验证：ATS 数据范围外返回 404 且不调用钉钉；未绑定钉钉身份返回 403 并留痕 MINUTES_IDENTITY_MISSING；钉钉侧 403 映射为越权并记录 MINUTES_HTTP_403，错误信息不含原文。人工录入需 candidate:stage:update，素材标记 MANUAL_ENTRY。真实 HTTP 路由 /interviews/minutes/capability、/transcripts/:linkId/fetch、/materials、/interview-eval 均需鉴权。"
+    },
+    {
+      "name": "tenant_capability_and_interview_eval_delivery",
+      "passed": false,
+      "criteria": [
+        "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。"
+      ],
+      "details": "INTERVIEW_EVAL 交付已本地验证：职位无招聘要求时拒绝发起（AI-5）；成功时生成 interviewId 绑定的 INTERVIEW_EVAL 草稿任务，inputRefs 为 interview-eval.v1，只含素材引用、哈希、长度、分段数与面试上下文，不含原文，boundaries 写死 builtinMinutesSummaryUsedAsConclusion=false、aiOutputIsDraft=true、requiresManualConfirmation=true。真实租户听记能力未验证：2026-11-23 复核钉钉开放平台未向企业内部应用开放听记读取 REST 接口，官方通道为 CLI(dws)/MCP 或内置连接器，需组织管理员开通并由成员扫码授权；本地未配置听记网关，能力探测返回 UNSUPPORTED。因此本条整体不判为通过。"
+    },
+    {
+      "name": "isolated_snapshot_and_regression",
+      "passed": true,
+      "criteria": [],
+      "details": "在 5c80a8a 独立快照执行：类型检查、oxlint（0 警告 0 错误）、后端 nest build、前端 vite build 通过；后端 183 项单元测试通过，11 项隔离测试按设计跳过；临时 MySQL 重放 13 个迁移全部成功，ATS-020 隔离套件 7 项通过，ATS-014 面试隔离套件 4 项回归通过；临时库已删除。"
+    }
+  ],
+  "limitations": [
+    "未在授权测试组织验证听记读取能力、权限点与审批路径；本地能力探测在未配置网关时为 UNSUPPORTED。",
+    "听记网关为部署侧契约（GET /v1/minutes/capability、POST /v1/minutes/transcripts），本地以 HTTP 桩验证协议与错误映射，未对接真实网关或钉钉真实接口。",
+    "AI 模型执行与人工复核属 ATS-021；本任务只交付 INTERVIEW_EVAL 输入契约与草稿任务，未产生评估结论。",
+    "前端仅构建通过与既有 ATS-014 无头浏览器用例回归，未对新增听记面板做独立浏览器走查。"
+  ],
+  "follow_up": [
+    "确认授权测试组织是否开通听记读取能力，并记录实际权限点与拒绝样例。",
+    "网关正式实现后补充真实听记读取、超时与限流证据。"
+  ]
+}
