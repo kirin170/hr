@@ -63,6 +63,7 @@
 ## 6. 当前实现与待验证项
 
 - 已在本地实现 OAuth 授权码登录、企业 ID 校验、`unionId → userId` 映射、加密回调、用户/部门全量与事件增量同步、离职权限撤销、多部门归属、BullMQ 失败重试和管理端人工重试接口。
+- 已在本地实现 DT-4 听记素材读取（ATS-020）：听记链接解析、按操作者钉钉身份读取原文/摘要、按轮次追加留存、`INTERVIEW_EVAL` 统一素材交付、越权与失败降级，详见 §7。真实租户的听记读取能力仍未验证。
 - 当前未注入钉钉测试企业的 AppKey/AppSecret、corpId、回调 Token/AESKey；未执行租户联调、权限审批或真实回调验证。不得将本地测试报告写成租户验收证据。
 - 租户验证顺序：先配置最小权限并做 OAuth 与当前用户映射；再用脱敏组织样例验证全量部门树、多部门用户、重复回调、转岗、离职、无效签名、接口限流、超时、失败重试与手工恢复；最后分别验证 DT-1、DT-3、DT-4、DT-5、DT-6 的权限和对应业务降级。
 - 钉钉开放平台官方文档复核记录（2026-11-18）：
@@ -71,3 +72,27 @@
   - 通讯录：`topapi/v2/department/listsub` 递归读取部门；`topapi/v2/user/list` 按 `dept_id` 和 `next_cursor` 分页，`contain_access_limit=true` 纳入通讯录中受访问限制的用户。
   - 当前企业内部应用的 HTTP 事件推送可配置用户和部门变更事件；批量回调中的 userId/deptId 是数组。当前开发者后台事件订阅的 HTTP 回调 ownerKey 使用对应应用 AppKey；旧版回调模式若配置契约不同，再显式覆盖 `DINGTALK_CALLBACK_OWNER_KEY`。
   - 官方页面检索入口：OAuth 2.0 授权与获取用户访问凭证、获取企业内部应用 accessToken、获取部门用户详情、事件订阅回调加解密（open.dingtalk.com）。API 字段、权限、配额和事件名仍需在授权测试组织中复核。
+
+## 7. DT-4 听记素材读取（ATS-020）
+
+### 7.1 能力现状（2026-11-23 复核）
+
+- 钉钉开放平台当前未向企业内部应用提供听记（AI 听记）读取的 REST 接口。官方对外通道是「AI 听记 · 连接你的 AI 工具」中的 CLI（dws）与 MCP/内置连接器；组织内使用需管理员开通权限，并由成员扫码授权，读取范围受授权人本人可见范围限制。
+- 因此 ATS 后端不能仅凭 AppKey/AppSecret 读取任意听记。实现以「按操作者身份读取 + 显式能力探测」为前提：未开通时保留人工录入通道，不伪造素材，也不把内置智能纪要当评估结论。
+
+### 7.2 本地实现
+
+- 链接解析：只接受 `shanji.dingtalk.com` 的听记地址（如 `/app/transcribes/<id>`）或 16–64 位十六进制听记 ID；外部域名不解析、不回源，避免 SSRF。
+- 读取：按当前操作者的 `DINGTALK userId` 调用部署环境注入的听记网关，由网关在租户侧按人授权。
+  - `GET {DINGTALK_MINUTES_GATEWAY_URL}/v1/minutes/capability`
+  - `POST {DINGTALK_MINUTES_GATEWAY_URL}/v1/minutes/transcripts`，请求体 `{ minutesId, operatorUserId }`，响应 `{ minutesId, title, summary, originalText, segments[] }`
+  - 单请求 8 秒超时；429/5xx/网络错误重试一次；401/403 与权限错误码立即判为越权，不重试。
+- 错误与降级：ATS 数据范围越权按 404 处理；钉钉侧越权返回 403 并记录 `interview.transcript.material_denied` / `material_failed`（仅错误码）；租户未开通返回 503 并提示人工录入；原文、摘要与令牌不进入日志、审计摘要或错误信息。
+- 留存：素材写入 `interview_transcript_materials`，按「链接 + 内容哈希」唯一，重复读取不新增、不覆盖既有来源关联；链接表只补齐 `minutesId/source`，不改写 URL；听记链接仍按轮次追加。
+- 交付：`INTERVIEW_EVAL` 输入契约 `interview-eval.v1` 只保存素材引用（`materialId`、`sourceRef`、哈希、长度、分段数）与面试上下文、职位招聘要求、本轮评价；`boundaries` 写死「内置智能纪要不得作为结论、AI 输出为草稿、需人工确认」。职位无招聘要求时不发起评估（AI-5）。
+
+### 7.3 待验证项
+
+- 授权测试组织是否具备听记读取能力、所需权限点与审批路径。
+- 网关（或等价服务端通道）的正式实现、限流与配额。
+- 真实听记的摘要/原文质量、分段时间轴字段与长文本上限。

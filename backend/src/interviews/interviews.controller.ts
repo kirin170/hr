@@ -1,11 +1,14 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { AuditAction, CurrentUser, PublicRoute, RequirePermission } from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { InterviewTranscriptsService } from './interview-transcripts.service.js';
 import { InterviewsService } from './interviews.service.js';
 
 @Controller('interviews')
 export class InterviewsController {
-  constructor(private readonly service: InterviewsService) {}
+  constructor(private readonly service: InterviewsService, private readonly transcriptsService: InterviewTranscriptsService) {}
+  @Get('minutes/capability') @RequirePermission('candidate:read') @AuditAction('interview.transcript.capability', 'Interview')
+  transcriptCapability(@CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.capability(actor); }
   @Get() @RequirePermission('candidate:read') @AuditAction('interview.list', 'Interview')
   list(@CurrentUser() actor: AuthenticatedUser, @Query() query: { candidateId?: string; jobId?: string; status?: string; keyword?: string }) { return this.service.list(actor, query); }
   @Get('registration/template') @RequirePermission('candidate:read') @AuditAction('interview.registration.template.read', 'Interview')
@@ -34,6 +37,16 @@ export class InterviewsController {
   transcripts(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.service.transcripts(id, actor); }
   @Post(':id/transcripts') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcripts.create', 'Interview')
   addTranscript(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.service.addTranscript(id, body, actor); }
+  @Get(':id/transcripts/:linkId/materials') @RequirePermission('candidate:read') @AuditAction('interview.transcript.materials.list', 'Interview')
+  transcriptMaterials(@Param('id') id: string, @Param('linkId') linkId: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.list(id, linkId, actor); }
+  @Post(':id/transcripts/:linkId/fetch') @RequirePermission('candidate:read') @AuditAction('interview.transcript.fetch', 'Interview')
+  fetchTranscript(@Param('id') id: string, @Param('linkId') linkId: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.fetchMaterial(id, linkId, actor); }
+  @Post(':id/transcripts/:linkId/materials') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcript.materials.create', 'Interview')
+  addTranscriptMaterial(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.addManualMaterial(id, linkId, body, actor); }
+  @Post(':id/transcripts/:linkId/interview-eval') @RequirePermission('candidate:read') @AuditAction('interview.transcript.interview_eval', 'Interview')
+  deliverInterviewEval(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.deliverToInterviewEval(id, linkId, body, actor); }
+  @Get(':id/interview-eval') @RequirePermission('candidate:read') @AuditAction('interview.interview_eval.list', 'Interview')
+  interviewEvalRuns(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.evalRuns(id, actor); }
   @Get(':id/registration') @RequirePermission('candidate:read') @AuditAction('interview.registration.list', 'Interview')
   registration(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.service.registration(id, actor); }
   @Post(':id/registration') @RequirePermission('candidate:stage:update') @AuditAction('interview.registration.create', 'Interview')

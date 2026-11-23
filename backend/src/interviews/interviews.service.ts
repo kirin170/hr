@@ -3,6 +3,7 @@ import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundEx
 import { DataScope, InterviewMode, InterviewStatus, Prisma } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
+import { parseMinutesLink } from '../dingtalk/dingtalk-minutes.client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { INTERVIEW_CALENDAR, INTERVIEW_NOTIFICATIONS, type InterviewCalendar, type InterviewNotifications } from './interview-adapters.js';
 
@@ -161,13 +162,24 @@ export class InterviewsService {
   }
   async transcripts(id: string, actor: AuthenticatedUser) {
     const row = await this.target(id, actor);
-    return this.db.interviewTranscriptLink.findMany({ where: { candidateId: row.candidateId, jobId: row.jobId }, orderBy: { createdAt: 'asc' } });
+    return this.db.interviewTranscriptLink.findMany({
+      where: { candidateId: row.candidateId, jobId: row.jobId },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        materials: {
+          select: { id: true, source: true, title: true, contentHash: true, fetchedAt: true },
+          orderBy: { fetchedAt: 'desc' },
+        },
+      },
+    });
   }
   async addTranscript(id: string, value: unknown, actor: AuthenticatedUser) {
     const row = await this.target(id, actor); await this.manageable(row.candidateId, row.jobId, actor);
     const url = required(record(value).url, '听记链接');
     try { const parsed = new URL(url); if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error(); } catch { throw new BadRequestException('链接必须为 HTTP(S) 地址'); }
-    return this.db.interviewTranscriptLink.create({ data: { interviewId: id, candidateId: row.candidateId, jobId: row.jobId, round: row.round, url, createdBy: actor.id } });
+    // 追加写入，不覆盖既有链接；能解析出听记 ID 时记录来源，便于按权限读取素材（ATS-020）
+    const minutesId = parseMinutesLink(url)?.minutesId ?? null;
+    return this.db.interviewTranscriptLink.create({ data: { interviewId: id, candidateId: row.candidateId, jobId: row.jobId, round: row.round, url, createdBy: actor.id, source: minutesId ? 'DINGTALK' : 'MANUAL', minutesId } });
   }
   async registrationTemplate(actor: AuthenticatedUser) {
     this.auth.scopesFor(actor, 'candidate:read');

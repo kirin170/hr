@@ -325,8 +325,56 @@ model InterviewTranscriptLink {
   url         String   @db.Text
   createdBy   String
   createdAt   DateTime @default(now())
+  /// 链接来源：人工粘贴或钉钉听记地址；追加写入，不覆盖既有链接（ATS-020）
+  source      TranscriptLinkSource @default(MANUAL)
+  /// 从钉钉听记地址解析出的听记 ID；解析不到时为空，只能走人工录入降级
+  minutesId   String?
+  materials   InterviewTranscriptMaterial[]
   @@index([candidateId, jobId, round])
+  @@index([minutesId])
   @@map("interview_transcript_links")
+}
+
+enum TranscriptLinkSource {
+  MANUAL
+  DINGTALK
+
+  @@map("transcript_link_source")
+}
+
+/// 听记素材：原文/摘要按轮次留存，来源可追溯；同一链接重复读取同一素材不新增也不覆盖
+model InterviewTranscriptMaterial {
+  id           String   @id @default(cuid())
+  linkId       String
+  interviewId  String
+  candidateId  String
+  jobId        String
+  round        Int
+  source       TranscriptMaterialSource
+  minutesId    String?
+  title        String?
+  summary      String?  @db.MediumText
+  originalText String?  @db.MediumText
+  /// 分段时间轴 [{index,startMs,endMs,speaker,text}]，供 INTERVIEW_EVAL evidence.sourceRef 回指原文
+  segments     Json?
+  /// 素材文本归一化后的 SHA-256：重复读取同一素材不新增，也不覆盖既有记录
+  contentHash  String
+  /// 来源标识（如 dingtalk-minutes:<minutesId>#<contentHash 前 12 位>），供评估依据回指
+  sourceRef    String
+  fetchedBy    String
+  fetchedAt    DateTime @default(now())
+  link         InterviewTranscriptLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+
+  @@unique([linkId, contentHash])
+  @@index([interviewId, round])
+  @@map("interview_transcript_materials")
+}
+
+enum TranscriptMaterialSource {
+  DINGTALK
+  MANUAL_ENTRY
+
+  @@map("transcript_material_source")
 }
 
 model OfferRecord {
@@ -442,9 +490,12 @@ model AIRun {
   attempts    Int      @default(0)
   errorCode   String?
   errorMessage String?
+  /// INTERVIEW_EVAL 关联的面试轮次（ATS-020 素材交付）；简历类任务为空
+  interviewId String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([interviewId, createdAt])
   @@map("ai_runs")
 }
 

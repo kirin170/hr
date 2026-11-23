@@ -8,7 +8,12 @@ type Person = { id: string; displayName: string }
 type Field = { key: string; label: string; type: 'text' | 'textarea' | 'select'; required: boolean; options: string[] }
 type Template = { id: string; fields: Field[] }
 type Feedback = { conclusion: string | null; id: string; interviewerId: string; filledById: string; filledByMode: string; proxyName: string | null; proxyAt: string | null; content: string; createdAt: string }
-type Transcript = { id: string; round: number; url: string; createdAt: string }
+type TranscriptMaterial = { id: string; source: string; title: string | null; summary: string | null; originalText: string | null; sourceRef: string; fetchedAt: string }
+type Transcript = { id: string; round: number; url: string; source: string; minutesId: string | null; materials: { id: string; source: string; title: string | null; fetchedAt: string }[]; createdAt: string }
+type MinutesCapability = { state: 'AVAILABLE' | 'DENIED' | 'UNSUPPORTED' | 'UNAVAILABLE'; configured: boolean; checkedAt: string; code: string | null; manualEntryAvailable: boolean }
+const capabilityLabel = (capability: MinutesCapability | null) => !capability
+  ? '检测中'
+  : `${({ AVAILABLE: '可用', DENIED: '无权限', UNSUPPORTED: '未开通', UNAVAILABLE: '不可用' } as Record<string, string>)[capability.state] ?? capability.state}${capability.code ? `（${capability.code}）` : ''}`
 const send = <T,>(path: string, body: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(body) })
 const datePart = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s))
 const localInput = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(s)).replace(' ', 'T')
@@ -69,13 +74,53 @@ function TemplateEditor({ onClose }: { onClose: () => void }) {
   const save = async () => { try { await send('/interviews/registration/template', { fields }); toast('登记表模板已保存，新提交使用新版本'); onClose() } catch (e) { toast(message(e), 'info') } }
   return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3>配置登记表</h3><button onClick={onClose}>关闭</button></div><div className="modal-body">{fields.map((f, i) => <div key={i} style={{borderBottom:'1px solid #ddd', padding:'12px 0'}}><div className="form-grid"><label className="form-field">字段标识<input value={f.key} onChange={e => update(i, { key: e.target.value })} /></label><label className="form-field">名称<input value={f.label} onChange={e => update(i, { label: e.target.value })} /></label></div><select value={f.type} onChange={e => update(i, { type: e.target.value as Field['type'] })}><option value="text">文本</option><option value="textarea">多行文本</option><option value="select">单选</option></select> <label><input type="checkbox" checked={f.required} onChange={e => update(i, { required: e.target.checked })} /> 必填</label> <button onClick={() => setFields(fields.filter((_, n) => n !== i))}>删除</button>{f.type === 'select' && <label className="form-field">选项（逗号分隔）<input value={f.options.join(',')} onChange={e => update(i, { options: e.target.value.split(',') })} /></label>}</div>)}<button className="button button-secondary" onClick={() => setFields([...fields, {key:'',label:'',type:'text',required:false,options:[]}])}>添加字段</button></div><div className="modal-footer"><button className="button button-primary" onClick={save}>保存模板</button></div></div></div>
 }
+function TranscriptMaterials({ interviewId, link, onChanged }: { interviewId: string; link: Transcript; onChanged: () => void }) {
+  const { toast } = useApp()
+  const [materials, setMaterials] = useState<TranscriptMaterial[] | null>(null)
+  const [title, setTitle] = useState('')
+  const [summary, setSummary] = useState('')
+  const [originalText, setOriginalText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const run = async (path: string, body: unknown, success: string) => {
+    setBusy(true)
+    try { await send(path, body); toast(success); onChanged() } catch (e) { toast(message(e), 'info') } finally { setBusy(false) }
+  }
+  const loadMaterials = async () => {
+    try {
+      const result = await request<{ materials: TranscriptMaterial[] }>(`/interviews/${interviewId}/transcripts/${link.id}/materials`)
+      setMaterials(result.materials ?? [])
+    } catch (e) { toast(message(e), 'info') }
+  }
+  return <div style={{ borderLeft: '2px solid #e2e8f0', paddingLeft: 12, marginBottom: 10 }}>
+    <button disabled={busy} onClick={() => run(`/interviews/${interviewId}/transcripts/${link.id}/fetch`, {}, '听记素材已读取')}>读取听记素材</button>{' '}
+    <button onClick={loadMaterials}>查看素材（{link.materials.length}）</button>{' '}
+    <button disabled={busy || link.materials.length === 0} onClick={() => run(`/interviews/${interviewId}/transcripts/${link.id}/interview-eval`, {}, '已生成 INTERVIEW_EVAL 草稿任务')}>交付 AI 评估</button>
+    {materials && materials.length === 0 && <p>暂无素材，可读取钉钉听记或粘贴原文。</p>}
+    {materials && materials.map(material => <details key={material.id}>
+      <summary>{material.source === 'DINGTALK' ? '钉钉听记' : '人工录入'} · {material.title || '未命名'} · {timeLabel(material.fetchedAt)}</summary>
+      <pre style={{ whiteSpace: 'pre-wrap' }}>{material.originalText || material.summary}</pre>
+      <p>来源：{material.sourceRef}</p>
+    </details>)}
+    <details>
+      <summary>粘贴原文或摘要（听记不可用时的降级通道）</summary>
+      <label className="form-field">标题<input value={title} onChange={e => setTitle(e.target.value)} /></label>
+      <label className="form-field">摘要<textarea value={summary} onChange={e => setSummary(e.target.value)} /></label>
+      <label className="form-field">转写原文<textarea value={originalText} onChange={e => setOriginalText(e.target.value)} /></label>
+      <button disabled={busy || (!summary.trim() && !originalText.trim())} onClick={async () => {
+        await run(`/interviews/${interviewId}/transcripts/${link.id}/materials`, { title, summary, originalText }, '素材已保存')
+        setTitle(''); setSummary(''); setOriginalText('')
+      }}>保存人工素材</button>
+    </details>
+  </div>
+}
 function InterviewDetail({ row, onClose }: { row: Row; onClose: () => void }) {
-  const { toast } = useApp(); const [feedback, setFeedback] = useState<Feedback[]>([]); const [transcripts, setTranscripts] = useState<Transcript[]>([]); const [template, setTemplate] = useState<Template | null>(null); const [forms, setForms] = useState<{ id: string; values: Record<string, string>; createdAt: string }[]>([]); const [values, setValues] = useState<Record<string,string>>({}); const [interviewerId, setInterviewerId] = useState(row.interviewerIds[0] || ''); const [content, setContent] = useState(''); const [conclusion, setConclusion] = useState('HOLD'); const [url, setUrl] = useState(''); const [history, setHistory] = useState<{id:string; action:string; actorId:string; reason:string; createdAt:string}[]>([]); const [inviteLink, setInviteLink] = useState(''); const [notifications, setNotifications] = useState<{id:string; action:string; recipient:string}[]>([])
+  const { toast } = useApp(); const [feedback, setFeedback] = useState<Feedback[]>([]); const [transcripts, setTranscripts] = useState<Transcript[]>([]); const [template, setTemplate] = useState<Template | null>(null); const [forms, setForms] = useState<{ id: string; values: Record<string, string>; createdAt: string }[]>([]); const [values, setValues] = useState<Record<string,string>>({}); const [interviewerId, setInterviewerId] = useState(row.interviewerIds[0] || ''); const [content, setContent] = useState(''); const [conclusion, setConclusion] = useState('HOLD'); const [url, setUrl] = useState(''); const [history, setHistory] = useState<{id:string; action:string; actorId:string; reason:string; createdAt:string}[]>([]); const [inviteLink, setInviteLink] = useState(''); const [notifications, setNotifications] = useState<{id:string; action:string; recipient:string}[]>([]); const [capability, setCapability] = useState<MinutesCapability | null>(null)
+  const loadCapability = () => request<MinutesCapability>('/interviews/minutes/capability').then(setCapability).catch(() => setCapability(null))
   const load = () => { request<typeof history>(`/interviews/${row.id}/history`).then(setHistory).catch(() => setHistory([])); request<typeof notifications>(`/interviews/${row.id}/mock-notifications`).then(setNotifications).catch(() => setNotifications([])); Promise.all([request<Feedback[]>(`/interviews/${row.id}/feedback`), request<Transcript[]>(`/interviews/${row.id}/transcripts`), request<Template | null>('/interviews/registration/template'), request<typeof forms>(`/interviews/${row.id}/registration`).catch(() => [])]).then(([f,t,templateResult, formResult]) => { setFeedback(f); setTranscripts(t); setTemplate(templateResult); setForms(formResult) }).catch(e => toast(message(e), 'info')) }
-  useEffect(load, [row.id])
+  useEffect(load, [row.id]); useEffect(() => { loadCapability() }, [])
   const act = async (path: string, body: unknown, success: string) => { try { await send(path, body); toast(success); load(); refreshEvent() } catch(e) { toast(message(e), 'info') } }
   return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3>{row.candidate.name} · 第 {row.round} 轮</h3><button onClick={onClose}>关闭</button></div><div className="modal-body"><p>Mock 邀请响应（仅受邀面试官本人）</p><button onClick={() => act(`/interviews/${row.id}/response`, { response: 'ACCEPTED' }, '已模拟接受')}>接受</button> <button onClick={() => act(`/interviews/${row.id}/response`, { response: 'DECLINED' }, '已模拟拒绝')}>拒绝</button>
   <h3>改期与取消记录</h3>{history.map(h => <p key={h.id}>{timeLabel(h.createdAt)} · {h.action} · {h.actorId} · {h.reason}</p>)}<h3>Mock 通知记录</h3>{notifications.map(n => <p key={n.id}>{n.action} · {n.recipient}（模拟）</p>)}<h3>面试评价</h3>{feedback.map(f => <p key={f.id}>{f.interviewerId} · {f.conclusion || "未记录结论"}：{f.content} {f.filledByMode === 'PROXY' && <strong>（PROXY · {f.proxyName || f.filledById} · {f.proxyAt && timeLabel(f.proxyAt)}）</strong>}</p>)}<label className="form-field">评价人<select value={interviewerId} onChange={e => setInterviewerId(e.target.value)}>{row.interviewerIds.map(id => <option key={id} value={id}>{id}</option>)}</select></label><label className="form-field">评价结论<select value={conclusion} onChange={e => setConclusion(e.target.value)}><option value="PASS">通过</option><option value="HOLD">待定</option><option value="REJECT">不通过</option></select></label><label className="form-field">评价内容<textarea value={content} onChange={e => setContent(e.target.value)} /></label><button onClick={() => act(`/interviews/${row.id}/feedback`, { interviewerId, content, conclusion }, '评价已记录，候选人阶段未改变')}>提交评价</button>
-  <h3>听记链接</h3>{transcripts.map(t => <p key={t.id}>第 {t.round} 轮：<a href={t.url} target="_blank" rel="noreferrer">{t.url}</a></p>)}<input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." /> <button onClick={() => act(`/interviews/${row.id}/transcripts`, {url}, '链接已追加')}>追加链接</button>
+  <h3>听记链接（按轮次追加，不覆盖）</h3><p>听记读取能力：{capabilityLabel(capability)} <button onClick={loadCapability}>重新检测</button></p>{transcripts.map(t => <div key={t.id}><p>第 {t.round} 轮：<a href={t.url} target="_blank" rel="noreferrer">{t.url}</a>{t.source === 'DINGTALK' && <span>（钉钉听记{t.minutesId ? ` ${t.minutesId}` : '，待解析'}）</span>}</p><TranscriptMaterials interviewId={row.id} link={t} onChanged={load} /></div>)}<input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://shanji.dingtalk.com/..." /> <button onClick={() => act(`/interviews/${row.id}/transcripts`, {url}, '链接已追加')}>追加链接</button>
   <h3>面试登记表</h3><button onClick={async () => { try { const invite = await send<{token: string}>(`/interviews/${row.id}/registration-invite`, {}); setInviteLink(`${window.location.origin}/registration#${invite.token}`) } catch(e) { toast(message(e), 'info') } }}>生成候选人填写链接</button>{inviteLink && <label className="form-field">一次性链接，请通过授权渠道交给候选人<input readOnly value={inviteLink} /></label>}{forms.map(f => <p key={f.id}>{timeLabel(f.createdAt)}：{Object.entries(f.values).map(([k,v]) => `${k}: ${v}`).join('；')}</p>)}{template ? <>{template.fields.map(f => <label className="form-field" key={f.key}>{f.label}{f.required && ' *'}{f.type === 'select' ? <select value={values[f.key] || ''} onChange={e => setValues({...values,[f.key]:e.target.value})}><option value="">请选择</option>{f.options.map(o => <option key={o}>{o}</option>)}</select> : <input value={values[f.key] || ''} onChange={e => setValues({...values,[f.key]:e.target.value})} />}</label>)}<button onClick={() => act(`/interviews/${row.id}/registration`, {templateId: template.id, values}, '登记表已保存')}>保存登记表</button></> : <p>请先配置登记表字段。</p>}</div></div></div>
 }
