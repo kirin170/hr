@@ -297,7 +297,7 @@ work_items:
   next_action: "已预派给 Trae（第2批，待 ATS-012 验收通过后启动）：准备人才库总量 ≥10000 的数据场景，实现归档入池、标签检索、选择职位激活至 RECOMMENDED 与流式加载/索引，实测查询并记录数据规模；仅人才库总量 ≥10000 显示 1w+，阶段 Tab 与报表用真实计数。"
 - id: ATS-014
   kind: delivery
-  status: planned
+  status: completed
   owner: Codex
   goal: ats-interview
   priority: P1
@@ -308,7 +308,9 @@ work_items:
   - "登记表字段可配置；评价代填记录 PROXY/操作人/时间，同职位同候选人范围内互看，听记链接按轮次追加。"
   - "日历/通知采用接口化 Mock 可演示接受/拒绝/冲突；评价不自动转阶段，实际钉钉验收由 ATS-018/020 承接。"
   depends_on: [ATS-012]
-  next_action: "已预派给 Codex（第2批，待 ATS-012 验收通过后启动，关键路径）：先统一 Interview/Feedback/Registration/Transcript 契约，再实现多轮多人排期、改期/取消原因必填、登记表字段配置、代填 PROXY 标识与同职位同候选人评价互看；日历/通知先用接口化 Mock，评价结论不自动转阶段。"
+  next_action: "无；ATS-014 已按 ats014-acceptance-v1 完成本地验收，真实钉钉日历及通知由 ATS-018、听记读取由 ATS-020 承接。"
+  "evidence": ["docs/verification/ats014-acceptance-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-015
   kind: delivery
   status: planned
