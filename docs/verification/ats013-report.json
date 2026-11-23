@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "work_item": "ATS-013",
+  "owner": "Trae",
+  "date": "2026-11-23",
+  "verified_at": 1795417500000,
+  "source_sha": "08fe1e9727f6e53deb292db0a3627c835bc73b80",
+  "working_tree_dirty": true,
+  "working_tree_note": "工作树含本任务未提交改动（ATS-013 后端/前端与迁移），source_sha 仅为提交前基线。",
+  "summary": "ATS-013 人才库归档、激活与万级查询：归档自动入池并留存来源阶段、归档渠道快照与归档原因（含未填写档 reasonMissing 区分）；人才库支持标签与关键字检索、归档渠道筛选；选择职位激活后回流至 RECOMMENDED 并在原归档记录上回写激活时间/职位/操作人，保留全部历史。人才库不设容量与硬拉取上限，列表按页取数、计数与阶段统计走独立聚合，新增 stage/updatedAt/createdAt、poolType/stage、archiveChannel/stage 与人才库记录索引；仅人才库总量 ≥10000 显示 1w+，阶段 Tab 与报表显示真实数量并通过 talentPool.total 与 counts 分离保证一致。在隔离临时库造 12000 名候选人（10420 已归档）实测：总量 10420→1w+，阶段计数合计 12000 与总量一致，深页查询与标签检索均在毫秒级且命中覆盖索引。后端 typecheck/lint/164 项测试与前端 tsc+vite 构建全部通过。",
+  "command": "CREATE DATABASE talentflow_ats013_bench; DATABASE_URL=...talentflow_ats013_bench npx prisma migrate deploy; node .tmp-ats013-bench.mjs seed; node .tmp-ats013-bench.mjs bench; EXPLAIN/ANALYZE（candidates、talent_pool_entries）; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build（web）; DROP DATABASE talentflow_ats013_bench",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261123120000_ats013_talent_pool/migration.sql",
+    "backend/src/candidates/candidates.controller.ts",
+    "backend/src/candidates/candidates.service.ts",
+    "backend/src/candidates/candidates.service.spec.ts",
+    "src/api.ts",
+    "src/types.ts",
+    "src/pages/Candidates.tsx",
+    "src/components/CandidateDrawer.tsx",
+    "talentflow_ats013_bench（临时数据库，实测后删除）"
+  ],
+  "checks": [
+    {
+      "name": "archive_to_pool_and_activation",
+      "passed": true,
+      "criteria": [
+        "候选人归档自动进入人才库，保留标签/检索信息。",
+        "支持选择职位激活，激活后阶段为人才推荐（RECOMMENDED）。",
+        "激活与再次归档保留全部历史，不覆盖也不删除既有归档记录。"
+      ],
+      "details": "persistStageChange 在阶段变更为 ARCHIVED 时同一事务内写入 candidateTalentPoolEntry（candidateId、archivedAt、sourceStage=原阶段、reasonId、reasonText 快照）并把 archiveChannel 快照写入候选人；时间线 payload 记录 poolEntryId 与 archiveReasonMissing。activateFromPool 要求 jobId 必填且职位存在、ACTIVE、非虚拟、在操作人数据范围内（否则 404 '职位不存在、已关闭或无权访问'），仅允许 stage=ARCHIVED 的候选人（否则 409 '只有人才库中已归档的候选人可以激活'），事务内 updateMany 至 RECOMMENDED 并绑定新职位、poolType=NONE，再把 reactivatedAt/reactivatedJobId/reactivatedById 回写到最近一条未激活的归档记录（不删除），并写 ACTIVATE_FROM_POOL 时间线。重复归档（已 ARCHIVED）直接返回，不产生第二条入池记录、不执行 updateMany；撤销归档时仅删除本次入池记录（reactivatedAt 为空的同一条）。单测 candidates.service.spec.ts 新增 6 项覆盖上述分支，全量 8/8 通过。"
+    },
+    {
+      "name": "unlimited_pool_streaming_pagination_index",
+      "passed": true,
+      "criteria": [
+        "人才库不设容量上限或后台硬性拉取上限。",
+        "列表采用流式/分页与索引，支持万级数据。",
+        "仅人才库统计总量 ≥10000 显示 1w+，阶段 Tab 与报表显示真实数量。"
+      ],
+      "details": "列表接口按 skip/take 取当前页（pageSize 默认 20，上限 100），total 与阶段 groupBy 为独立聚合，不在分页请求中夹带全量数据；前端提供分页条、跳页输入与 20/50/100 每页条数下拉，无容量或拉取条数上限。人才库总量由独立 count（仅受非阶段筛选影响）返回 talentPool.total，与阶段 Tab 用的 counts.ARCHIVED 分离。formatCount(value, abbreviate) 仅在人才库（ARCHIVED）场景且值 ≥10000（POOL_ABBREVIATE_THRESHOLD）时输出 '1w+'，其余阶段 Tab 与汇总面板均输出真实数字。索引：candidates(stage,updatedAt,createdAt) 支撑人才库分页排序，candidates(poolType,stage)、candidates(archiveChannel,stage)、talent_pool_entries(candidateId,archivedAt)/(archivedAt) 支撑类型/来源筛选与历史查询。"
+    },
+    {
+      "name": "archive_reason_missing_and_true_counts",
+      "passed": true,
+      "criteria": [
+        "归档原因包含未填写的情况。",
+        "人才库总量展示与报表计数为真实计数并区分展示形式。",
+        "实测数据规模与查询结果可复核。"
+      ],
+      "details": "归档原因为空时仍允许归档，reasonText 为 null 且 reasonMissing=true；详情页人才库历史对 reasonMissing 显示「归档原因未填写」，归档表单未填原因时给出提示但仍可提交。总量展示：人才库 Tab 徽标为 '1w+' 形式（≥10000），人才库汇总面板显示 talentPool.total 真实数字，阶段 Tab 与 totals 均为真实计数。"
+    },
+    {
+      "name": "scale_benchmark_12000",
+      "passed": true,
+      "criteria": [
+        "万级数据规模下查询与分页结果可复核。"
+      ],
+      "details": "隔离临时库 talentflow_ats013_bench 重放全部已提交迁移（含 20261123120000_ats013_talent_pool）。造数：12000 名候选人，其中 ARCHIVED 10420（占 86.8%，满足 ≥10000 的 1w+ 边界），其余 6 阶段各 263-264 条；10420 条人才库归档记录一一对应，含 reasonMissing 未填写档样本（每 5 条 1 条）。复核结果：candidateTotal=12000；archived=10420；poolEntries=10420；talentPool.total=10420（1w+ 生效）；阶段 groupBy 合计 12000 与总量一致（RECOMMENDED/HR_SCREENING/DEPT_SCREENING/INTERVIEWING 各 263、OFFERING/PENDING_ONBOARD 各 264、ARCHIVED 10420）。分页（pageSize=20，orderBy updatedAt desc, createdAt desc）：第 1 页 3.46ms、第 100 页 5.3ms、第 500 页 18.58ms、末页第 521 页 19.17ms，均返回 20 行；标签检索 '骨干' 2.7ms 返回当前页 20 行。执行计划：分页查询命中 candidates_stage_updatedAt_createdAt_idx（Backward index scan; Using index，覆盖索引），阶段统计为索引全扫（Using index），总量 count 走 candidates_poolType_stage_idx。实测后 DROP DATABASE，未连接 talentflow 与 talentflow_local_admin_preview。"
+    },
+    {
+      "name": "quality_gates",
+      "passed": true,
+      "criteria": [],
+      "details": "backend：npx prisma generate 成功；npm run typecheck（tsc --noEmit）退出码 0；npm run lint（oxlint --type-aware）0 warning 0 error；npm test 24 个文件 164 项通过、1 个集成文件 4 项按环境跳过（其中 candidates.service.spec.ts 8/8）。web：npm run build（tsc -b && vite build）成功。"
+    }
+  ],
+  "limitations": [
+    "本次为本地验收（locally_verified），数据为合成数据，不含真实个人信息；不等于业务验收人或生产环境验收。",
+    "万级实测直接调用 Prisma Client 复现列表查询（相同 where/orderBy/skip/take 与聚合），未在 12000 条数据上启动完整 HTTP 服务做端到端计时；接口层分页与计数逻辑与实测代码路径一致。",
+    "前端 1w+/真实计数展示由构建与代码路径验证，未在 12000 条数据上逐屏人工走查浏览器 UI（临时库实测后已删除）。",
+    "深页分页使用 offset skip，数据量继续大幅增长（百万级）时建议改为游标分页；本次按万级验收口径验证。",
+    "标签检索为 tags 字段 contains 匹配，未引入全文索引；万级实测 2.7ms 可接受。"
+  ]
+}

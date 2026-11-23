@@ -12,6 +12,7 @@ import type {
   Candidate,
   CandidateFilter,
   CandidatePage,
+  CandidatePoolHistoryEntry,
   CandidateStage,
   LegacyCandidateStage,
   CandidateTimelineEvent,
@@ -196,11 +197,22 @@ export function createCandidate(candidate: Candidate): Promise<Candidate> {
   })
 }
 
-export function updateCandidateStage(id: string, stage: CandidateStage | LegacyCandidateStage, reason?: string): Promise<Candidate> {
+export function updateCandidateStage(id: string, stage: CandidateStage | LegacyCandidateStage, reason?: string, reasonId?: string): Promise<Candidate> {
   return request<Candidate>(`/candidates/${encodeURIComponent(id)}/stage`, {
     method: 'PATCH',
-    body: JSON.stringify({ stage, reason }),
+    body: JSON.stringify({ stage, reason, reasonId }),
   })
+}
+
+/** 人才库激活（FR-POOL-4）：选择职位后回流至人才推荐，归档历史保留 */
+export function activateCandidateFromPool(id: string, jobId: string): Promise<Candidate> {
+  return request<Candidate>(`/candidates/${encodeURIComponent(id)}/activate`, {
+    method: 'POST', body: JSON.stringify({ jobId }),
+  })
+}
+
+export function getCandidatePoolHistory(id: string): Promise<{ items: CandidatePoolHistoryEntry[] }> {
+  return request<{ items: CandidatePoolHistoryEntry[] }>(`/candidates/${encodeURIComponent(id)}/pool-history`)
 }
 
 export function assignCandidateJob(id: string, jobId: string): Promise<Candidate> {

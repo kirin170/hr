@@ -24,9 +24,10 @@ export class CandidatesController {
     @Query('tag') tag?: string,
     @Query('lockedState') lockedState?: string,
     @Query('updatedBefore') updatedBefore?: string,
+    @Query('poolType') poolType?: string,
   ) {
     return this.candidates.listFiltered(actor, page, pageSize, {
-      stage, keyword, departmentId, jobId, company, channel, source, tag, lockedState, updatedBefore,
+      stage, keyword, departmentId, jobId, company, channel, source, tag, lockedState, updatedBefore, poolType,
     });
   }
 
@@ -72,6 +73,13 @@ export class CandidatesController {
     return this.candidates.timeline(id, actor);
   }
 
+  @Get('candidates/:id/pool-history')
+  @RequirePermission('candidate:read')
+  @AuditAction('candidate.pool.history.read', 'Candidate')
+  poolHistory(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) {
+    return this.candidates.listPoolHistory(id, actor);
+  }
+
   @Get('candidates/:id')
   @RequirePermission('candidate:read')
   @AuditAction('candidate.read', 'Candidate')
@@ -102,6 +110,13 @@ export class CandidatesController {
   @AuditAction('candidate.job.assign', 'Candidate')
   assignJob(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) {
     return this.candidates.assignJob(id, body, actor);
+  }
+
+  @Post('candidates/:id/activate')
+  @RequirePermission('candidate:stage:update')
+  @AuditAction('candidate.pool.activate', 'Candidate')
+  activate(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) {
+    return this.candidates.activateFromPool(id, body, actor);
   }
 
   @Post('candidates/:id/department-screening')

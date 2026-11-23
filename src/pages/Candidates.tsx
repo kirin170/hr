@@ -3,6 +3,7 @@ import { BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, ListFilter, 
 import { getDepartment } from '../data'
 import { useApp } from '../context'
 import {
+  activateCandidateFromPool,
   assignCandidateJob,
   batchRecordDepartmentScreening,
   batchUpdateCandidateTags,
@@ -20,6 +21,10 @@ import { cn, stageMeta } from '../utils'
 type CandidatesProps = { search: string; onOpenCandidate: (id: string) => void; onAddCandidate: () => void; onBulkImport?: () => void }
 
 const PAGE_SIZE = 20
+/** 只有人才库总量（已归档）达到万级才压缩展示；阶段 Tab 与报表始终展示真实数量（ATS-013） */
+const POOL_ABBREVIATE_THRESHOLD = 10000
+export const formatCount = (value: number, abbreviate: boolean) =>
+  abbreviate && value >= POOL_ABBREVIATE_THRESHOLD ? '1w+' : String(value)
 const stageTabs: { key: CandidateStageFilter; label: string }[] = [
   { key: 'UNASSIGNED', label: '待分配' },
   { key: 'RECOMMENDED', label: '人才推荐' },
@@ -48,14 +53,20 @@ const emptyFilters: CandidateFilter = {
   lockedState: undefined, updatedBefore: '',
 }
 
+const poolPageSizes = [20, 50, 100] as const
+
 export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImport }: CandidatesProps) {
   const { data, setData, candidatesLoading, candidatesError, apiJobs, toast } = useApp()
   const [rows, setRows] = useState<Candidate[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
+  const [poolTotal, setPoolTotal] = useState(0)
+  const [pageSize, setPageSize] = useState<number>(PAGE_SIZE)
   const [stage, setStage] = useState<CandidateStageFilter | 'ALL'>('ALL')
   const [filters, setFilters] = useState<CandidateFilter>(emptyFilters)
   const [page, setPage] = useState(1)
+  // 跳页：万级数据下页码条只展示当前附近 5 页，配合直接输入页码定位
+  const [jumpPage, setJumpPage] = useState('')
   const [selected, setSelected] = useState<string[]>([])
   const [view, setView] = useState<'list' | 'cards'>('list')
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -73,6 +84,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
   const [bulkTagMode, setBulkTagMode] = useState<'ADD' | 'REMOVE' | 'REPLACE'>('ADD')
   const [showStatusSummary, setShowStatusSummary] = useState(false)
   const [assignCandidateId, setAssignCandidateId] = useState<string | null>(null)
+  // 人才库激活与待分配职位分配复用同一个职位选择弹窗，用来源区分动作
+  const [assignMode, setAssignMode] = useState<'ASSIGN' | 'ACTIVATE'>('ASSIGN')
   const [assignJobId, setAssignJobId] = useState('')
   const [assignableJobs, setAssignableJobs] = useState<JobListItem[]>([])
   const [busy, setBusy] = useState(false)
@@ -98,18 +111,19 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
       ...queryFilters,
       stage: stage === 'ALL' ? undefined : stage,
       page,
-      pageSize: PAGE_SIZE,
+      pageSize,
     }).then((result) => {
       if (!active) return
       setRows(result.items)
       setCounts(result.counts)
       setTotal(result.total)
+      setPoolTotal(result.talentPool?.total ?? result.counts?.ARCHIVED ?? 0)
       setSelected((current) => current.filter((id) => result.items.some((candidate) => candidate.id === id)))
     }).catch((error: unknown) => {
       if (active) setLoadError(error instanceof Error ? error.message : '候选人列表加载失败')
     })
     return () => { active = false }
-  }, [data.candidates, page, queryFilters, refreshKey, stage])
+  }, [data.candidates, page, pageSize, queryFilters, refreshKey, stage])
 
   useEffect(() => {
     let active = true
@@ -123,9 +137,11 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
     return () => { active = false }
   }, [])
 
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const pages = Math.max(1, Math.ceil(total / pageSize))
+  const goToPage = (next: number) => setPage(Math.min(Math.max(1, Math.trunc(next)), pages))
   const activeFilterCount = [filters.departmentId, filters.jobId, filters.company, filters.channel, filters.source, filters.tag, filters.lockedState, filters.updatedBefore].filter(Boolean).length
   const allCount = Object.entries(counts).reduce((sum, [key, value]) => sum + (key === 'VIRTUAL_POOL' ? 0 : value), 0)
+  const archivedCount = poolTotal || counts.ARCHIVED || 0
   const visible = rows
   const jobOptions = assignableJobs
 
@@ -211,20 +227,24 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
     }
   }
   const assignCandidate = (candidate: Candidate) => {
+    setAssignMode(candidate.stage === 'ARCHIVED' ? 'ACTIVATE' : 'ASSIGN')
     setAssignCandidateId(candidate.id)
     setAssignJobId(jobOptions[0]?.id ?? '')
   }
+  const activatingCandidate = assignMode === 'ACTIVATE'
   const confirmAssignCandidate = async () => {
     if (!assignCandidateId || !assignJobId) return
     setBusy(true)
     try {
-      const updated = await assignCandidateJob(assignCandidateId, assignJobId)
+      const updated = activatingCandidate
+        ? await activateCandidateFromPool(assignCandidateId, assignJobId)
+        : await assignCandidateJob(assignCandidateId, assignJobId)
       mergeCandidatesIntoStore([updated])
-      toast('候选人已分配到职位')
+      toast(activatingCandidate ? '候选人已从人才库激活至人才推荐' : '候选人已分配到职位')
       setAssignCandidateId(null)
       refresh()
     } catch (error) {
-      toast(error instanceof Error ? error.message : '职位分配失败', 'info')
+      toast(error instanceof Error ? error.message : activatingCandidate ? '人才库激活失败' : '职位分配失败', 'info')
     } finally {
       setBusy(false)
     }
@@ -276,8 +296,21 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
 
       <div className="stage-tabs stage-tabs-scroll">
         <button className={cn('stage-tab', stage === 'ALL' && 'active')} onClick={() => selectStage('ALL')}>全部 <span>{allCount}</span></button>
-        {stageTabs.map((item) => <button key={item.key} className={cn('stage-tab', stage === item.key && 'active')} onClick={() => selectStage(item.key)}>{item.label}<span>{counts[item.key] ?? 0}</span></button>)}
+        {stageTabs.map((item) => {
+          // 阶段 Tab 始终展示真实数量；仅人才库（已归档）总量在万级时压缩为 1w+
+          const isPool = item.key === 'ARCHIVED'
+          const count = isPool ? archivedCount : counts[item.key] ?? 0
+          return <button key={item.key} className={cn('stage-tab', stage === item.key && 'active')} onClick={() => selectStage(item.key)}>{item.label}<span title={isPool ? `人才库总量 ${count} 人` : undefined}>{formatCount(count, isPool)}</span></button>
+        })}
       </div>
+
+      {stage === 'ARCHIVED' && (
+        <div className="panel pool-summary">
+          <div><strong>人才库</strong><span>人才库总量（已归档真实计数）：{archivedCount} 人。归档候选人自动入池，选择职位即可激活回人才推荐，归档与激活历史全部保留。</span></div>
+          <label className="candidate-filter-input"><span>标签检索</span><input value={filters.tag ?? ''} onChange={(event) => patchFilter('tag', event.target.value)} placeholder="如：Java、华为" /></label>
+          <label className="candidate-filter-input"><span>归档渠道</span><input value={filters.channel ?? ''} onChange={(event) => patchFilter('channel', event.target.value)} placeholder="渠道" /></label>
+        </div>
+      )}
 
       {(candidatesLoading || busy) && <div className="panel empty-inline">{candidatesLoading ? '正在加载候选人…' : '正在保存候选人状态…'}</div>}
       {(candidatesError || loadError) && <div className="panel empty-inline">候选人加载失败：{loadError || candidatesError} 刷新页面后重试。</div>}
@@ -344,10 +377,10 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
             {visible.length === 0 && !candidatesLoading && <EmptyState onReset={resetFilters} />}
           </div>}
 
-          <div className="table-footer"><span>显示 {total ? (page - 1) * PAGE_SIZE + 1 : 0}-{Math.min(page * PAGE_SIZE, total)}，共 {total} 条</span><div className="pagination"><button disabled={page === 1} onClick={() => setPage(page - 1)}><ChevronLeft size={15} /></button>{Array.from({ length: Math.min(pages, 5) }, (_, index) => { const pageNumber = Math.max(1, Math.min(pages - 4, page - 2)) + index; return pageNumber <= pages ? <button key={pageNumber} className={page === pageNumber ? 'active' : ''} onClick={() => setPage(pageNumber)}>{pageNumber}</button> : null })}<button disabled={page === pages} onClick={() => setPage(page + 1)}><ChevronRight size={15} /></button></div></div>
+          <div className="table-footer"><span>显示 {total ? (page - 1) * pageSize + 1 : 0}-{Math.min(page * pageSize, total)}，共 {total} 条{archivedCount >= POOL_ABBREVIATE_THRESHOLD ? `（人才库总量 ${formatCount(archivedCount, true)}）` : ''}</span><div className="pagination"><button disabled={page === 1} onClick={() => goToPage(page - 1)}><ChevronLeft size={15} /></button>{Array.from({ length: Math.min(pages, 5) }, (_, index) => { const pageNumber = Math.max(1, Math.min(pages - 4, page - 2)) + index; return pageNumber <= pages ? <button key={pageNumber} className={page === pageNumber ? 'active' : ''} onClick={() => goToPage(pageNumber)}>{pageNumber}</button> : null })}<button disabled={page === pages} onClick={() => goToPage(page + 1)}><ChevronRight size={15} /></button><input className="page-jump" value={jumpPage} onChange={(event) => setJumpPage(event.target.value.replace(/\D/g, ''))} onKeyDown={(event) => { if (event.key === 'Enter' && jumpPage) { goToPage(Number(jumpPage)); setJumpPage('') } }} placeholder="跳至" aria-label="跳转页码" /><span className="page-jump-total">/ {pages}</span><select className="page-size" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1) }} aria-label="每页条数">{poolPageSizes.map((size) => <option key={size} value={size}>{size} 条/页</option>)}</select></div></div>
         </div>
       </div>
-      {assignCandidateId && <div className="drawer-backdrop candidate-assign-backdrop" onClick={() => setAssignCandidateId(null)}><section className="candidate-assign-dialog" onClick={(event) => event.stopPropagation()}><h3>分配到职位</h3><label><span>目标职位</span><select value={assignJobId} onChange={(event) => setAssignJobId(event.target.value)}>{jobOptions.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentId}</option>)}</select></label><div><button className="button button-secondary" onClick={() => setAssignCandidateId(null)}>取消</button><button className="button button-primary" disabled={!assignJobId || busy} onClick={confirmAssignCandidate}>确认分配</button></div></section></div>}
+      {assignCandidateId && <div className="drawer-backdrop candidate-assign-backdrop" onClick={() => setAssignCandidateId(null)}><section className="candidate-assign-dialog" onClick={(event) => event.stopPropagation()}><h3>{activatingCandidate ? '从人才库激活' : '分配到职位'}</h3><label><span>目标职位</span><select value={assignJobId} onChange={(event) => setAssignJobId(event.target.value)}>{jobOptions.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentId}</option>)}</select></label>{activatingCandidate && <p className="hint">激活后候选人回流至「人才推荐」，原归档记录与原因全部保留。</p>}<div><button className="button button-secondary" onClick={() => setAssignCandidateId(null)}>取消</button><button className="button button-primary" disabled={!assignJobId || busy} onClick={confirmAssignCandidate}>{activatingCandidate ? '确认激活' : '确认分配'}</button></div></section></div>}
     </div>
   )
 }
@@ -363,7 +396,7 @@ function CandidateRow({ candidate, selected, onSelect, onOpen, onAssign }: { can
     <td><span className="rating-cell"><Star size={14} fill="#EEA23E" stroke="#EEA23E" />{candidate.rating}.0</span></td>
     <td><span className="last-activity">{candidate.lastActivity}<small>更新于</small></span></td>
     <td>{candidate.lockedState === 'INOPERABLE' ? <span className="locked-indicator"><LockKeyhole size={14} />不可操作</span> : <span className="locked-indicator muted">可操作</span>}</td>
-    <td>{unassigned ? <button className="text-button" onClick={onAssign}>分配职位</button> : <button className="text-button" onClick={onOpen}>查看</button>}</td>
+    <td>{unassigned ? <button className="text-button" onClick={onAssign}>分配职位</button> : candidate.stage === 'ARCHIVED' ? <button className="text-button" onClick={onAssign}>激活</button> : <button className="text-button" onClick={onOpen}>查看</button>}</td>
   </tr>
 }
 

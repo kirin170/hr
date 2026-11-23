@@ -23,6 +23,8 @@ const legacyStageMap: Record<LegacyUiStage, DbCandidateStage> = {
 
 const stageValues = Object.values(DbCandidateStage) as DbCandidateStage[];
 const lockedStateValues = ['NONE', 'OPERABLE', 'INOPERABLE'] as const;
+const poolTypeValues = ['NONE', 'UNASSIGNED', 'VIRTUAL'] as const;
+type PoolTypeValue = (typeof poolTypeValues)[number];
 const screeningResults = ['PASS', 'HOLD', 'REJECT'] as const;
 
 const avatarColors = ['#6675E8', '#19A77C', '#E27D62', '#D58A28', '#BF7BD5'];
@@ -47,7 +49,7 @@ type CandidateInput = {
   note?: unknown;
 };
 
-type StageInput = { stage?: unknown; reason?: unknown };
+type StageInput = { stage?: unknown; reason?: unknown; reasonId?: unknown };
 type CandidateQuery = {
   stage?: string;
   keyword?: string;
@@ -59,6 +61,7 @@ type CandidateQuery = {
   tag?: string;
   lockedState?: string;
   updatedBefore?: string;
+  poolType?: string;
 };
 
 type CandidateWithJob = Prisma.CandidateGetPayload<{ include: { job: true } }>;
@@ -82,6 +85,12 @@ export class CandidatesService {
     if (query.jobId) clauses.push({ jobId: query.jobId });
     if (query.company) clauses.push({ currentCompany: { contains: query.company.trim() } });
     if (query.channel) clauses.push({ channel: query.channel });
+    if (query.poolType) {
+      if (!poolTypeValues.includes(query.poolType as PoolTypeValue)) {
+        throw new BadRequestException('人才库类型筛选值无效');
+      }
+      clauses.push({ poolType: query.poolType as PoolTypeValue });
+    }
     if (query.source) clauses.push({ source: query.source });
     if (query.tag) clauses.push({ tags: { contains: query.tag.trim() } });
     if (query.lockedState) {
@@ -117,6 +126,7 @@ export class CandidatesService {
       SensitiveField.CANDIDATE_CONTACT,
       'READ',
     );
+    // 万级数据：分页取当前页，计数与阶段统计走独立聚合，不因页码/筛选夹带全量数据
     const [items, total, stageGroups] = await Promise.all([
       this.prisma.candidate.findMany({
         where,
@@ -133,6 +143,11 @@ export class CandidatesService {
       }),
     ]);
 
+    // 人才库总量：仅受非阶段筛选影响（不受当前阶段 Tab 限制），与阶段 Tab 真实计数区分
+    const archivedTotal = await this.prisma.candidate.count({
+      where: { AND: [baseWhere, { stage: DbCandidateStage.ARCHIVED }] },
+    });
+
     const counts = Object.fromEntries(stageValues.map((stage) => [stage, 0])) as Record<DbCandidateStage, number>;
     for (const group of stageGroups) counts[group.stage] = group._count._all;
 
@@ -145,6 +160,7 @@ export class CandidatesService {
         ...counts,
         UNASSIGNED: counts.UNASSIGNED + counts.VIRTUAL_POOL,
       },
+      talentPool: { total: archivedTotal },
     };
   }
 
@@ -288,6 +304,7 @@ export class CandidatesService {
     const input = this.asRecord<StageInput>(value);
     const nextStage = this.parseStage(input.stage);
     const reason = this.optionalText(input.reason);
+    const reasonId = this.optionalText(input.reasonId);
 
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.candidate.findFirst({
@@ -309,7 +326,7 @@ export class CandidatesService {
         return this.toCandidateDto(current, canReadContacts);
       }
       this.assertTransition(current.stage, nextStage);
-      return this.persistStageChange(tx, current, nextStage, actor, reason);
+      return this.persistStageChange(tx, current, nextStage, actor, reason, reasonId);
     });
   }
 
@@ -355,6 +372,93 @@ export class CandidatesService {
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
       return this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
+  }
+
+  /**
+   * 人才库激活（FR-POOL-4）：选择职位把已归档候选人回流到 RECOMMENDED。
+   * 归档记录不删除，只追加 reactivatedAt/reactivatedJobId，保留全部历史。
+   */
+  async activateFromPool(id: string, value: unknown, actor: AuthenticatedUser) {
+    const input = this.asRecord<{ jobId?: unknown }>(value);
+    const jobId = this.requiredText(input.jobId, '请选择职位');
+    const job = await this.prisma.job.findFirst({
+      where: {
+        AND: [
+          { id: jobId, status: 'ACTIVE', isVirtual: false },
+          this.authorization.jobWhere(actor, 'candidate:stage:update'),
+        ],
+      },
+      select: { id: true, title: true },
+    });
+    if (!job) throw new NotFoundException('职位不存在、已关闭或无权访问');
+
+    return this.prisma.$transaction(async (tx) => {
+      const current = await this.findOperableCandidate(tx, id, actor);
+      if (current.stage !== DbCandidateStage.ARCHIVED) {
+        throw new ConflictException('只有人才库中已归档的候选人可以激活');
+      }
+      const now = new Date();
+      const changed = await tx.candidate.updateMany({
+        where: { id, stage: DbCandidateStage.ARCHIVED, lockedState: { not: 'INOPERABLE' } },
+        data: { stage: DbCandidateStage.RECOMMENDED, jobId: job.id, poolType: 'NONE' },
+      });
+      if (changed.count !== 1) throw new ConflictException('候选人状态已变化，请刷新后重试');
+      const openEntry = await tx.candidateTalentPoolEntry.findFirst({
+        where: { candidateId: id, reactivatedAt: null },
+        orderBy: { archivedAt: 'desc' },
+      });
+      const poolEntryId = openEntry
+        ? (
+            await tx.candidateTalentPoolEntry.update({
+              where: { id: openEntry.id },
+              data: { reactivatedAt: now, reactivatedJobId: job.id, reactivatedById: actor.id },
+            })
+          ).id
+        : null;
+      await tx.timelineEvent.create({
+        data: {
+          entityType: 'Candidate', entityId: id, actorId: actor.id,
+          action: 'candidate.stage_changed',
+          payload: {
+            from: DbCandidateStage.ARCHIVED,
+            to: DbCandidateStage.RECOMMENDED,
+            action: 'ACTIVATE_FROM_POOL',
+            jobId: job.id,
+            jobTitle: job.title,
+            previousJobId: current.jobId,
+            poolEntryId,
+            archiveReasonText: current.archiveReasonText,
+          },
+        },
+      });
+      const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
+      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+    });
+  }
+
+  /** 人才库历史：该候选人全部归档/激活记录，供详情抽屉展示「历史不被覆盖」 */
+  async listPoolHistory(id: string, actor: AuthenticatedUser) {
+    const accessible = await this.prisma.candidate.findFirst({
+      where: { AND: [{ id }, this.authorization.candidateWhere(actor, 'candidate:read')] },
+      select: { id: true },
+    });
+    if (!accessible) throw new NotFoundException('候选人不存在');
+    const entries = await this.prisma.candidateTalentPoolEntry.findMany({
+      where: { candidateId: id },
+      orderBy: { archivedAt: 'desc' },
+    });
+    return {
+      items: entries.map((entry) => ({
+        id: entry.id,
+        archivedAt: entry.archivedAt.toISOString(),
+        sourceStage: entry.sourceStage,
+        reasonId: entry.reasonId,
+        reasonText: entry.reasonText,
+        reasonMissing: entry.reasonMissing,
+        reactivatedAt: entry.reactivatedAt?.toISOString() ?? null,
+        reactivatedJobId: entry.reactivatedJobId,
+      })),
+    };
   }
 
   async recordDepartmentScreening(id: string, value: unknown, actor: AuthenticatedUser) {
@@ -485,6 +589,13 @@ export class CandidatesService {
         await tx.candidateDepartmentScreening.updateMany({
           where: { id: screeningRecordId, candidateId: id, revokedAt: null },
           data: { revokedAt: new Date() },
+        });
+      }
+      // 撤销归档后该次入池记录不再成立，删除本次生成的归档记录（属于撤销同一动作，非覆盖历史）
+      const poolEntryId = typeof payload.poolEntryId === 'string' ? payload.poolEntryId : null;
+      if (poolEntryId) {
+        await tx.candidateTalentPoolEntry.deleteMany({
+          where: { id: poolEntryId, candidateId: id, reactivatedAt: null },
         });
       }
       await tx.timelineEvent.create({
@@ -698,16 +809,36 @@ export class CandidatesService {
     nextStage: DbCandidateStage,
     actor: AuthenticatedUser,
     reason: string | null,
+    reasonId: string | null = null,
   ) {
     const isArchive = nextStage === DbCandidateStage.ARCHIVED;
+    // 已归档候选人再次归档视为重复动作，沿用现有归档记录，不重复入池
+    const alreadyArchived = current.stage === DbCandidateStage.ARCHIVED;
     const changed = await tx.candidate.updateMany({
       where: { id: current.id, stage: current.stage, lockedState: { not: 'INOPERABLE' } },
       data: {
         stage: nextStage,
-        ...(isArchive ? { archiveReasonText: reason } : {}),
+        ...(isArchive && !alreadyArchived
+          ? { archiveReasonText: reason, archiveReasonId: reasonId, archiveChannel: current.channel }
+          : {}),
       },
     });
     if (changed.count !== 1) throw new ConflictException('候选人状态已变化，请刷新后重试');
+    let poolEntryId: string | null = null;
+    if (isArchive && !alreadyArchived) {
+      // 归档自动入池：一条归档记录对应一次入池历史，未填写原因以 reasonMissing 单独统计
+      const entry = await tx.candidateTalentPoolEntry.create({
+        data: {
+          candidateId: current.id,
+          archivedAt: new Date(),
+          sourceStage: current.stage,
+          reasonId,
+          reasonText: reason,
+          reasonMissing: !reason && !reasonId,
+        },
+      });
+      poolEntryId = entry.id;
+    }
     await tx.timelineEvent.create({
       data: {
         entityType: 'Candidate', entityId: current.id, actorId: actor.id,
@@ -718,6 +849,8 @@ export class CandidatesService {
           databaseFrom: current.stage,
           databaseTo: nextStage,
           reason,
+          reasonId,
+          ...(isArchive && !alreadyArchived ? { poolEntryId, archiveReasonMissing: !reason && !reasonId } : {}),
           ...(isArchive ? { previousArchiveReasonText: current.archiveReasonText } : {}),
         },
       },

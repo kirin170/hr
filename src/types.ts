@@ -100,6 +100,19 @@ export type CandidatePage = {
   pageSize: number
   total: number
   counts: Record<CandidateStageFilter | 'VIRTUAL_POOL', number>
+  /** 人才库总量（全部已归档真实计数，不受阶段 Tab 影响） */
+  talentPool?: { total: number }
+}
+
+export type CandidatePoolHistoryEntry = {
+  id: string
+  archivedAt: string
+  sourceStage: string
+  reasonId: string | null
+  reasonText: string | null
+  reasonMissing: boolean
+  reactivatedAt: string | null
+  reactivatedJobId: string | null
 }
 
 export type CandidateFilter = {
