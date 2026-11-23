@@ -1,123 +1,81 @@
-import { useMemo, useState } from 'react'
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, MapPin, MessageSquare, MoreHorizontal, Plus, Video, X } from 'lucide-react'
-import { dateLabel, getCandidate, getJob, today, weekdayLabel } from '../data'
+import { useEffect, useState } from 'react'
+import { CalendarDays, Plus, X } from 'lucide-react'
 import { useApp } from '../context'
-import type { Interview, InterviewStatus } from '../types'
-import { cn, interviewModeLabel, interviewStatusMeta } from '../utils'
+import { request } from '../api'
 
-type InterviewsProps = { onOpenCandidate: (id: string) => void; openNew: number }
+type Row = { id: string; candidateId: string; jobId: string; candidate: { name: string }; round: number; mode: string; time: string; endTime: string | null; location: string | null; status: string; interviewerIds: string[]; responses: Record<string, string> | null }
+type Person = { id: string; displayName: string }
+type Field = { key: string; label: string; type: 'text' | 'textarea' | 'select'; required: boolean; options: string[] }
+type Template = { id: string; fields: Field[] }
+type Feedback = { conclusion: string | null; id: string; interviewerId: string; filledById: string; filledByMode: string; proxyName: string | null; proxyAt: string | null; content: string; createdAt: string }
+type Transcript = { id: string; round: number; url: string; createdAt: string }
+const send = <T,>(path: string, body: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(body) })
+const datePart = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s))
+const localInput = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(s)).replace(' ', 'T')
+const today = () => datePart(new Date().toISOString())
+const timeLabel = (s: string) => new Date(s).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+const message = (e: unknown) => e instanceof Error ? e.message : '操作失败'
+const refreshEvent = () => window.dispatchEvent(new Event('interviews-changed'))
 
-function addDays(date: string, amount: number) {
-  const d = new Date(`${date}T00:00:00`)
-  d.setDate(d.getDate() + amount)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-export function Interviews({ onOpenCandidate, openNew }: InterviewsProps) {
-  const { data, updateInterview, toast } = useApp()
-  const [selectedDate, setSelectedDate] = useState(today)
-  const [view, setView] = useState<'day' | 'week'>('day')
-  const [status, setStatus] = useState<InterviewStatus | 'all'>('all')
-  const [showCreate, setShowCreate] = useState(openNew > 0)
-  const weekDates = Array.from({ length: 7 }, (_, i) => addDays(today, i - 1))
-  const interviews = useMemo(() => data.interviews.filter(item => {
-    if (status !== 'all' && item.status !== status) return false
-    return view === 'day' ? item.date === selectedDate : weekDates.includes(item.date)
-  }).sort((a, b) => `${a.date}${a.start}`.localeCompare(`${b.date}${b.start}`)), [data.interviews, selectedDate, view, status])
-
-  const markFeedback = (id: string) => {
-    updateInterview(id, { status: 'completed', feedback: '面试反馈已提交。' })
-    toast('面试反馈已记录')
+export function Interviews({ onOpenCandidate, openNew }: { onOpenCandidate: (id: string) => void; openNew: number }) {
+  const { toast, apiJobs } = useApp()
+  const [jobId, setJobId] = useState('')
+  const [rows, setRows] = useState<Row[]>([])
+  const [error, setError] = useState('')
+  const [keyword, setKeyword] = useState('')
+  const [status, setStatus] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+  const [selected, setSelected] = useState<Row | null>(null)
+  const [configure, setConfigure] = useState(false)
+  const load = () => {
+    const q = new URLSearchParams(); if (keyword.trim()) q.set('keyword', keyword.trim()); if (status) q.set('status', status); if (jobId) q.set('jobId', jobId)
+    request<Row[]>(`/interviews?${q}`).then(data => { setRows(data); setError('') }).catch(e => setError(message(e)))
   }
-
-  return <div className="page-stack interviews-page">
-    <div className="page-title-row">
-      <div><div className="eyebrow">面试协同 <span className="eyebrow-separator">·</span> {data.interviews.filter(i => i.status === 'scheduled').length} 场待进行</div><h2>面试安排</h2><p>统一协调面试官与候选人时间，及时收集反馈。</p></div>
-      <div className="page-title-actions"><button className="button button-secondary"><CalendarDays size={16} />同步日历</button><button className="button button-primary" onClick={() => setShowCreate(true)}><Plus size={17} />安排面试</button></div>
-    </div>
-
-    <div className="interview-summary-grid">
-      <SummaryCard icon={<CalendarDays size={17} />} label="今日面试" value={data.interviews.filter(i => i.date === today && i.status === 'scheduled').length.toString()} note="较昨日 +2" tone="blue" />
-      <SummaryCard icon={<Clock3 size={17} />} label="待反馈" value={data.interviews.filter(i => i.status === 'pending_feedback').length.toString()} note="需要及时跟进" tone="amber" />
-      <SummaryCard icon={<Check size={17} />} label="本周已完成" value="34" note="完成率 92.6%" tone="green" />
-      <SummaryCard icon={<MessageSquare size={17} />} label="平均反馈时长" value="6.4h" note="较上周 -1.2h" tone="violet" />
-    </div>
-
-    <div className="interview-layout">
-      <div className="panel interview-main">
-        <div className="interview-toolbar">
-          <div className="date-navigator"><button className="icon-button icon-button-small" onClick={() => setSelectedDate(addDays(selectedDate, -1))}><ChevronLeft size={17} /></button><button className="date-title" onClick={() => setSelectedDate(today)}><strong>{selectedDate === today ? '今天' : dateLabel(selectedDate)}</strong><span>{selectedDate} · {weekdayLabel(selectedDate)}</span></button><button className="icon-button icon-button-small" onClick={() => setSelectedDate(addDays(selectedDate, 1))}><ChevronRight size={17} /></button></div>
-          <div className="interview-toolbar-actions"><label className="filter-select mini"><select value={status} onChange={e => setStatus(e.target.value as typeof status)}><option value="all">全部状态</option><option value="scheduled">待进行</option><option value="pending_feedback">待反馈</option><option value="completed">已完成</option></select><ChevronDown size={13} /></label><div className="view-switch"><button className={cn(view === 'day' && 'active')} onClick={() => setView('day')}>日</button><button className={cn(view === 'week' && 'active')} onClick={() => setView('week')}>周</button></div></div>
-        </div>
-        {view === 'week' && <div className="week-strip">{weekDates.map(date => { const count = data.interviews.filter(i => i.date === date).length; return <button key={date} className={cn(selectedDate === date && 'active')} onClick={() => setSelectedDate(date)}><span>{weekdayLabel(date)}</span><strong>{Number(date.slice(-2))}</strong>{count > 0 && <i>{count}</i>}</button> })}</div>}
-        <div className="interview-list">
-          {interviews.map(interview => {
-            const candidate = getCandidate(data, interview.candidateId)
-            const job = getJob(interview.jobId)
-            if (!candidate) return null
-            const statusMeta = interviewStatusMeta[interview.status]
-            return <div className="interview-card" key={interview.id}>
-              <div className="interview-time"><strong>{interview.start}</strong><span>{interview.end}</span><i /></div>
-              <button className="interview-candidate" onClick={() => onOpenCandidate(candidate.id)}><span className="avatar avatar-md" style={{background:`${candidate.avatarColor}18`,color:candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}<em className={cn('status-dot-label', statusMeta.tone)}>{statusMeta.label}</em></strong><small>{job?.title}</small></span></button>
-              <div className="interview-detail"><strong>{interview.round}</strong><span>{interview.interviewers.join(' · ')}</span></div>
-              <div className="interview-location"><span className={cn('mode-icon', interview.mode)}>{interview.mode === 'video' ? <Video size={15} /> : <MapPin size={15} />}</span><span><strong>{interviewModeLabel[interview.mode]}</strong><small>{interview.location}</small></span></div>
-              <div className="interview-actions">{interview.status === 'pending_feedback' ? <button className="button button-secondary button-sm" onClick={() => markFeedback(interview.id)}>填写反馈</button> : <button className="icon-button"><MoreHorizontal size={18} /></button>}</div>
-            </div>
-          })}
-          {interviews.length === 0 && <div className="empty-state interview-empty"><span><CalendarDays size={24} /></span><h4>这一天还没有面试</h4><p>安排一场面试，让候选人流程继续推进。</p><button className="button button-primary button-sm" onClick={() => setShowCreate(true)}><Plus size={15} />安排面试</button></div>}
-        </div>
-        <div className="interview-tip"><span className="tip-icon">i</span><span>面试开始前 30 分钟，系统会向面试官和候选人发送提醒。</span></div>
-      </div>
-      <aside className="interview-side">
-        <div className="panel side-calendar">
-          <div className="side-calendar-head"><strong>{today.slice(0,4)}年 {Number(today.slice(5,7))}月</strong><div><button className="icon-button icon-button-small"><ChevronLeft size={15} /></button><button className="icon-button icon-button-small"><ChevronRight size={15} /></button></div></div>
-          <div className="calendar-weekdays">{['一','二','三','四','五','六','日'].map(d => <span key={d}>{d}</span>)}</div>
-          <div className="calendar-days">{Array.from({length: 35}, (_, i) => { const day = i - 4; const active = day === Number(today.slice(-2)); const has = [1,3,5,6,10,12,18,20,24,26].includes(day); return <button key={i} className={cn(day < 1 || day > 30 ? 'muted' : '', active && 'active', has && 'has-event')} onClick={() => setSelectedDate(`${today.slice(0,8)}${String(Math.max(1, day)).padStart(2,'0')}`)}>{day < 1 ? 31 + day : day > 30 ? day - 30 : day}</button> })}</div>
-        </div>
-        <div className="panel interviewer-panel">
-          <div className="panel-header"><div><h3>面试官负载</h3><p>本周面试场次</p></div></div>
-          {[{name:'陈屿', job:'研发负责人', count:8, color:'#4D91D9'}, {name:'林夏', job:'招聘负责人', count:6, color:'#D58A28'}, {name:'周宁', job:'产品负责人', count:5, color:'#E27D62'}, {name:'苏嘉', job:'增长负责人', count:4, color:'#19A77C'}].map(person => <div className="load-row" key={person.name}><span className="avatar avatar-sm" style={{background:`${person.color}18`,color:person.color}}>{person.name.slice(-1)}</span><div><strong>{person.name}</strong><span>{person.job}</span></div><div className="load-bar"><span><i style={{width:`${person.count * 10}%`,background:person.color}} /></span><small>{person.count} 场</small></div></div>)}
-        </div>
-        <div className="panel quick-panel"><h3>面试小贴士</h3><p>面试结束后 24 小时内提交反馈，有助于团队更快做出决策。</p><button className="text-button">查看面试规范 <ChevronRight size={14} /></button></div>
-      </aside>
-    </div>
-    {showCreate && <InterviewModal onClose={() => setShowCreate(false)} />}
-  </div>
-}
-
-function SummaryCard({icon,label,value,note,tone}:{icon:React.ReactNode;label:string;value:string;note:string;tone:string}) {
-  return <div className="summary-card"><span className={cn('summary-icon', tone)}>{icon}</span><div><span>{label}</span><strong>{value}</strong><small>{note}</small></div></div>
-}
-
-export function InterviewModal({onClose, initialCandidate}: {onClose:()=>void; initialCandidate?: string}) {
-  const { data, addInterview, toast } = useApp()
-  const [candidateId, setCandidateId] = useState(initialCandidate || data.candidates.find(c => !['hired','rejected'].includes(c.stage))?.id || '')
-  const [round, setRound] = useState('一面 · 技术面试')
-  const [date, setDate] = useState(today)
-  const [start, setStart] = useState('10:00')
-  const [end, setEnd] = useState('11:00')
-  const [interviewer, setInterviewer] = useState('陈屿')
-  const [mode, setMode] = useState<'video'|'onsite'|'phone'>('video')
-  const [location, setLocation] = useState('飞书会议 · 待生成')
-  const candidate = getCandidate(data, candidateId)
-  const submit = () => {
-    if (!candidate) { toast('请选择候选人', 'info'); return }
-    const interview: Interview = { id: `i-${Date.now()}`, candidateId, jobId: candidate.jobId, round, type: '专业面试', date, start, end, interviewers: interviewer.split(/[、,，]/).filter(Boolean), location, mode, status: 'scheduled' }
-    addInterview(interview)
-    toast('面试已安排')
-    onClose()
+  useEffect(() => { load(); window.addEventListener('interviews-changed', load); return () => window.removeEventListener('interviews-changed', load) }, [keyword, status, jobId])
+  useEffect(() => { if (openNew > 0) setShowCreate(true) }, [openNew])
+  const exportCsv = () => {
+    const quote = (v: unknown) => `"${String(v ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`
+    const csv = [['候选人', '职位 ID', '轮次', '开始', '结束', '形式', '面试官 ID', '状态'], ...rows.map(r => [r.candidate.name, r.jobId, r.round, timeLabel(r.time), r.endTime ? timeLabel(r.endTime) : '', r.mode, r.interviewerIds.join('、'), r.status])].map(line => line.map(quote).join(',')).join('\r\n')
+    const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' })); link.download = '面试列表.csv'; link.click(); URL.revokeObjectURL(link.href)
   }
-  return <div className="modal-backdrop" onMouseDown={onClose}><div className="modal interview-modal" onMouseDown={e => e.stopPropagation()}>
-    <div className="modal-header"><div><span className="modal-icon"><CalendarDays size={18} /></span><div><h3>安排面试</h3><p>为候选人协调下一轮面试</p></div></div><button className="icon-button" onClick={onClose}><X size={18} /></button></div>
-    <div className="modal-body">
-      <label className="form-field"><span>候选人 <em>*</em></span><select value={candidateId} onChange={e => setCandidateId(e.target.value)}>{data.candidates.filter(c => !['hired','rejected'].includes(c.stage)).map(c => <option key={c.id} value={c.id}>{c.name} · {getJob(c.jobId)?.title}</option>)}</select></label>
-      <div className="form-grid"><label className="form-field"><span>面试轮次</span><select value={round} onChange={e => setRound(e.target.value)}><option>一面 · 技术面试</option><option>二面 · 技术复试</option><option>三面 · 业务面试</option><option>终面 · 综合面试</option></select></label><label className="form-field"><span>面试形式</span><select value={mode} onChange={e => { const v=e.target.value as typeof mode; setMode(v); setLocation(v === 'video' ? '飞书会议 · 待生成' : v === 'onsite' ? '3F · 海棠会议室' : '电话面试') }}><option value="video">视频面试</option><option value="onsite">现场面试</option><option value="phone">电话面试</option></select></label></div>
-      <div className="form-grid"><label className="form-field"><span>日期</span><input type="date" value={date} onChange={e => setDate(e.target.value)} /></label><div className="time-fields"><label className="form-field"><span>开始时间</span><input type="time" value={start} onChange={e => setStart(e.target.value)} /></label><span>-</span><label className="form-field"><span>结束时间</span><input type="time" value={end} onChange={e => setEnd(e.target.value)} /></label></div></div>
-      <label className="form-field"><span>面试官 <small>多人用顿号分隔</small></span><input value={interviewer} onChange={e => setInterviewer(e.target.value)} placeholder="例如：陈屿、林夏" /></label>
-      <label className="form-field"><span>地点 / 会议链接</span><input value={location} onChange={e => setLocation(e.target.value)} /></label>
-      <div className="form-notice"><CalendarDays size={15} /><span>安排后将向面试官发送日历邀请，候选人确认状态会同步到流程中。</span></div>
-    </div>
-    <div className="modal-footer"><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" onClick={submit}><Check size={16} />确认安排</button></div>
-  </div></div>
+  const change = async (row: Row, action: 'CANCEL' | 'RESCHEDULE') => {
+    const reason = window.prompt(action === 'CANCEL' ? '请输入取消原因' : '请输入改期原因')?.trim(); if (!reason) { toast('原因必填', 'info'); return }
+    const startAt = action === 'RESCHEDULE' ? window.prompt('新开始时间（例如 2026-11-24T10:00:00+08:00）') : undefined
+    const endAt = action === 'RESCHEDULE' ? window.prompt('新结束时间（例如 2026-11-24T11:00:00+08:00）') : undefined
+    if (action === 'RESCHEDULE' && (!startAt || !endAt)) return
+    try { const result = await send<{ conflicts: string[] }>(`/interviews/${row.id}/change`, { action, reason, startAt, endAt }); toast(result.conflicts.length ? `已保存，Mock 冲突：${result.conflicts.join('、')}` : '已保存（Mock 日历）'); refreshEvent() } catch (e) { toast(message(e), 'info') }
+  }
+  const groups = [{ title: '今天', test: (r: Row) => datePart(r.time) === today() }, { title: '明天及以后', test: (r: Row) => datePart(r.time) > today() }, { title: '昨天及以前', test: (r: Row) => datePart(r.time) < today() }]
+  return <div className="page-stack"><div className="page-title-row"><div><h2>面试安排</h2><p>日历与通知为 Mock，接受状态不代表真实钉钉日程。</p></div><div className="page-title-actions"><button className="button button-secondary" onClick={() => setConfigure(true)}>登记表字段</button><button className="button button-secondary" onClick={exportCsv}>导出筛选结果</button><button className="button button-primary" onClick={() => setShowCreate(true)}><Plus size={16} />安排面试</button></div></div>
+    <div className="panel" style={{padding: 20}}><div className="interview-toolbar-actions"><input placeholder="候选人姓名" value={keyword} onChange={e => setKeyword(e.target.value)} /><select value={jobId} onChange={e => setJobId(e.target.value)}><option value="">全部职位</option>{apiJobs.map(job => <option key={job.id} value={job.id}>{job.title}</option>)}</select><select value={status} onChange={e => setStatus(e.target.value)}><option value="">全部状态</option><option value="TO_SCHEDULE">待进行</option><option value="FEEDBACK_PENDING">待反馈</option><option value="COMPLETED">已完成</option><option value="CANCELLED">已取消</option></select></div>
+      {error && <p role="alert">{error}</p>}{groups.map(group => <section key={group.title}><h3>{group.title}</h3>{rows.filter(group.test).map(row => <div className="interview-card" data-interview-id={row.id} key={row.id}><div><strong>{timeLabel(row.time)}</strong><br />{row.endTime && timeLabel(row.endTime)}</div><div><button className="text-button" onClick={() => onOpenCandidate(row.candidateId)}>{row.candidate.name}</button><br />职位 {row.jobId}</div><div>第 {row.round} 轮 · {row.mode}<br />{row.location}</div><div>{row.interviewerIds.map(id => <div key={id}>{id}: {row.responses?.[id] || 'PENDING'}</div>)}</div><div>{row.status}<br /><button className="text-button" onClick={() => setSelected(row)}>协同详情</button>{row.status !== 'CANCELLED' && <><button className="text-button" onClick={() => change(row, 'RESCHEDULE')}>改期</button><button className="text-button" onClick={() => change(row, 'CANCEL')}>取消</button></>}</div></div>)}{!rows.some(group.test) && <p>暂无面试</p>}</section>)}
+    </div>{showCreate && <InterviewModal onClose={() => setShowCreate(false)} />}{selected && <InterviewDetail row={selected} onClose={() => setSelected(null)} />}{configure && <TemplateEditor onClose={() => setConfigure(false)} />}</div>
+}
+
+export function InterviewModal({ onClose, initialCandidate }: { onClose: () => void; initialCandidate?: string }) {
+  const { data, toast } = useApp(); const [candidateId, setCandidateId] = useState(initialCandidate || ''); const [people, setPeople] = useState<Person[]>([]); const [selected, setSelected] = useState<string[]>([]); const [round, setRound] = useState(1); const [mode, setMode] = useState('VIDEO'); const [startAt, setStart] = useState(''); const [endAt, setEnd] = useState(''); const [location, setLocation] = useState(''); const [availability, setAvailability] = useState<{ id: string; availabilitySlots: {startAt: string; endAt: string}[] }[]>([])
+  const candidate = data.candidates.find(c => c.id === candidateId)
+  useEffect(() => { request<Person[]>('/interviews/interviewers').then(setPeople).catch(e => toast(message(e), 'info')) }, [])
+  useEffect(() => { if (!candidateId) { setAvailability([]); return }; request<typeof availability>(`/interviews/availability/${encodeURIComponent(candidateId)}`).then(setAvailability).catch(e => toast(message(e), 'info')) }, [candidateId])
+  const submit = async () => { try { if (!candidate || !startAt || !endAt) throw new Error('请选择候选人并填写时间'); const result = await send<{ conflicts: string[] }>('/interviews', { candidateId, jobId: candidate.jobId, round, mode, startAt: new Date(`${startAt}:00+08:00`).toISOString(), endAt: new Date(`${endAt}:00+08:00`).toISOString(), location, interviewerIds: selected }); toast(result.conflicts.length ? `已安排；Mock 冲突：${result.conflicts.join('、')}` : '已安排（Mock 日历）'); refreshEvent(); onClose() } catch (e) { toast(message(e), 'info') } }
+  return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3><CalendarDays size={18} /> 安排面试</h3><button className="icon-button" onClick={onClose}><X size={18} /></button></div><div className="modal-body"><label className="form-field">候选人<select value={candidateId} onChange={e => setCandidateId(e.target.value)}><option value="">请选择</option>{data.candidates.filter(c => c.jobId).map(c => <option key={c.id} value={c.id}>{c.name} · {c.jobId}</option>)}</select></label>
+  <p>筛选通过时记录的可约面时间（北京时间）：</p>{availability.flatMap(a => (a.availabilitySlots || []).map((slot, index) => <button className="text-button" key={`${a.id}-${index}`} onClick={() => { setStart(localInput(slot.startAt)); setEnd(localInput(slot.endAt)) }}>{timeLabel(slot.startAt)} — {timeLabel(slot.endAt)}</button>))}
+  <div className="form-grid"><label className="form-field">轮次<input type="number" min="1" value={round} onChange={e => setRound(Number(e.target.value))} /></label><label className="form-field">形式<select value={mode} onChange={e => setMode(e.target.value)}><option value="VIDEO">视频</option><option value="ONSITE">现场</option><option value="PHONE">电话</option></select></label></div><div className="form-grid"><label className="form-field">开始<input type="datetime-local" value={startAt} onChange={e => setStart(e.target.value)} /></label><label className="form-field">结束<input type="datetime-local" value={endAt} onChange={e => setEnd(e.target.value)} /></label></div><label className="form-field">地点或链接<input value={location} onChange={e => setLocation(e.target.value)} /></label><p>面试官（可多选）</p>{people.map(p => <label key={p.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(p.id)} onChange={e => setSelected(e.target.checked ? [...selected, p.id] : selected.filter(id => id !== p.id))} /> {p.displayName}</label>)}</div><div className="modal-footer"><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" onClick={submit}>安排</button></div></div></div>
+}
+function TemplateEditor({ onClose }: { onClose: () => void }) {
+  const { toast } = useApp(); const [fields, setFields] = useState<Field[]>([{ key: 'name', label: '姓名', type: 'text', required: true, options: [] }])
+  useEffect(() => { request<Template | null>('/interviews/registration/template').then(t => { if (t) setFields(t.fields) }).catch(e => toast(message(e), 'info')) }, [])
+  const update = (i: number, patch: Partial<Field>) => setFields(fields.map((f, index) => i === index ? { ...f, ...patch } : f))
+  const save = async () => { try { await send('/interviews/registration/template', { fields }); toast('登记表模板已保存，新提交使用新版本'); onClose() } catch (e) { toast(message(e), 'info') } }
+  return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3>配置登记表</h3><button onClick={onClose}>关闭</button></div><div className="modal-body">{fields.map((f, i) => <div key={i} style={{borderBottom:'1px solid #ddd', padding:'12px 0'}}><div className="form-grid"><label className="form-field">字段标识<input value={f.key} onChange={e => update(i, { key: e.target.value })} /></label><label className="form-field">名称<input value={f.label} onChange={e => update(i, { label: e.target.value })} /></label></div><select value={f.type} onChange={e => update(i, { type: e.target.value as Field['type'] })}><option value="text">文本</option><option value="textarea">多行文本</option><option value="select">单选</option></select> <label><input type="checkbox" checked={f.required} onChange={e => update(i, { required: e.target.checked })} /> 必填</label> <button onClick={() => setFields(fields.filter((_, n) => n !== i))}>删除</button>{f.type === 'select' && <label className="form-field">选项（逗号分隔）<input value={f.options.join(',')} onChange={e => update(i, { options: e.target.value.split(',') })} /></label>}</div>)}<button className="button button-secondary" onClick={() => setFields([...fields, {key:'',label:'',type:'text',required:false,options:[]}])}>添加字段</button></div><div className="modal-footer"><button className="button button-primary" onClick={save}>保存模板</button></div></div></div>
+}
+function InterviewDetail({ row, onClose }: { row: Row; onClose: () => void }) {
+  const { toast } = useApp(); const [feedback, setFeedback] = useState<Feedback[]>([]); const [transcripts, setTranscripts] = useState<Transcript[]>([]); const [template, setTemplate] = useState<Template | null>(null); const [forms, setForms] = useState<{ id: string; values: Record<string, string>; createdAt: string }[]>([]); const [values, setValues] = useState<Record<string,string>>({}); const [interviewerId, setInterviewerId] = useState(row.interviewerIds[0] || ''); const [content, setContent] = useState(''); const [conclusion, setConclusion] = useState('HOLD'); const [url, setUrl] = useState(''); const [history, setHistory] = useState<{id:string; action:string; actorId:string; reason:string; createdAt:string}[]>([]); const [inviteLink, setInviteLink] = useState(''); const [notifications, setNotifications] = useState<{id:string; action:string; recipient:string}[]>([])
+  const load = () => { request<typeof history>(`/interviews/${row.id}/history`).then(setHistory).catch(() => setHistory([])); request<typeof notifications>(`/interviews/${row.id}/mock-notifications`).then(setNotifications).catch(() => setNotifications([])); Promise.all([request<Feedback[]>(`/interviews/${row.id}/feedback`), request<Transcript[]>(`/interviews/${row.id}/transcripts`), request<Template | null>('/interviews/registration/template'), request<typeof forms>(`/interviews/${row.id}/registration`).catch(() => [])]).then(([f,t,templateResult, formResult]) => { setFeedback(f); setTranscripts(t); setTemplate(templateResult); setForms(formResult) }).catch(e => toast(message(e), 'info')) }
+  useEffect(load, [row.id])
+  const act = async (path: string, body: unknown, success: string) => { try { await send(path, body); toast(success); load(); refreshEvent() } catch(e) { toast(message(e), 'info') } }
+  return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3>{row.candidate.name} · 第 {row.round} 轮</h3><button onClick={onClose}>关闭</button></div><div className="modal-body"><p>Mock 邀请响应（仅受邀面试官本人）</p><button onClick={() => act(`/interviews/${row.id}/response`, { response: 'ACCEPTED' }, '已模拟接受')}>接受</button> <button onClick={() => act(`/interviews/${row.id}/response`, { response: 'DECLINED' }, '已模拟拒绝')}>拒绝</button>
+  <h3>改期与取消记录</h3>{history.map(h => <p key={h.id}>{timeLabel(h.createdAt)} · {h.action} · {h.actorId} · {h.reason}</p>)}<h3>Mock 通知记录</h3>{notifications.map(n => <p key={n.id}>{n.action} · {n.recipient}（模拟）</p>)}<h3>面试评价</h3>{feedback.map(f => <p key={f.id}>{f.interviewerId} · {f.conclusion || "未记录结论"}：{f.content} {f.filledByMode === 'PROXY' && <strong>（PROXY · {f.proxyName || f.filledById} · {f.proxyAt && timeLabel(f.proxyAt)}）</strong>}</p>)}<label className="form-field">评价人<select value={interviewerId} onChange={e => setInterviewerId(e.target.value)}>{row.interviewerIds.map(id => <option key={id} value={id}>{id}</option>)}</select></label><label className="form-field">评价结论<select value={conclusion} onChange={e => setConclusion(e.target.value)}><option value="PASS">通过</option><option value="HOLD">待定</option><option value="REJECT">不通过</option></select></label><label className="form-field">评价内容<textarea value={content} onChange={e => setContent(e.target.value)} /></label><button onClick={() => act(`/interviews/${row.id}/feedback`, { interviewerId, content, conclusion }, '评价已记录，候选人阶段未改变')}>提交评价</button>
+  <h3>听记链接</h3>{transcripts.map(t => <p key={t.id}>第 {t.round} 轮：<a href={t.url} target="_blank" rel="noreferrer">{t.url}</a></p>)}<input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." /> <button onClick={() => act(`/interviews/${row.id}/transcripts`, {url}, '链接已追加')}>追加链接</button>
+  <h3>面试登记表</h3><button onClick={async () => { try { const invite = await send<{token: string}>(`/interviews/${row.id}/registration-invite`, {}); setInviteLink(`${window.location.origin}/registration#${invite.token}`) } catch(e) { toast(message(e), 'info') } }}>生成候选人填写链接</button>{inviteLink && <label className="form-field">一次性链接，请通过授权渠道交给候选人<input readOnly value={inviteLink} /></label>}{forms.map(f => <p key={f.id}>{timeLabel(f.createdAt)}：{Object.entries(f.values).map(([k,v]) => `${k}: ${v}`).join('；')}</p>)}{template ? <>{template.fields.map(f => <label className="form-field" key={f.key}>{f.label}{f.required && ' *'}{f.type === 'select' ? <select value={values[f.key] || ''} onChange={e => setValues({...values,[f.key]:e.target.value})}><option value="">请选择</option>{f.options.map(o => <option key={o}>{o}</option>)}</select> : <input value={values[f.key] || ''} onChange={e => setValues({...values,[f.key]:e.target.value})} />}</label>)}<button onClick={() => act(`/interviews/${row.id}/registration`, {templateId: template.id, values}, '登记表已保存')}>保存登记表</button></> : <p>请先配置登记表字段。</p>}</div></div></div>
 }

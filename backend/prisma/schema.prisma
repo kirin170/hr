@@ -203,12 +203,14 @@ model Interview {
   round           Int      @default(1)
   mode            InterviewMode
   time            DateTime
+  endTime         DateTime?
   location        String?
   interviewerIds  String?
   candidate       Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
   status          InterviewStatus @default(TO_SCHEDULE)
   calendarEventId String?
   cancelReason    String?
+  responses       Json?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -241,12 +243,83 @@ model InterviewFeedback {
   proxyName       String?
   proxyAt         DateTime?
   content         String   @db.Text
+  conclusion      String?
   aiSuggestionRunId String?
   visibleToInterviewers Boolean @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@map("interview_feedback")
+}
+
+model InterviewChange {
+  id          String   @id @default(cuid())
+  interviewId String
+  action      String
+  actorId     String
+  reason      String   @db.Text
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now())
+  @@index([interviewId, createdAt])
+  @@map("interview_changes")
+}
+
+model InterviewMockNotification {
+  id          String   @id @default(cuid())
+  interviewId String
+  action      String
+  recipient   String
+  createdAt   DateTime @default(now())
+  @@index([interviewId, createdAt])
+  @@map("interview_mock_notifications")
+}
+
+model InterviewRegistrationTemplate {
+  id        String   @id @default(cuid())
+  fields    Json
+  createdBy String
+  createdAt DateTime @default(now())
+  @@map("interview_registration_templates")
+}
+
+model InterviewRegistrationForm {
+  id          String   @id @default(cuid())
+  candidateId String
+  jobId       String
+  templateId  String
+  fields      Json
+  values      Json
+  submittedBy String
+  createdAt   DateTime @default(now())
+  @@index([candidateId, jobId, createdAt])
+  @@map("interview_registration_forms")
+}
+
+model InterviewRegistrationInvite {
+  id          String   @id @default(cuid())
+  tokenHash   String   @unique
+  interviewId String
+  templateId  String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  @@index([interviewId])
+  @@map("interview_registration_invites")
+}
+
+model InterviewTranscriptLink {
+  id          String   @id @default(cuid())
+  interviewId String
+  candidateId String
+  jobId       String
+  round       Int
+  url         String   @db.Text
+  createdBy   String
+  createdAt   DateTime @default(now())
+  @@index([candidateId, jobId, round])
+  @@map("interview_transcript_links")
 }
 
 model OfferRecord {

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { refreshAccessToken, getAccessToken, setAccessToken } from './api'
 import { DingTalkLogin } from './DingTalkLogin'
+import { InterviewRegistration } from './pages/InterviewRegistration'
 import { CampusPortal } from './pages/CampusPortal'
 import './styles.css'
 
@@ -15,6 +16,8 @@ function Root() {
     window.addEventListener('talentflow-auth-required', requireLogin)
     return () => window.removeEventListener('talentflow-auth-required', requireLogin)
   }, [])
+
+  if (path.replace(/\/+$/, '') === '/registration') return <InterviewRegistration />
 
   // 校招投递门户为公开页面，不要求登录
   if (path.replace(/\/+$/, '') === '/campus') {

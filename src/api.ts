@@ -110,7 +110,7 @@ export async function loginLocal(identifier: string, secret: string): Promise<st
   return body.accessToken
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let token = getAccessToken()
   let response: Response
   try {
