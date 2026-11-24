@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "work_item": "ATS-019",
+  "date": "2026-11-24",
+  "verified_at": 1795508351530,
+  "source_sha": "3917d1af7f4a8213cf8afefa894d1a7a94dcd2bd",
+  "working_tree_dirty": true,
+  "summary": "ATS-019 在 3917d1a 上验收：招聘需求审批同步（真实签名/AES 校验、corpId 校验、processCode 白名单、唯一约束 + 事务 + 事件去重保证 16 并发重复回调只生成 1 条需求）、人工触发同步、事件失败重试、录用审批发起（两级审批人、材料仅简历/面试登记表/录用职级，薪资与面试评价不进 OA）、OA 状态回读（仅展示，不驱动阶段结果）均通过隔离库验证。隔离临时 MySQL 在当前 HEAD（含 ATS-018/023/024 迁移）重放全量迁移成功，5 项集成用例全部通过；后端 typecheck 通过、oxlint 0 错误（2 条既有告警属 settings/audit 模块）、钉钉相关 102 项单测通过；前端 tsc + vite build 通过。同步修复 DINGTALK_CALLBACK_OWNER_KEY 空值不回退导致回调 503 的部署配置缺陷。未与真实钉钉审批实例联调，列入 limitations 并转 ATS-025。",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; node node_modules/vitest/vitest.mjs run src/dingtalk --prefix backend; npm run build; node backend/scripts/ats019-isolated-check.mjs",
+  "scope": [
+    "backend/prisma/migrations/20261124100000_ats019_dingtalk_oa/migration.sql",
+    "backend/prisma/schema.prisma",
+    "backend/scripts/ats019-isolated-check.mjs",
+    "backend/src/dingtalk/dingtalk-api.client.ts",
+    "backend/src/dingtalk/dingtalk-callback-crypto.ts",
+    "backend/src/dingtalk/dingtalk-department-code.ts",
+    "backend/src/dingtalk/dingtalk-oa.client.ts",
+    "backend/src/dingtalk/dingtalk-oa.client.spec.ts",
+    "backend/src/dingtalk/dingtalk-oa.config.ts",
+    "backend/src/dingtalk/dingtalk-oa.controller.ts",
+    "backend/src/dingtalk/dingtalk-oa.errors.ts",
+    "backend/src/dingtalk/dingtalk-oa.integration.spec.ts",
+    "backend/src/dingtalk/dingtalk-oa.service.ts",
+    "backend/src/dingtalk/dingtalk-oa.service.spec.ts",
+    "backend/src/dingtalk/dingtalk-sync.service.ts",
+    "backend/src/dingtalk/dingtalk-sync.service.spec.ts",
+    "backend/src/dingtalk/dingtalk.module.ts",
+    "backend/src/offers/offers.module.ts",
+    "backend/src/offers/offers.service.ts",
+    "backend/src/requisitions/requisitions.controller.ts",
+    "backend/src/requisitions/requisitions.service.ts",
+    "backend/.env.example",
+    "src/api.ts",
+    "src/types.ts",
+    "src/pages/Positions.tsx",
+    "src/components/OfferPanel.tsx",
+    "README.md",
+    "隔离临时数据库 ats019_tmp_*（验证后删除）"
+  ],
+  "checks": [
+    {
+      "name": "requisition_oa_callback_and_manual_sync",
+      "passed": true,
+      "criteria": [
+        "招聘需求审批通过实接、签名/来源校验、唯一约束与事务保证重复并发回调不重复生成；支持人工触发同步。"
+      ],
+      "details": "隔离库验证：伪造签名返回 401，corpId 不符返回 400，非本任务 processCode 与缺失 processCode 的事件只确认接收、不落库不处理；16 个并发重复回调只产生 1 条事件，8 次 Worker 并发重试与 12 次直接事件重放后 job_requisition 仍只有 1 条（oaApprovalId 唯一 + 事务）；时间线仅 1 条 requisition.created_from_oa，事件最终 PROCESSED。人工同步 POST /requisitions/sync-from-oa 只接受审批实例标识，重复提交返回 created=false，开始招聘时间仅允许在人工路径补录；OA 表单缺少开始时间时回读失败并给出明确错误码。招聘需求字段全部由服务端回读 OA 写入，不接受前端直传。能力探测 GET /requisitions/oa-sync/capability 返回模板配置状态，未配置时前端只保留人工通道。事件列表与失败重试接口可用，前端已提供「OA 同步记录」面板。"
+    },
+    {
+      "name": "offer_approval_materials_and_two_levels",
+      "passed": true,
+      "criteria": [
+        "录用审批材料和两级审批对应正式 OA，结果手工回填兜底；录用结果自动回调仅为可选增强，不作为必交付门槛。"
+      ],
+      "details": "隔离库验证：POST /candidates/:id/offer/oa 由系统发起录用审批，材料固定为简历信息、面试登记表、录用职级，登记表中的手机号、期望薪资、AI 建议等字段被剔除，OA 请求体中不含薪资明细；审批人按配置注入两级（人事经理 → 人事主管），同级多人按 AND 会签，缺任一级或会签方式非法时 capability 报配置错误。系统发起后 Offer 记录 oaInstanceId 写入，人工修改 oaApprovalId 被拒绝，前端输入框置灰。POST /offer/oa/refresh 只回读并更新 oaInstanceStatus/oaInstanceResult/oaSyncedAt，不改变 Offer 阶段与阶段结果；人工回填单号路径仍可用（无系统实例时），手工回填兜底保留。"
+    },
+    {
+      "name": "no_self_built_workflow_no_reverse_write",
+      "passed": true,
+      "criteria": [
+        "系统不自建审批流、不反向更改 OA 原单，不引入薪资明细。"
+      ],
+      "details": "代码与集成断言核对：ATS 侧无审批流表与审批状态机，OA 只作为外部审批结果来源；所有 OA 交互均为发起审批或读取实例详情，无更新/撤销 OA 原单的调用；OA 客户端请求体与材料预览均不含薪资字段，候选人与 Offer 的薪资数据不进入 OA 请求；回读结果只落展示字段，不写回 OA。"
+    },
+    {
+      "name": "isolated_snapshot_and_regression",
+      "passed": true,
+      "criteria": [],
+      "details": "在 3917d1a 执行：后端 tsc 类型检查通过；oxlint 0 错误（2 条既有告警位于 settings/reason-settings.service.ts 与 audit/audit.controller.ts，非本任务范围）；钉钉目录 16 个测试文件 102 项通过、12 项按设计跳过；前端 vite build（含 tsc）通过；临时 MySQL 重放当前 HEAD 全部迁移（含 ATS-018/023/024）成功，ATS-019 隔离套件 5 项全部通过，临时库已删除。集成测试的环境变量改为直接写入 process.env 并在 afterAll 还原，避免 vitest 4 在 beforeAll 中的 stubEnv 到测试执行时被恢复。"
+    }
+  ],
+  "limitations": [
+    "未与真实钉钉测试企业的两类审批模板联调：招聘需求回调、录用审批发起、实例详情回读均以 HTTP 桩替换钉钉开放接口（签名与 AES 加解密使用真实算法），真实 processCode、表单字段名、审批人 userId 与回调订阅可达性未验证，列入 ATS-025 发布前阻断事项。",
+    "前端仅通过 tsc 与 vite build，未做登录态下的浏览器走查：新建需求、OA 编号展示、发起录用审批、刷新状态、OA 同步记录面板的实际交互未人工点击验证。",
+    "部署配置需人工确认：backend/.env.example 已列出 DINGTALK_OA_* 全部键与字段映射说明，但当前 .env.local 未配置任何 OA 键，capability 在生产环境会报未配置并只保留人工通道。",
+    "仅验证单人 HR 场景，未覆盖多 HR 并发人工同步同一实例（已有唯一约束兜底，但未做多用户并发实测）。"
+  ],
+  "follow_up": [
+    "ATS-025：在测试企业创建两类审批模板，填入 processCode 与字段映射，验证真实回调（含重试与验签）、真实发起录用审批、真实回读实例状态。",
+    "ATS-025：登录态浏览器走查 Positions 新建需求、Offer 面板发起/刷新 OA 审批与 OA 同步记录面板。",
+    "ATS-025：多 HR 并发人工同步同一审批实例的实测。"
+  ]
+}

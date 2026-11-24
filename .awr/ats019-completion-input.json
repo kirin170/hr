@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source_sha": "3917d1af7f4a8213cf8afefa894d1a7a94dcd2bd",
+  "acceptance": [
+    {
+      "criterion": "招聘需求审批通过实接、签名/来源校验、唯一约束与事务保证重复并发回调不重复生成；支持人工触发同步。",
+      "evidence": ["ats019-dingtalk-oa-v1"]
+    },
+    {
+      "criterion": "录用审批材料和两级审批对应正式 OA，结果手工回填兜底；录用结果自动回调仅为可选增强，不作为必交付门槛。",
+      "evidence": ["ats019-dingtalk-oa-v1"]
+    },
+    {
+      "criterion": "系统不自建审批流、不反向更改 OA 原单，不引入薪资明细。",
+      "evidence": ["ats019-dingtalk-oa-v1"]
+    }
+  ]
+}
