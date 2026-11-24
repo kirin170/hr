@@ -4,8 +4,10 @@ import { Injectable } from '@nestjs/common';
 const REQUEST_TIMEOUT_MS = 8_000;
 /** 只允许读取钉钉听记域名，避免把任意 URL 当作听记素材来源 */
 const MINUTES_HOSTS = new Set(['shanji.dingtalk.com']);
-const MINUTES_ID_PATTERN = /^[0-9a-f]{16,64}$/i;
-const MINUTES_PATH_PATTERN = /\/(?:transcribes?|transcriptions?|minutes)\/([0-9a-f]{16,64})(?:\/|$)/i;
+/** 真实听记 ID 形如 <16 位以上十六进制>_<十六进制>_<十六进制>，分段之间用下划线连接 */
+const MINUTES_ID_SOURCE = '[0-9a-f]{16,128}(?:_[0-9a-f]+)*';
+const MINUTES_ID_PATTERN = new RegExp(`^${MINUTES_ID_SOURCE}$`, 'i');
+const MINUTES_PATH_PATTERN = new RegExp(`\\/(?:transcribes?|transcriptions?|minutes)\\/(${MINUTES_ID_SOURCE})(?:\\/|$)`, 'i');
 const PERMISSION_CODES = new Set(['403', '401', 'Forbidden', 'Forbidden.AccessDenied', 'noPermission', 'MINUTES_ACCESS_DENIED']);
 const RETRYABLE_STATUS = new Set([429, 502, 503, 504]);
 /** 单条听记素材上限，避免异常响应把数据库写满 */

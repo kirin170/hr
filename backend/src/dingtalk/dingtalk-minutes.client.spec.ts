@@ -36,6 +36,13 @@ describe('parseMinutesLink（DT-4 听记来源识别）', () => {
     expect(parseMinutesLink(id)).toEqual({ minutesId: id });
   });
 
+  it('识别带下划线分段的线上听记链接', () => {
+    const real = '7632756964353431303231313937313138315f323433313835333732355f35';
+    expect(parseMinutesLink(`https://shanji.dingtalk.com/app/transcribes/${real}`)).toEqual({ minutesId: real });
+    expect(parseMinutesLink(real)).toEqual({ minutesId: real });
+    expect(parseMinutesLink('https://shanji.dingtalk.com/app/transcribes/not_a_valid')).toBeNull();
+  });
+
   it('拒绝非钉钉听记域名与无法识别的内容，避免按外部链接回源', () => {
     expect(parseMinutesLink('https://example.org/app/transcribes/a1b2c3d4e5f60718')).toBeNull();
     expect(parseMinutesLink('https://shanji.dingtalk.com/app/home')).toBeNull();
