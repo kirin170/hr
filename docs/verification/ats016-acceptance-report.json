@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "work_item": "ATS-016",
+  "date": "2026-11-24",
+  "verified_at": 1795484200769,
+  "source_sha": "016ff926ab2c5583532ad8de5189263e468cadec",
+  "working_tree_dirty": true,
+  "working_tree_note": "隔离 MySQL 集成验证在共享工作树执行，另含 ATS-019/024 未提交迁移和代码；独立源码快照以 HEAD 和本次改动构造并运行构建与常规测试。",
+  "summary": "ATS-016 入职及试用期链路和内部人事站内保温提醒；隔离 MySQL 4 项集成测试通过，验证并发计数、改期与提醒去重等。",
+  "command": "node scripts/ats016-isolated-check.mjs (backend); npm run typecheck (backend); npm run build (源码快照前后端); npm test (源码快照 backend); npx vitest run src/dingtalk/dingtalk-callback-crypto.spec.ts (源码快照 backend)",
+  "scope": [
+    "backend/src/candidates",
+    "backend/src/offers",
+    "backend/prisma/migrations/20261124000000_ats016_onboard_reasons",
+    "backend/prisma/migrations/20261124010000_ats016_reminders",
+    "src/components/OnboardingPanel.tsx",
+    "src/pages/Probation.tsx",
+    "src/components/TopBar.tsx"
+  ],
+  "checks": [
+    {
+      "name": "entry_and_hired",
+      "passed": true,
+      "criteria": [
+        "仅书面 Offer 为接受、入职时间和已发送标记均具备时可入待入职；不通过不可推进，确认入职回写 hiredCount，重复操作不重复累计。"
+      ],
+      "details": "单元测试验证 Offer 事实和背调失败；隔离库验证并发确认仅计一次、撤销回退和重复确认。"
+    },
+    {
+      "name": "abandon_and_reminder",
+      "passed": true,
+      "criteria": [
+        "放弃入职使用集 C 原因必填并归档，「其他·可填写」需说明；保温基准随入职日期更新且仅提醒人事。"
+      ],
+      "details": "隔离库验证集 C、其他说明、提醒并发去重、已读、改期失效和入职后失效；仅职位招聘负责人且持 RECRUITER 和候选人权限可收站内提醒。"
+    },
+    {
+      "name": "probation_scope",
+      "passed": true,
+      "criteria": [
+        "试用期仅记录是否转正和时间，原型绩效/目标/自建审批能力按业务范围收敛；不采集入职花名册、薪资和社保档案。"
+      ],
+      "details": "隔离库验证显式转正及日期持久化；试用期 UI 收敛至真实候选人及结果记录。"
+    }
+  ],
+  "limitations": [
+    "站内提醒默认七天周期是需求未指定频率时的实现默认值；须运行 worker 并为职位配置具权限的招聘负责人。",
+    "钉钉正式通知适配由 ATS-018 承接；未发送真实钉钉消息。",
+    "没有进行浏览器人工业务走查或业务验收。",
+    "源码快照常规测试 190 通过、24 跳过、1 既有签名测试因随机签名末位恰为替换值失败，单独重跑通过。",
+    "隔离 MySQL 测试包含并行任务尚未提交的迁移，不能视为纯提交版本的独立迁移验收。"
+  ]
+}

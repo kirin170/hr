@@ -329,7 +329,7 @@ work_items:
   "verification": {"evidence_level":"locally_verified"}
 - id: ATS-016
   kind: delivery
-  status: planned
+  status: completed
   owner: Codex
   goal: ats-offer-onboarding
   priority: P1
@@ -340,7 +340,9 @@ work_items:
   - "放弃入职使用集 C 原因必填并归档，「其他·可填写」需说明；保温基准随入职日期更新且仅提醒人事。"
   - "试用期仅记录是否转正和时间，原型绩效/目标/自建审批能力按业务范围收敛；不采集入职花名册、薪资和社保档案。"
   depends_on: [ATS-015]
-  next_action: "已预派给 Codex（第3批，待 ATS-015 完成后启动）：先定义待入职准入条件（书面 Offer 接受+入职时间+已发送）、确认入职幂等与 hiredCount 回写、放弃入职集 C 原因校验，并明确原型试用期绩效与自建审批数据的收敛及迁移范围。"
+  next_action: "无；已完成 ATS-016 本地验证，ATS-018 前置依赖已解除；钉钉正式通知由 ATS-018 接入。"
+  "evidence": ["docs/verification/ats016-acceptance-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-017
   kind: delivery
   status: completed
