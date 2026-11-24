@@ -1,5 +1,3 @@
-import { createServer, type Server } from 'node:http';
-import type { AddressInfo } from 'node:net';
 import { Test } from '@nestjs/testing';
 import { DataScope } from '@prisma/client';
 import request from 'supertest';
@@ -11,7 +9,7 @@ import { AuthorizationModule } from '../auth/authorization.module.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { CandidatesModule } from '../candidates/candidates.module.js';
-import { DingTalkMinutesClient, MINUTES_SOURCE } from '../dingtalk/dingtalk-minutes.client.js';
+import { MINUTES_SOURCE, MinutesSourceError, type MinutesSource } from '../dingtalk/dingtalk-minutes.client.js';
 import { JobsModule } from '../jobs/jobs.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -27,11 +25,41 @@ const isolated = process.env.ATS020_ISOLATED_TEST === '1'
 const MINUTES_ID = 'a1b2c3d4e5f60718';
 const MINUTES_URL = `https://shanji.dingtalk.com/app/transcribes/${MINUTES_ID}`;
 
+/**
+ * 隔离库测试用内存听记源：真实读取走部署机上的 dws 服务账号，
+ * 集成测试只验证 ATS 侧的数据范围、留存与交付，不拉起 CLI。
+ */
+class FakeMinutesSource implements MinutesSource {
+  constructor(private readonly deniedOperator: string) {}
+
+  capability() {
+    return Promise.resolve({ state: 'AVAILABLE' as const, configured: true, checkedAt: new Date().toISOString(), code: null });
+  }
+
+  fetch(minutesId: string, operator: string) {
+    if (operator === this.deniedOperator) {
+      return Promise.reject(new MinutesSourceError('DENIED', 'MINUTES_CLI_DENIED'));
+    }
+    if (minutesId !== MINUTES_ID) {
+      return Promise.reject(new MinutesSourceError('NOT_FOUND', 'MINUTES_NOT_FOUND'));
+    }
+    return Promise.resolve({
+      minutesId,
+      title: '一面听记',
+      summary: '候选人介绍了订单系统改造经历',
+      originalText: '面试官：请介绍项目\n候选人：负责订单系统改造',
+      segments: [
+        { index: 0, startMs: 0, endMs: 1500, speaker: '面试官', text: '请介绍项目' },
+        { index: 1, startMs: 1500, endMs: 5000, speaker: '候选人', text: '负责订单系统改造' },
+      ],
+      transcriptUnavailable: null,
+    });
+  }
+}
+
 describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
   const db = new PrismaService();
   const auth = new AuthorizationService(db);
-  const service = new InterviewTranscriptsService(db, auth, new TimelineService(db), new DingTalkMinutesClient());
-  const interviews = new InterviewsService(db, auth, new MockInterviewNotifications(db), new MockInterviewCalendar(db));
   const actor = (id: string, scope: DataScope, perms: string[]): AuthenticatedUser => ({
     id, displayName: id, departmentId: null, departmentIds: [], groupIds: [],
     roles: [{ code: id, name: id, dataScope: scope, permissions: perms }],
@@ -41,46 +69,15 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
   const deniedInterviewer = actor('ats020_i2', DataScope.PARTICIPATING, ['candidate:read']);
   const outsider = actor('ats020_out', DataScope.SELF, ['candidate:read']);
   const noIdentity = actor('ats020_noid', DataScope.ALL, ['candidate:read']);
+  const minutes = new FakeMinutesSource(deniedInterviewer.id);
+  const service = new InterviewTranscriptsService(db, auth, new TimelineService(db), minutes);
+  const interviews = new InterviewsService(db, auth, new MockInterviewNotifications(db), new MockInterviewCalendar(db));
 
-  let gateway: Server;
   let interviewId = '';
   let linkId = '';
 
   beforeAll(async () => {
     await db.$connect();
-    gateway = createServer((req, res) => {
-      const chunks: Buffer[] = [];
-      req.on('data', (chunk: Buffer) => chunks.push(chunk));
-      req.on('end', () => {
-        const body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString('utf8')) as { minutesId?: string; operatorUserId?: string } : {};
-        if (req.url === '/v1/minutes/capability') {
-          res.writeHead(200, { 'content-type': 'application/json' }).end('{"ok":true}');
-          return;
-        }
-        if (body.operatorUserId === 'denied-user') {
-          res.writeHead(403, { 'content-type': 'application/json' }).end('{"code":"noPermission"}');
-          return;
-        }
-        if (!body.minutesId) {
-          res.writeHead(400, { 'content-type': 'application/json' }).end('{"code":"badRequest"}');
-          return;
-        }
-        res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({
-          minutesId: body.minutesId,
-          title: '一面听记',
-          summary: '候选人介绍了订单系统改造经历',
-          originalText: '面试官：请介绍项目\n候选人：负责订单系统改造',
-          segments: [
-            { startMs: 0, endMs: 1500, speaker: '面试官', text: '请介绍项目' },
-            { startMs: 1500, endMs: 5000, speaker: '候选人', text: '负责订单系统改造' },
-          ],
-        }));
-      });
-    });
-    await new Promise<void>((resolve) => gateway.listen(0, '127.0.0.1', resolve));
-    process.env.APP_ENV = 'local';
-    process.env.DINGTALK_MINUTES_GATEWAY_URL = `http://127.0.0.1:${(gateway.address() as AddressInfo).port}`;
-    process.env.DINGTALK_MINUTES_GATEWAY_TOKEN = 'ats020-token';
 
     await db.user.createMany({
       data: [
@@ -89,14 +86,6 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
         { id: deniedInterviewer.id, displayName: 'I2' },
         { id: outsider.id, displayName: 'Out' },
         { id: noIdentity.id, displayName: 'NoIdentity' },
-      ],
-    });
-    await db.identityLink.createMany({
-      data: [
-        { provider: 'DINGTALK', subject: 'ding-i1', userId: interviewer.id },
-        { provider: 'DINGTALK', subject: 'denied-user', userId: deniedInterviewer.id },
-        { provider: 'DINGTALK', subject: 'ding-out', userId: outsider.id },
-        { provider: 'DINGTALK', subject: 'ding-hr', userId: hr.id },
       ],
     });
     await db.job.create({
@@ -118,7 +107,6 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
   });
 
   afterAll(async () => {
-    if (gateway) await new Promise<void>((resolve) => gateway.close(() => resolve()));
     await db.$disconnect();
   });
 
@@ -149,15 +137,18 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
     expect((await db.interviewTranscriptLink.findUniqueOrThrow({ where: { id: linkId } })).url).toBe(MINUTES_URL);
   });
 
-  it('rejects out-of-scope readers and operators denied by DingTalk', async () => {
+  it('rejects out-of-scope readers, ignores operator DingTalk binding, and keeps denials leak-free', async () => {
     await expect(service.fetchMaterial(interviewId, linkId, outsider)).rejects.toMatchObject({ status: 404 });
-    await expect(service.fetchMaterial(interviewId, linkId, noIdentity)).rejects.toMatchObject({ status: 403 });
+
+    // 服务账号读取：操作者未绑定钉钉身份也可读，归属由 ATS 审计记录
+    const unbound = await service.fetchMaterial(interviewId, linkId, noIdentity);
+    expect(unbound.material.minutesId).toBe(MINUTES_ID);
 
     const denied = await service.fetchMaterial(interviewId, linkId, deniedInterviewer).catch((error: unknown) => error);
     expect(denied).toMatchObject({ status: 403 });
     expect((denied as Error).message).not.toContain('候选人介绍了订单系统改造经历');
     const deniedEvent = await db.timelineEvent.findFirst({ where: { entityId: interviewId, action: 'interview.transcript.material_failed' }, orderBy: { createdAt: 'desc' } });
-    expect(deniedEvent?.payload).toMatchObject({ code: 'MINUTES_HTTP_403', kind: 'DENIED' });
+    expect(deniedEvent?.payload).toMatchObject({ code: 'MINUTES_CLI_DENIED', kind: 'DENIED' });
   });
 
   it('keeps manual entry as the degraded channel with write permission', async () => {
@@ -214,7 +205,7 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
         InterviewsService,
         InterviewTranscriptsService,
         TimelineService,
-        { provide: MINUTES_SOURCE, useValue: new DingTalkMinutesClient() },
+        { provide: MINUTES_SOURCE, useValue: minutes },
         { provide: INTERVIEW_CALENDAR, useClass: MockInterviewCalendar },
         { provide: INTERVIEW_NOTIFICATIONS, useClass: MockInterviewNotifications },
       ],

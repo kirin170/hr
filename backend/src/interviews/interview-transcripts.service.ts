@@ -70,7 +70,12 @@ export class InterviewTranscriptsService {
     };
   }
 
-  /** 按操作者钉钉身份读取听记原文/摘要；越权、未开通与失败分别给出显式错误码 */
+  /**
+   * 读取听记原文/摘要。
+   *
+   * 钉钉侧由部署机的服务账号统一授权，ATS 侧只做数据范围校验；操作者仅作为审计归属记录，
+   * 不要求绑定钉钉身份。越权、未开通与失败分别给出显式错误码。
+   */
   async fetchMaterial(interviewId: string, linkId: string, actor: AuthenticatedUser) {
     const interview = await this.readable(interviewId, actor);
     const link = await this.link(interviewId, linkId);
@@ -78,21 +83,10 @@ export class InterviewTranscriptsService {
     if (!minutesId) {
       throw new BadRequestException('该链接不是可读取的钉钉听记地址，请粘贴原文或摘要');
     }
-    const identity = await this.db.identityLink.findUnique({
-      where: { provider_userId: { provider: 'DINGTALK', userId: actor.id } },
-      select: { subject: true },
-    });
-    if (!identity?.subject) {
-      await this.record(interview.id, 'interview.transcript.material_denied', actor.id, {
-        linkId: link.id,
-        code: 'MINUTES_IDENTITY_MISSING',
-      });
-      throw new ForbiddenException('当前账号未绑定钉钉身份，无法按本人权限读取听记');
-    }
 
     let material: MinutesMaterial;
     try {
-      material = await this.minutes.fetch(minutesId, identity.subject);
+      material = await this.minutes.fetch(minutesId, actor.id);
     } catch (error) {
       throw await this.fail(interview.id, link.id, actor.id, error);
     }
@@ -144,6 +138,8 @@ export class InterviewTranscriptsService {
       minutesId,
       chars: (material.originalText ?? material.summary ?? '').length,
       hash: hash.slice(0, 12),
+      // 逐字稿未取到但摘要可读时如实标注部分成功，避免下游当成完整转写
+      transcriptUnavailable: material.transcriptUnavailable ?? null,
     });
     return { material: this.materialDto(created), deduplicated: false };
   }

@@ -63,7 +63,7 @@
 ## 6. 当前实现与待验证项
 
 - 已在本地实现 OAuth 授权码登录、企业 ID 校验、`unionId → userId` 映射、加密回调、用户/部门全量与事件增量同步、离职权限撤销、多部门归属、BullMQ 失败重试和管理端人工重试接口。
-- 已在本地实现 DT-4 听记素材读取（ATS-020）：听记链接解析、按操作者钉钉身份读取原文/摘要、按轮次追加留存、`INTERVIEW_EVAL` 统一素材交付、越权与失败降级，详见 §7。真实租户的听记读取能力仍未验证。
+- 已在本地实现 DT-4 听记素材读取（ATS-020）：听记链接解析、进程内调用 dws 以服务账号读取原文/摘要、按轮次追加留存、`INTERVIEW_EVAL` 统一素材交付、越权与失败降级，详见 §7。真实租户的听记读取能力仍未验证。
 - 当前未注入钉钉测试企业的 AppKey/AppSecret、corpId、回调 Token/AESKey；未执行租户联调、权限审批或真实回调验证。不得将本地测试报告写成租户验收证据。
 - 租户验证顺序：先配置最小权限并做 OAuth 与当前用户映射；再用脱敏组织样例验证全量部门树、多部门用户、重复回调、转岗、离职、无效签名、接口限流、超时、失败重试与手工恢复；最后分别验证 DT-1、DT-3、DT-4、DT-5、DT-6 的权限和对应业务降级。
 - 钉钉开放平台官方文档复核记录（2026-11-18）：
@@ -75,25 +75,28 @@
 
 ## 7. DT-4 听记素材读取（ATS-020）
 
-### 7.1 能力现状（2026-11-23 复核）
+### 7.1 能力现状（2026-11-24 复核）
 
-- 钉钉开放平台当前未向企业内部应用提供听记（AI 听记）读取的 REST 接口。官方对外通道是「AI 听记 · 连接你的 AI 工具」中的 CLI（dws）与 MCP/内置连接器；组织内使用需管理员开通权限，并由成员扫码授权，读取范围受授权人本人可见范围限制。
-- 因此 ATS 后端不能仅凭 AppKey/AppSecret 读取任意听记。实现以「按操作者身份读取 + 显式能力探测」为前提：未开通时保留人工录入通道，不伪造素材，也不把内置智能纪要当评估结论。
+- 钉钉开放平台未向企业内部应用提供 AI 听记读取的 REST 接口。官方通道是「AI 听记 · 连接你的 AI 工具」中的 CLI（dws）与 MCP/内置连接器；组织内使用需管理员放开 CLI 访问，并由成员扫码授权，读取范围受授权账号可见范围限制。
+- 2026-11-24 在授权测试组织后台核实：`Minutes.Content.Read` 已开通（无需审批），但该权限只关联「查询/创建 DingTalkA1 小助理分析」两个接口，入参为 `agentId` 与 `openFileId`，不接受听记 uuid，读不到 AI 听记的摘要与逐字稿。
+- 因此采用「服务账号 + 单实例固定主机」方案：部署机安装 dws，由招聘服务账号执行一次 `dws auth login --device` 授权，后端以子进程调用 dws 读取；ATS 侧只做数据范围校验，操作者无需绑定钉钉身份，读取身份统一为服务账号。面试官需把听记分享给该服务账号（或设置为组织内可见），否则读不到。
 
 ### 7.2 本地实现
 
-- 链接解析：只接受 `shanji.dingtalk.com` 的听记地址（如 `/app/transcribes/<id>`）或 16–64 位十六进制听记 ID；外部域名不解析、不回源，避免 SSRF。
-- 读取：按当前操作者的 `DINGTALK userId` 调用部署环境注入的听记网关，由网关在租户侧按人授权。
-  - `GET {DINGTALK_MINUTES_GATEWAY_URL}/v1/minutes/capability`
-  - `POST {DINGTALK_MINUTES_GATEWAY_URL}/v1/minutes/transcripts`，请求体 `{ minutesId, operatorUserId }`，响应 `{ minutesId, title, summary, originalText, segments[] }`
-  - 单请求 8 秒超时；429/5xx/网络错误重试一次；401/403 与权限错误码立即判为越权，不重试。
-- 错误与降级：ATS 数据范围越权按 404 处理；钉钉侧越权返回 403 并记录 `interview.transcript.material_denied` / `material_failed`（仅错误码）；租户未开通返回 503 并提示人工录入；原文、摘要与令牌不进入日志、审计摘要或错误信息。
+- 链接解析：只接受 `shanji.dingtalk.com` 的听记地址（如 `/app/transcribes/<id>`）或十六进制听记 ID（允许下划线分段）；外部域名不解析、不回源，避免 SSRF。
+- 读取：进程内以子进程执行 dws，无独立网关服务。
+  - 摘要与基础信息：`dws minutes +detail --id <id> --artifacts basic,summary --format json`
+  - 完整逐字稿：`dws minutes +transcript --id <id> --format json`（跨分页；`complete=false` 判为失败，不写入残缺素材）
+  - 能力探测：`dws minutes +list-mine --format json`，结果缓存 60 秒
+  - 单次调用超时 30 秒（`DINGTALK_MINUTES_DWS_TIMEOUT_MS`），输出上限 64MB，单条素材上限 200 万字符
+- 输出归一化：兼容 `{ success, data }` 包裹与 `segments/paragraphs/sentences` 容器；字段无法识别时返回 `MINUTES_TRANSCRIPT_SHAPE_UNSUPPORTED`，不把未知结构当成“没有发言”。逐字稿失败但摘要可读时按部分成功返回并记录 `transcriptUnavailable` 错误码。
+- 错误与降级：ATS 数据范围越权按 404 处理；dws 认证/权限失败返回 403 并记录 `interview.transcript.material_denied` / `material_failed`（仅错误码，不落 stderr 文本）；未配置 dws 或二进制缺失返回 503 并提示人工录入；原文、摘要与令牌不进入日志、审计摘要或错误信息。
+- 部署约束：dws 授权凭证与设备绑定，换机器、重建容器或迁移服务器后需重新扫码授权；因此后端按单实例固定主机部署，不做多副本共享。
 - 留存：素材写入 `interview_transcript_materials`，按「链接 + 内容哈希」唯一，重复读取不新增、不覆盖既有来源关联；链接表只补齐 `minutesId/source`，不改写 URL；听记链接仍按轮次追加。
 - 交付：`INTERVIEW_EVAL` 输入契约 `interview-eval.v1` 只保存素材引用（`materialId`、`sourceRef`、哈希、长度、分段数）与面试上下文、职位招聘要求、本轮评价；`boundaries` 写死「内置智能纪要不得作为结论、AI 输出为草稿、需人工确认」。职位无招聘要求时不发起评估（AI-5）。
 
 ### 7.3 待验证项
 
-- 2026-11-24 在授权测试组织的开放平台后台核实：`Minutes.Content.Read` 已开通（无需审批），但该权限只关联「查询/创建 DingTalkA1 小助理分析」两个接口，官方文档写明入参为 `agentId` 与 `openFileId`，不接受听记 uuid，读不到 AI 听记的摘要与逐字稿。
-- 授权测试组织是否具备听记读取能力、所需权限点与审批路径。
-- 网关（或等价服务端通道）的正式实现、限流与配额。
-- 真实听记的摘要/原文质量、分段时间轴字段与长文本上限。
+- 部署机安装 dws 并完成服务账号授权后，用 `scripts/ats020-minutes-probe.mjs` 核对 `+detail` / `+transcript` 的真实输出结构（脚本只打印键名与类型，不打印正文），据此确认归一化映射。
+- 组织是否已放开 CLI 访问管理；听记分享给服务账号的实际流程与可见范围。
+- 真实听记的摘要质量、分段时间轴字段与长文本上限。

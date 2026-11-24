@@ -71,7 +71,7 @@ const makeService = (overrides: Partial<MinutesSource> = {}) => {
       findMany: vi.fn().mockResolvedValue([material]),
       create: vi.fn().mockResolvedValue(material),
     },
-    identityLink: { findUnique: vi.fn().mockResolvedValue({ subject: 'ding-user-1' }) },
+
     job: { findUnique: vi.fn().mockResolvedValue({ requirements: '五年以上 Java 经验' }) },
     interviewFeedback: { findMany: vi.fn().mockResolvedValue([{ interviewerId: 'i-1', conclusion: 'PASS', content: '基础扎实' }]) },
     aIRun: { create: vi.fn().mockResolvedValue({ id: 'run-1', type: 'INTERVIEW_EVAL', status: 'PENDING', isDraft: true, createdAt: new Date() }), findMany: vi.fn().mockResolvedValue([]) },
@@ -117,17 +117,11 @@ describe('听记素材按权限读取（ATS-020）', () => {
     expect(mocks.fetchMock).not.toHaveBeenCalled();
   });
 
-  it('未绑定钉钉身份时拒绝读取并留痕', async () => {
+  it('服务账号读取：操作者无需绑定钉钉身份，操作者仅作审计归属', async () => {
     const { service, mocks } = makeService();
-    mocks.prisma.identityLink.findUnique.mockResolvedValue(null);
-    await expect(service.fetchMaterial(interview.id, link.id, actor)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(mocks.fetchMock).not.toHaveBeenCalled();
-    expect(mocks.timeline.record).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: 'interview.transcript.material_denied',
-        payload: expect.objectContaining({ code: 'MINUTES_IDENTITY_MISSING' }),
-      }),
-    );
+    const result = await service.fetchMaterial(interview.id, link.id, actor);
+    expect(result.deduplicated).toBe(false);
+    expect(mocks.fetchMock).toHaveBeenCalledWith('a1b2c3d4e5f60718', actor.id);
   });
 
   it('钉钉拒绝越权读取时返回 403，记录错误码且不写入素材', async () => {
@@ -146,7 +140,7 @@ describe('听记素材按权限读取（ATS-020）', () => {
 
   it('租户未开通听记能力时降级提示人工录入', async () => {
     const { service } = makeService({
-      fetch: vi.fn().mockRejectedValue(new MinutesSourceError('UNSUPPORTED', 'MINUTES_GATEWAY_NOT_CONFIGURED')),
+      fetch: vi.fn().mockRejectedValue(new MinutesSourceError('UNSUPPORTED', 'MINUTES_CLI_NOT_CONFIGURED')),
     });
     await expect(service.fetchMaterial(interview.id, link.id, actor)).rejects.toMatchObject({ status: 503 });
   });

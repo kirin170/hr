@@ -13,7 +13,7 @@ type Transcript = { id: string; round: number; url: string; source: string; minu
 type MinutesCapability = { state: 'AVAILABLE' | 'DENIED' | 'UNSUPPORTED' | 'UNAVAILABLE'; configured: boolean; checkedAt: string; code: string | null; manualEntryAvailable: boolean }
 const capabilityLabel = (capability: MinutesCapability | null) => !capability
   ? '检测中'
-  : `${({ AVAILABLE: '可用', DENIED: '无权限', UNSUPPORTED: '未开通', UNAVAILABLE: '不可用' } as Record<string, string>)[capability.state] ?? capability.state}${capability.code ? `（${capability.code}）` : ''}`
+  : `${({ AVAILABLE: '可用', DENIED: '无权限', UNSUPPORTED: '未配置', UNAVAILABLE: '不可用' } as Record<string, string>)[capability.state] ?? capability.state}${capability.code ? `（${capability.code}）` : ''}`
 const send = <T,>(path: string, body: unknown) => request<T>(path, { method: 'POST', body: JSON.stringify(body) })
 const datePart = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s))
 const localInput = (s: string) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(s)).replace(' ', 'T')
