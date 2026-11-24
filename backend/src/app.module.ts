@@ -4,12 +4,14 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AttachmentsModule } from './attachments/attachments.module.js';
 import { CandidatesModule } from './candidates/candidates.module.js';
+import { DashboardModule } from './dashboard/dashboard.module.js';
 import { DingTalkModule } from './dingtalk/dingtalk.module.js';
 import { InterviewsModule } from './interviews/interviews.module.js';
 import { IntakeModule } from './intake/intake.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { OffersModule } from './offers/offers.module.js';
+import { ReportsModule } from './reports/reports.module.js';
 import { RequisitionsModule } from './requisitions/requisitions.module.js';
 import { RetentionModule } from './retention/retention.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -32,8 +34,10 @@ import { SettingsModule } from './settings/settings.module.js';
     IntakeModule,
     InterviewsModule,
     CandidatesModule,
+    DashboardModule,
     JobsModule,
     RequisitionsModule,
+    ReportsModule,
     AttachmentsModule,
     RetentionModule,
     DingTalkModule,

@@ -83,7 +83,7 @@ export const DICT_TYPE_LABELS: Record<DictType, { label: string; effect: string;
   TAG: { label: '标签', effect: '候选人标签输入建议与筛选', integrated: true },
   JOB_LEVEL: { label: '职级', effect: '招聘需求表单职级建议', integrated: true },
   JOB_FUNCTION: { label: '职能类型', effect: '职位暂无职能类型字段，随职位模型扩展后接入表单', integrated: false },
-  REQUISITION_TYPE: { label: '需求类型', effect: '需求暂无类型字段，随需求类型维度（ATS-023）接入', integrated: false },
+  REQUISITION_TYPE: { label: '需求类型', effect: '招聘需求表单、OA 同步与报表“需求类型”维度统一取值，空值统计为“未填写”', integrated: true },
 };
 
 export function isDictType(value: unknown): value is DictType {

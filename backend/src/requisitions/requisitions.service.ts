@@ -8,6 +8,7 @@ import { Prisma, RequisitionStatus } from '@prisma/client';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { assertDictValue } from '../settings/config-rules.js';
 import {
   CYCLE_FORMULA,
   calculateCycleDays,
@@ -25,6 +26,7 @@ export type RequisitionListQuery = {
   oaApprovalId?: string;
   departmentId?: string;
   recruiterId?: string;
+  requisitionType?: string;
   status?: string;
   startFrom?: string;
   startTo?: string;
@@ -67,6 +69,7 @@ export type RequisitionDto = {
   departmentId: string;
   recruiterId: string | null;
   jobLevel: string | null;
+  requisitionType: string | null;
   headcount: number;
   source: string;
   status: RequisitionStatus;
@@ -106,6 +109,8 @@ export class RequisitionsService {
     if (departmentId) conditions.push({ departmentId });
     const recruiterId = this.optionalText(query.recruiterId);
     if (recruiterId) conditions.push({ recruiterId });
+    const requisitionType = this.optionalText(query.requisitionType);
+    if (requisitionType) conditions.push({ requisitionType });
 
     if (query.status) {
       if (query.status !== RequisitionStatus.ACTIVE && query.status !== RequisitionStatus.CLOSED) {
@@ -196,6 +201,10 @@ export class RequisitionsService {
     await this.assertDepartment(departmentId);
     const oaApprovalTitle = this.optionalText(input.oaApprovalTitle);
     const jobLevel = this.optionalText(input.jobLevel);
+    const requisitionType = this.optionalText(input.requisitionType);
+    if (requisitionType) {
+      await assertDictValue(this.prisma, 'REQUISITION_TYPE', requisitionType, '需求类型');
+    }
     const recruiterId = this.optionalText(input.recruiterId);
     const note = this.optionalText(input.note);
     const requirements = this.optionalText(input.requirements);
@@ -215,6 +224,7 @@ export class RequisitionsService {
             departmentId,
             recruiterId,
             jobLevel,
+            requisitionType,
             headcount,
             submittedAt,
             recruitmentStartDate,
@@ -285,6 +295,13 @@ export class RequisitionsService {
     }
     if ('jobLevel' in input) {
       assign('jobLevel', this.optionalText(input.jobLevel), current.jobLevel);
+    }
+    if ('requisitionType' in input) {
+      const next = this.optionalText(input.requisitionType);
+      if (next) {
+        await assertDictValue(this.prisma, 'REQUISITION_TYPE', next, '需求类型');
+      }
+      assign('requisitionType', next, current.requisitionType);
     }
     if ('headcount' in input) {
       assign(
@@ -569,6 +586,7 @@ export class RequisitionsService {
     departmentId: string;
     recruiterId: string | null;
     jobLevel: string | null;
+    requisitionType: string | null;
     headcount: number;
     source: string;
     status: RequisitionStatus;
@@ -596,6 +614,7 @@ export class RequisitionsService {
       departmentId: record.departmentId,
       recruiterId: record.recruiterId,
       jobLevel: record.jobLevel,
+      requisitionType: record.requisitionType,
       headcount: record.headcount,
       source: record.source,
       status: record.status,

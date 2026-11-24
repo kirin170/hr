@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles, Users, UsersRound } from 'lucide-react'
 import type { CurrentUser, PageKey } from '../types'
+import { getDashboardSummary } from '../api'
 import { cn } from '../utils'
 
 type SidebarProps = { page: PageKey; onNavigate: (page: PageKey) => void; onSettings: () => void; me: CurrentUser | null }
@@ -14,7 +15,7 @@ const navPrimary: { key: PageKey; label: string; icon: typeof LayoutDashboard; b
   { key: 'campus', label: '校招投递', icon: GraduationCap },
   { key: 'candidates', label: '简历库', icon: Users },
   { key: 'pipeline', label: '招聘流程', icon: BriefcaseBusiness },
-  { key: 'interviews', label: '面试安排', icon: CalendarDays, badge: '3' },
+  { key: 'interviews', label: '面试安排', icon: CalendarDays },
 ]
 
 const navSecondary: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] = [
@@ -25,6 +26,26 @@ const navSecondary: { key: PageKey; label: string; icon: typeof LayoutDashboard 
 
 export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  // 面试安排角标使用今日面试真实数量，登录后再拉取，避免未登录时触发鉴权跳转
+  const [interviewCount, setInterviewCount] = useState<number | null>(null)
+  const meId = me?.id
+  useEffect(() => {
+    if (!meId) {
+      setInterviewCount(null)
+      return
+    }
+    let cancelled = false
+    getDashboardSummary()
+      .then((summary) => {
+        if (!cancelled) setInterviewCount(summary.today.interviews.count)
+      })
+      .catch(() => {
+        if (!cancelled) setInterviewCount(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [meId])
   // 管理后台只对具备设置读取权限的角色开放，其余角色看不到入口
   const canManageSettings = me?.roles.some((role) => role.permissions.includes('setting:read')) ?? false
   return (
@@ -44,11 +65,12 @@ export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
         <span className="nav-label">{!collapsed && '招聘管理'}</span>
         {navPrimary.map((item) => {
           const Icon = item.icon
+          const badge = item.key === 'interviews' ? (interviewCount ? String(interviewCount) : undefined) : item.badge
           return (
             <button key={item.key} className={cn('nav-item', page === item.key && 'nav-item-active')} onClick={() => onNavigate(item.key)} title={item.label}>
               <Icon size={18} strokeWidth={1.9} />
               {!collapsed && <span>{item.label}</span>}
-              {!collapsed && item.badge && <span className="nav-badge">{item.badge}</span>}
+              {!collapsed && badge && <span className="nav-badge">{badge}</span>}
             </button>
           )
         })}

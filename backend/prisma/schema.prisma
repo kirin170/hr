@@ -41,6 +41,8 @@ model JobRequisition {
   departmentId         String
   recruiterId          String?
   jobLevel             String?
+  /// 需求类型：取值来自字典 REQUISITION_TYPE；空值在报表中统计为“未填写”（ATS-023）
+  requisitionType      String?
   headcount            Int
   source               String   @default("DINGTALK_OA")
   /// 钉钉审批编号（审批单上展示的 businessId）；oaApprovalId 保存审批实例 ID 作为幂等键
@@ -64,6 +66,7 @@ model JobRequisition {
   @@index([status, closedAt])
   @@index([departmentId, status])
   @@index([recruiterId])
+  @@index([requisitionType])
   @@map("job_requisitions")
 }
 

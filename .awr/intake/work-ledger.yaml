@@ -433,18 +433,21 @@ work_items:
   next_action: "无；真实邮箱验收与格式分流/查重分支验证完成。剩余待补：解析失败转 NEEDS_MANUAL 需 ATS-021 正式 provider 后复验；管理后台邮箱配置界面由 ATS-024 承接；正式接收邮箱上线前需把 TLS 代理改为直连或白名单。"
 - id: ATS-023
   kind: delivery
-  status: planned
+  status: completed
   owner: Trae
   goal: ats-operations
   priority: P1
   title: "工作台与可下钻招聘报表"
-  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第4批。依据：FR-RPT-1～9、FR-DSH；功能需求 §1.3/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 Trae，第4批。依据：FR-RPT-1～9、FR-DSH；功能需求 §1.3/§4.11。整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。2026-11-24 交付：新增 dashboard 模块（七类待办、今日待筛选/今日面试、分类通知与全部已读、职位360）与 reports 模块（漏斗/渠道/三类原因含未填写/转正率/周期，均支持下钻），全部按 candidateWhere/requisitionWhere 权限范围实时聚合；周期复用 requisition-cycle 自然日差（同日计 1 天）并独立统计四类排除；新增 JobRequisition.requisitionType 与迁移，字典 REQUISITION_TYPE 标记已接入；前端 Dashboard/Reports 去硬编码改接真实接口，侧边栏面试角标改为今日真实数量。AWR 写入器仍报 quoted scalar marker mismatch，按既有处置手工登记。"
   acceptance:
   - "工作台待办、今日指标、分类通知/全部已读和职位360均来自真实权限内数据。"
   - "漏斗/渠道/三类原因/转正率与周期报表可下钻；周期按需求级自然日差计算，同日计 1 天，排除未关闭及本期不补录的已关闭存量需求；保留部门/招聘负责人/时间段/需求类型并支持用户自由组合，汇总均值/中位数/最长/最短；报表数量真实展示，不套用 1w+。"
   - "明确分母、时间口径、权限和未填写档；招聘周期等业务指标建立可复算基线，不虚设未确认改善百分比。"
+  evidence: [docs/verification/ats023-report.json]
+  verification:
+    evidence_level: locally_verified
   depends_on: [ATS-007, ATS-013, ATS-014, ATS-016]
-  next_action: "已预派给 Trae（第4批，待 ATS-013/014/016 完成后启动）：先形成指标字典与可复算样本（分母、时间口径、权限、未填写档），再交付工作台与漏斗/渠道/三类原因/转正率/周期报表及下钻；周期按需求级自然日差、同日计1天，报表不套用 1w+。"
+  next_action: "无阻断；工作台与五类报表（含下钻、需求类型维度、未填写档与可复算基线）已交付并通过后端 268 项单测、类型检查、Lint 与前后端构建。剩余待办：一、浏览器端到端点击复验（下钻、职位360、通知全部已读）留待 ATS-025 统一验收；二、存量需求的“需求类型”需业务补录，否则报表显示未填写；三、报表为权限内实时聚合，万级数据性能与物化方案由 ATS-025 实测后再定；四、不包含消息推送（用户明确不需要）。"
 - id: ATS-024
   kind: delivery
   status: planned

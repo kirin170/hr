@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "work_item": "ATS-023",
+  "date": "2026-11-24",
+  "verified_at": 1795489200000,
+  "source_sha": "2c2d1b2f6ee15a9aa28f33bdeb0a8878c42c2b8e",
+  "working_tree_dirty": true,
+  "summary": "交付工作台与可下钻招聘报表。工作台七类待办（待分配/待筛选/待安排面试/待评价/背调待确认/待发书面 offer/待确认入职）、今日指标与分类通知（@我/跟进提醒/评价相关/offer 相关，支持全部已读）全部按当前账号数据权限实时聚合；职位 360 返回 HC、缺口、流程中人数、阶段分布、面试与 offer 进展。报表模块提供漏斗、渠道、三类原因（归档/Offer 拒绝/放弃入职，未填写单列）、转正率与招聘周期，每个报表按分组返回明细下钻；周期复用 requisition-cycle 的需求级自然日差（同日计 1 天），排除进行中、本期不补录存量、缺日期与关闭早于开始的需求，并支持部门/招聘负责人/时间段/需求类型自由组合与均值/中位数/最长/最短。补齐“需求类型”字段（JobRequisition.requisitionType + 迁移 + OA 同步与编辑校验 + 字典 REQUISITION_TYPE 标记为已接入），报表按需求类型分组时未填写单列。前端 Dashboard/Reports 改为真实接口取数，删除硬编码指标与“1w+”，侧边栏面试角标改为今日面试真实数量。",
+  "command": "npm run typecheck --prefix backend; npx oxlint --type-aware src/reports src/dashboard; npx vitest run (backend, 36 files / 268 tests passed, 29 skipped integration); npm run build --prefix backend; npx tsc -b (frontend); npm run build (frontend tsc + vite)",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261124140000_ats023_requisition_type/migration.sql",
+    "backend/src/reports/reports.module.ts",
+    "backend/src/reports/reports.service.ts",
+    "backend/src/reports/reports.controller.ts",
+    "backend/src/reports/report-metrics.ts",
+    "backend/src/reports/report-metrics.spec.ts",
+    "backend/src/dashboard/dashboard.module.ts",
+    "backend/src/dashboard/dashboard.service.ts",
+    "backend/src/dashboard/dashboard.controller.ts",
+    "backend/src/requisitions/requisitions.service.ts",
+    "backend/src/settings/field-registry.ts",
+    "backend/src/app.module.ts",
+    "src/api.ts",
+    "src/pages/Dashboard.tsx",
+    "src/pages/Reports.tsx",
+    "src/components/Sidebar.tsx",
+    "docs/verification/ats023-report.json"
+  ],
+  "metric_dictionary": [
+    {
+      "metric": "工作台待办",
+      "numerator": "满足七类条件的记录数，逐类独立计数（待安排面试/待评价按面试记录，背调与书面 offer 按 offer 记录，其余按候选人阶段）",
+      "denominator": "无（待办为绝对数量）",
+      "time_window": "实时快照",
+      "permission": "candidate:read 数据范围（ALL / DEPARTMENT / OWN_JOBS / PARTICIPATING）",
+      "unfilled": "不适用"
+    },
+    {
+      "metric": "今日待筛选申请",
+      "numerator": "appliedAt 落在今日（UTC 自然日）且当前阶段为 HR_SCREENING 的候选人",
+      "denominator": "无（绝对数量）",
+      "time_window": "今日 00:00:00.000Z 至 23:59:59.999Z",
+      "permission": "candidate:read 数据范围",
+      "unfilled": "不适用"
+    },
+    {
+      "metric": "今日面试",
+      "numerator": "面试时间落在今日且状态非 CANCELLED 的面试记录",
+      "denominator": "无（绝对数量）",
+      "time_window": "今日 UTC 自然日",
+      "permission": "candidate:read 数据范围（经候选人关联过滤）",
+      "unfilled": "不适用"
+    },
+    {
+      "metric": "漏斗各环节到达人数",
+      "numerator": "当前阶段序号 >= 该环节序号的流程内候选人（按当前阶段累计回填）",
+      "denominator": "权限范围内流程内候选人，排除 ARCHIVED 与 UNASSIGNED/VIRTUAL_POOL",
+      "time_window": "按候选人 appliedAt 可选筛选；默认全部",
+      "permission": "candidate:read 数据范围 + 可选部门/招聘负责人/需求类型过滤",
+      "unfilled": "归档与待分配池不计入漏斗，在 excluded 中单独返回数量"
+    },
+    {
+      "metric": "渠道分布",
+      "numerator": "按 candidate.channel 分组计数；面试/Offer/入职为阶段到达数",
+      "denominator": "权限范围内全部候选人（含归档）",
+      "time_window": "按 appliedAt 可选筛选",
+      "permission": "candidate:read 数据范围",
+      "unfilled": "channel 为空或空白归入“未填写”并通过 unfilled 字段单列，不并入其他渠道"
+    },
+    {
+      "metric": "三类原因",
+      "numerator": "ARCHIVE：人才库归档记录的 reasonId/原因文本；OFFER_REJECT：口头或书面结果为 REJECTED 的 Offer 记录的 rejectReasonId/失败原因；ONBOARD_ABANDON：onboarding.abandoned 时间线事件的原因字段",
+      "denominator": "对应记录总数（三类独立统计，不合并）",
+      "time_window": "ARCHIVE 按 archivedAt；OFFER_REJECT 按 offer.updatedAt；ONBOARD_ABANDON 按事件 createdAt；均可选 from/to",
+      "permission": "candidate:read 数据范围（记录需关联权限内候选人）",
+      "unfilled": "无原因或 reasonMissing 归入“未填写”，通过 unfilled 字段单列；不把“未填写”当作可选原因"
+    },
+    {
+      "metric": "转正率",
+      "numerator": "converted=true 的试用期记录数",
+      "denominator": "已记录试用期结论的试用期记录数（含未通过）；进入试用期但无结论不计入分母",
+      "time_window": "按 probationRecord.createdAt 可选筛选",
+      "permission": "candidate:read 数据范围",
+      "unfilled": "未归属部门归入“未填写”分组"
+    },
+    {
+      "metric": "招聘周期",
+      "numerator": "max(1, 关闭日期 - 开始招聘日期) 的自然日差",
+      "denominator": "status=CLOSED 且 cycleEligible=true 且 recruitmentStartDate/closedAt 均存在且关闭不早于开始的需求",
+      "time_window": "按需求 closedAt 可选筛选（关闭月份作为“时间段”维度）",
+      "permission": "requisition:read 数据范围（ALL / 本部门 / 本人负责）；无该权限时接口返回 accessible=false 与说明，不回退全量",
+      "excluded": "进行中需求、本期不补录的存量已关闭需求、缺日期、关闭早于开始、时间段外，分别计数返回",
+      "unfilled": "需求类型为空归入“未填写”分组；招聘负责人为空归入“未填写”分组"
+    }
+  ],
+  "baseline": {
+    "source": "backend/src/reports/report-metrics.spec.ts",
+    "kind": "recomputable_fixture",
+    "sample": {
+      "requisitions": [
+        { "start": "2026-11-01", "closed": "2026-11-02", "expectedDays": 1 },
+        { "start": "2026-11-01", "closed": "2026-11-16", "expectedDays": 15 },
+        { "start": "2026-01-31", "closed": "2026-03-01", "expectedDays": 29 },
+        { "start": "2025-12-20", "closed": "2026-01-05", "expectedDays": 16 }
+      ],
+      "expectedSummary": { "count": 4, "average": 15.3, "median": 15.5, "max": 29, "min": 1 },
+      "emptySummary": { "count": 0, "average": null, "median": null, "max": null, "min": null }
+    },
+    "note": "该样本同时被 vitest 断言，报表接口与测试共享 report-metrics 纯函数，复算结果必须一致；未确认的改善百分比不出现在接口与页面中。"
+  },
+  "checks": [
+    {
+      "name": "dashboard_real_scoped_data",
+      "passed": true,
+      "criteria": [
+        "七类待办来自 candidate/interview/offer 实时计数，全部叠加 candidateWhere(actor,'candidate:read')",
+        "今日指标以 UTC 自然日窗口计算并返回口径说明",
+        "分类通知按面试官身份（@我/评价相关）、OnboardingReminder（跟进提醒）、offer 阶段（offer 相关）聚合，已读状态按用户存 SystemSetting，支持全部已读",
+        "职位 360 先经 canAccessJob 校验，返回 HC/缺口/流程中/阶段分布/面试与 offer 进展/渠道分布",
+        "前端 Dashboard 删除全部硬编码数字，改为 getDashboardSummary/getDashboardNotifications/listDashboardJobs/getDashboardJob360"
+      ]
+    },
+    {
+      "name": "reports_drilldown_and_dimensions",
+      "passed": true,
+      "criteria": [
+        "funnel/channels/reasons/probation/cycles 均支持 drill 参数返回明细（上限 500 条）",
+        "周期按 dimensions=department,recruiter,period,requisitionType 自由组合分组，每组返回 count/average/median/max/min 与明细",
+        "周期排除逻辑独立计数：active/ineligible/missingDate/closedBeforeStart/outOfPeriod",
+        "周期复用 requisition-cycle 的 calculateCycleDays 与 isClosedBeforeStart，同日计 1 天"
+      ]
+    },
+    {
+      "name": "true_counts_and_denominators",
+      "passed": true,
+      "criteria": [
+        "报表接口返回原始计数，不返回或渲染“1w+”等放大文案；前端报表页无硬编码百分比",
+        "每个报表返回 denominator 文案与未填写档（unfilled / __unfilled__ / 未填写分组）",
+        "分母为 0 时 rate/percentage 返回 null 而非 0，避免误导"
+      ]
+    },
+    {
+      "name": "requisition_type_dimension",
+      "passed": true,
+      "criteria": [
+        "JobRequisition 新增 nullable requisitionType 字段与迁移，OA 同步/编辑按字典 REQUISITION_TYPE 校验",
+        "field-registry 中 REQUISITION_TYPE 标记 integrated=true",
+        "报表需求类型筛选与分组支持“未填写”档"
+      ]
+    },
+    {
+      "name": "build_and_tests",
+      "passed": true,
+      "criteria": [
+        "backend tsc -p tsconfig.build.json 通过",
+        "oxlint --type-aware src/reports src/dashboard 0 warning / 0 error",
+        "backend vitest：36 files / 268 tests passed（含新增 report-metrics 8 用例）",
+        "frontend tsc -b 与 vite build 通过"
+      ]
+    }
+  ],
+  "limitations": [
+    "尚未执行浏览器端到端点击验证，下钻交互与职位 360 的视觉/交互留待 ATS-025 统一验收，或由用户在本地启动前后端后复验。",
+    "需求类型为本次新增字段，存量需求需人工补录，否则报表显示“未填写”；未做历史数据推测回填。",
+    "工作台通知为业务事件实时聚合的派生通知，不包含消息推送通道（用户明确不需要推送）；已读状态存于 SystemSetting，按用户隔离。",
+    "报表在权限范围内按需全量聚合（非预计算物化表），当前数据量下可接受；万级数据性能需 ATS-025 实测确认。"
+  ]
+}

@@ -966,3 +966,257 @@ export function createFieldGrant(payload: {
 export function revokeFieldGrant(id: string): Promise<{ revoked: boolean }> {
   return request(`${authzBase}/field-grants/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
+
+// ---------- 工作台（ATS-023） ----------
+
+export type DashboardTodo = {
+  key: string
+  label: string
+  detail: string
+  page: string
+  count: number
+}
+
+export type DashboardInterviewItem = {
+  id: string
+  candidateId: string
+  candidateName: string | null
+  jobTitle: string | null
+  round: number
+  mode: string
+  time: string
+}
+
+export type DashboardSummary = {
+  generatedAt: string
+  date: string
+  timezone: string
+  todos: DashboardTodo[]
+  today: {
+    screening: { count: number; label: string; denominator: string }
+    interviews: { count: number; label: string; items: DashboardInterviewItem[] }
+  }
+  note: string
+}
+
+export type DashboardJobItem = {
+  id: string
+  code: string
+  title: string
+  departmentId: string
+  departmentName: string | null
+  headcount: number
+  hiredCount: number
+  status: string
+  isVirtual: boolean
+}
+
+export type DashboardJob360 = {
+  job: {
+    id: string
+    code: string
+    title: string
+    departmentName: string | null
+    recruiterName: string | null
+    headcount: number
+    hiredCount: number
+    status: string
+    requisition: {
+      id: string
+      title: string
+      status: string
+      headcount: number
+      requisitionType: string | null
+      submittedAt: string
+      recruitmentStartDate: string | null
+      closedAt: string | null
+      cycleDays: number | null
+    } | null
+  }
+  hc: { headcount: number; hiredCount: number; gap: number; inProcess: number }
+  stageCounts: Record<string, number>
+  progress: { total: number; interviewed: number; offered: number; onboarded: number }
+  interviews: { toSchedule: number; feedbackPending: number; items: { id: string; candidateId: string; status: string; time: string; round: number }[] }
+  offers: Record<string, number>
+  channels: { channel: string; count: number }[]
+}
+
+export type DashboardNotification = {
+  id: string
+  category: 'MENTION' | 'FOLLOW_UP' | 'FEEDBACK' | 'OFFER'
+  title: string
+  detail: string
+  at: string | null
+  page: string
+  candidateId: string | null
+  read: boolean
+}
+
+export type DashboardNotifications = {
+  generatedAt: string
+  categories: { key: string; label: string; count: number; unread: number; items: DashboardNotification[] }[]
+  total: number
+  unreadTotal: number
+  source: string
+}
+
+export function getDashboardSummary(): Promise<DashboardSummary> {
+  return request<DashboardSummary>('/v1/dashboard/summary')
+}
+
+export function listDashboardJobs(): Promise<DashboardJobItem[]> {
+  return request<DashboardJobItem[]>('/v1/dashboard/jobs')
+}
+
+export function getDashboardJob360(jobId: string): Promise<DashboardJob360> {
+  return request<DashboardJob360>(`/v1/dashboard/job-360${toQuery({ jobId })}`)
+}
+
+export function getDashboardNotifications(): Promise<DashboardNotifications> {
+  return request<DashboardNotifications>('/v1/dashboard/notifications')
+}
+
+export function markDashboardNotificationsRead(payload: { ids?: string[]; all?: boolean }): Promise<{ allReadAt: string | null; readIds: number }> {
+  return request('/v1/dashboard/notifications/read', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+// ---------- 招聘报表（ATS-023） ----------
+
+export type ReportFilters = {
+  from?: string
+  to?: string
+  departmentId?: string
+  recruiterId?: string
+  requisitionType?: string
+}
+
+export type ReportFilterOptions = {
+  departments: { id: string; name: string }[]
+  recruiters: { id: string; name: string }[]
+  requisitionTypes: string[]
+  dimensions: { key: string; label: string }[]
+}
+
+export type ReportFunnelStage = {
+  key: string
+  label: string
+  reached: number
+  inStage: number
+  conversionFromPrevious: number | null
+}
+
+export type ReportDrillCandidate = {
+  id: string
+  name: string
+  stage: string
+  jobTitle: string | null
+  departmentName: string | null
+  channel: string | null
+  appliedAt: string | null
+}
+
+export type ReportFunnel = {
+  generatedAt: string
+  denominator: string
+  total: number
+  stages: ReportFunnelStage[]
+  excluded: { archived: number; pool: number }
+  drill?: { stage: string; total: number; items: ReportDrillCandidate[] }
+}
+
+export type ReportChannelRow = {
+  key: string
+  label: string
+  total: number
+  interviewed: number
+  offered: number
+  onboarded: number
+  archived: number
+  share: number | null
+}
+
+export type ReportChannels = {
+  generatedAt: string
+  denominator: string
+  total: number
+  unfilled: number
+  rows: ReportChannelRow[]
+  drill?: { key: string; items: ReportDrillCandidate[] }
+}
+
+export type ReportReasonRow = {
+  key: string
+  label: string
+  count: number
+  share: number | null
+  unfilled: boolean
+}
+
+export type ReportReasons = {
+  type: string
+  label: string
+  denominator: string
+  total: number
+  unfilled: number
+  rows: ReportReasonRow[]
+  drill?: { key: string; label: string; items: { id: string; name: string; jobTitle: string | null; at: string | null; detail: string | null }[] }
+}
+
+export type ReportProbation = {
+  denominator: string
+  total: number
+  converted: number
+  rate: number | null
+  rows: { key: string; label: string; total: number; converted: number; rate: number | null }[]
+  drill?: { key: string; items: { id: string; name: string; jobTitle: string | null; converted: boolean; at: string | null }[] }
+}
+
+export type ReportCycleSummary = {
+  count: number
+  average: number | null
+  median: number | null
+  max: number | null
+  min: number | null
+}
+
+export type ReportCycles = {
+  accessible: boolean
+  note?: string
+  formula: string
+  denominator: string | null
+  dimensions: string[]
+  dimensionLabels?: string[]
+  eligible: ReportCycleSummary
+  excluded: { active: number; ineligible: number; missingDate: number; closedBeforeStart: number; outOfPeriod: number } | null
+  rows: { key: string; labels: string[]; summary: ReportCycleSummary }[]
+  drill?: { key: string; labels: string[]; items: { id: string; title: string; departmentName: string | null; recruiterName: string | null; requisitionType: string; recruitmentStartDate: string | null; closedAt: string | null; cycleDays: number }[] }
+  unit: string
+}
+
+function reportQuery(filters: ReportFilters, extra: Record<string, string | number | undefined> = {}): string {
+  return toQuery({ ...filters, ...extra })
+}
+
+export function getReportFilterOptions(): Promise<ReportFilterOptions> {
+  return request<ReportFilterOptions>('/v1/reports/filters')
+}
+
+export function getReportFunnel(filters: ReportFilters, drillStage?: string): Promise<ReportFunnel> {
+  return request<ReportFunnel>(`/v1/reports/funnel${reportQuery(filters, { drillStage })}`)
+}
+
+export function getReportChannels(filters: ReportFilters, drillChannel?: string): Promise<ReportChannels> {
+  return request<ReportChannels>(`/v1/reports/channels${reportQuery(filters, { drillChannel })}`)
+}
+
+export function getReportReasons(type: 'ARCHIVE' | 'OFFER_REJECT' | 'ONBOARD_ABANDON', filters: ReportFilters, drillKey?: string): Promise<ReportReasons> {
+  return request<ReportReasons>(`/v1/reports/reasons${reportQuery(filters, { type, drillKey })}`)
+}
+
+export function getReportProbation(filters: ReportFilters, drillGroup?: string): Promise<ReportProbation> {
+  return request<ReportProbation>(`/v1/reports/probation${reportQuery(filters, { drillGroup })}`)
+}
+
+export function getReportCycles(filters: ReportFilters, dimensions: string[], drillGroup?: string): Promise<ReportCycles> {
+  return request<ReportCycles>(`/v1/reports/cycles${reportQuery(filters, { dimensions: dimensions.join(','), drillGroup })}`)
+}
