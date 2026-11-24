@@ -24,6 +24,8 @@ const permissions = [
   ['retention:manage', '查看保留期限并触发到期清理'],
   ['ai:read', '查看权限范围内 AI 解析草稿'],
   ['ai:confirm', '确认 AI 解析草稿'],
+  ['setting:read', '查看管理后台配置与运行状态'],
+  ['setting:manage', '维护业务配置（字段、字典、原因、面试方案）'],
 ];
 
 const roles = [

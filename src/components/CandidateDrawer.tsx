@@ -6,11 +6,14 @@ import { getCandidate, getCandidateDepartment, getCandidateJob } from '../data'
 import { activateCandidateFromPool, getCandidateDetail, getCandidatePoolHistory, getCandidateTimeline, listJobs, recordDepartmentScreening, setCandidateLockedState, undoCandidateStage, updateCandidateStage } from '../api'
 import { useApp } from '../context'
 import type { Candidate, CandidateMainStage, CandidatePoolHistoryEntry, CandidateStage, CandidateTimelineEvent, JobListItem } from '../types'
+import { useEffectiveSettings } from '../useEffectiveSettings'
 import { cn, stageMeta } from '../utils'
 import { StageBadge } from '../pages/Candidates'
 
 export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidateId: string; onClose: () => void; onSchedule: (candidate: Candidate) => void }) {
   const { data, setData, toast } = useApp()
+  const effective = useEffectiveSettings()
+  const archiveReasons = effective?.archiveReasons ?? []
   const candidateFromList = getCandidate(data, candidateId)
   const [detailCandidate, setDetailCandidate] = useState<Candidate | null>(null)
   const [timeline, setTimeline] = useState<CandidateTimelineEvent[]>([])
@@ -22,6 +25,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
   const [availabilitySlots, setAvailabilitySlots] = useState([{ startAt: '', endAt: '' }])
   const [archiveOpen, setArchiveOpen] = useState(false)
   const [archiveReason, setArchiveReason] = useState('')
+  const [archiveReasonId, setArchiveReasonId] = useState('')
   const [activateOpen, setActivateOpen] = useState(false)
   const [activateJobId, setActivateJobId] = useState('')
   const [activateJobs, setActivateJobs] = useState<JobListItem[]>([])
@@ -32,6 +36,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
     setAvailabilitySlots([{ startAt: '', endAt: '' }])
     setArchiveOpen(false)
     setArchiveReason('')
+    setArchiveReasonId('')
     setActivateOpen(false)
   }, [candidateId])
   // 人才库历史随详情一起刷新：激活/重复归档后仍展示全部归档与激活记录
@@ -91,18 +96,24 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
     }
   }
 
-  // 归档：原因可选（未填写档），归档后自动入池并保留本次归档记录
+  // 归档：原因来自管理后台配置的归档原因集合，未选择记为「未填写档」；「其他」必须填说明
   const submitArchive = async () => {
     try {
+      const option = archiveReasons.find((item) => item.id === archiveReasonId)
       const reason = archiveReason.trim()
-      const updated = await updateCandidateStage(candidate.id, 'ARCHIVED', reason || undefined)
+      if (option?.isOther && !reason) {
+        toast('选择「其他」时必须填写说明', 'info')
+        return
+      }
+      const updated = await updateCandidateStage(candidate.id, 'ARCHIVED', reason || undefined, option?.id)
       applyCandidateUpdate(updated)
       setShowStageMenu(false)
       setArchiveOpen(false)
       setArchiveReason('')
+      setArchiveReasonId('')
       setTimeline(await getCandidateTimeline(candidate.id))
       refreshPoolHistory(candidate.id)
-      toast(reason ? '候选人已归档并进入人才库' : '候选人已归档并进入人才库（归档原因未填写）')
+      toast(option ? `候选人已归档并进入人才库（${option.label}）` : '候选人已归档并进入人才库（归档原因未填写）')
     } catch (error) {
       toast(error instanceof Error ? error.message : '归档失败', 'info')
     }
@@ -159,6 +170,8 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
     try {
       const nextState = candidate.lockedState === 'INOPERABLE' ? 'OPERABLE' : 'INOPERABLE'
       applyCandidateUpdate(await setCandidateLockedState(candidate.id, nextState))
+      // 锁定/解锁会写入时间线，重新拉取保证操作记录即时可见
+      setTimeline(await getCandidateTimeline(candidate.id))
       toast(nextState === 'INOPERABLE' ? '候选人已锁定为不可操作' : '候选人已恢复可操作')
     } catch (error) {
       toast(error instanceof Error ? error.message : '锁定状态更新失败', 'info')
@@ -214,8 +227,8 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
         {tab === 'overview' && <>
           <section className="drawer-section">
             <div className="drawer-section-title"><h3>招聘进度</h3><div className="stage-action"><button className="text-button" disabled={!isOperable} onClick={() => setShowStageMenu(!showStageMenu)}>阶段动作 <ChevronDown size={14} /></button>{showStageMenu && <div className="stage-menu">{next && <button disabled={!isOperable} onClick={() => moveTo(next)}>推进至「{stageMeta[next].label}」</button>}{!['ARCHIVED', 'OFFERING', 'PENDING_ONBOARD'].includes(candidate.stage) && <button disabled={!isOperable} onClick={() => { setShowStageMenu(false); setArchiveOpen(true) }}>归档</button>}{candidate.stage === 'ARCHIVED' && <button disabled={!isOperable} onClick={() => { setShowStageMenu(false); void openActivate() }}>从人才库激活</button>}{candidate.stage === 'OFFERING' && <small>请在 Offer 协同中记录发送、接受及入职日期后推进待入职。</small>}</div>}</div></div>
-            {archiveOpen && <div className="candidate-screening-form"><h4>归档至人才库</h4><label>归档原因（可选，未填写记为「未填写档」）<textarea value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} placeholder="如：薪资未谈拢、暂不匹配等" /></label><div className="candidate-stage-tools"><button className="button button-secondary button-sm" onClick={() => setArchiveOpen(false)}>取消</button><button className="button button-primary button-sm" disabled={!isOperable} onClick={submitArchive}>确认归档</button></div></div>}
-            {activateOpen && <div className="candidate-screening-form"><h4>从人才库激活</h4><label>目标职位<select value={activateJobId} onChange={(event) => setActivateJobId(event.target.value)}>{activateJobs.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentId || '部门待补充'}</option>)}</select></label><p className="hint">激活后进入「人才推荐」，原归档记录与原因全部保留。</p><div className="candidate-stage-tools"><button className="button button-secondary button-sm" onClick={() => setActivateOpen(false)}>取消</button><button className="button button-primary button-sm" disabled={!activateJobId} onClick={submitActivate}>确认激活</button></div></div>}
+            {archiveOpen && <div className="candidate-screening-form"><h4>归档至人才库</h4><label>归档原因（可选，未选择记为「未填写档」）<select value={archiveReasonId} onChange={(event) => { setArchiveReasonId(event.target.value); setArchiveReason('') }}><option value="">未填写</option>{archiveReasons.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>{archiveReasons.find((item) => item.id === archiveReasonId)?.isOther && <label>说明（必填）<textarea value={archiveReason} onChange={(event) => setArchiveReason(event.target.value)} placeholder="请说明具体归档原因" /></label>}{archiveReasons.length === 0 && <p className="hint">归档原因暂不可用，可留空归档。</p>}<div className="candidate-stage-tools"><button className="button button-secondary button-sm" onClick={() => setArchiveOpen(false)}>取消</button><button className="button button-primary button-sm" disabled={!isOperable} onClick={submitArchive}>确认归档</button></div></div>}
+            {activateOpen && <div className="candidate-screening-form"><h4>从人才库激活</h4><label>目标职位<select value={activateJobId} onChange={(event) => setActivateJobId(event.target.value)}>{activateJobs.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentName || '部门待补充'}</option>)}</select></label><p className="hint">激活后进入「人才推荐」，原归档记录与原因全部保留。</p><div className="candidate-stage-tools"><button className="button button-secondary button-sm" onClick={() => setActivateOpen(false)}>取消</button><button className="button button-primary button-sm" disabled={!activateJobId} onClick={submitActivate}>确认激活</button></div></div>}
             <div className="stage-progress">
               {mainStages.map((key, index) => {
                 const complete = activeIndex >= 0 && index < activeIndex

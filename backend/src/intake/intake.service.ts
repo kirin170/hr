@@ -1182,8 +1182,14 @@ export class IntakeService {
 
   /** 已配置的接收邮箱（本期仅 Mock 配置，用于邮箱模拟入口） */
   async listMailboxes() {
+    // ATS-024：入场页只需要邮箱地址与抓取状态，连接凭据（密文）与主机账号信息不出接口
     const items = await this.prisma.mailInboxConfig.findMany({
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, address: true, provider: true, active: true,
+        lastPolledAt: true, lastPollStatus: true, lastError: true, lastErrorAt: true,
+        consecutiveFailures: true,
+      },
     });
     return { items, total: items.length };
   }

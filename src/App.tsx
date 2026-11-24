@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
-import type { PageKey, Candidate } from './types'
+import { useCallback, useEffect, useState } from 'react'
+import type { CurrentUser, PageKey, Candidate } from './types'
+import { getCurrentUser } from './api'
 import { useAppData } from './store'
 import { AppProvider } from './context'
 import { Sidebar } from './components/Sidebar'
@@ -19,6 +20,7 @@ import { Interviews, InterviewModal } from './pages/Interviews'
 import { Probation } from './pages/Probation'
 import { Team } from './pages/Team'
 import { Reports } from './pages/Reports'
+import { Admin } from './pages/Admin'
 import { CheckCircle2, Info, X } from 'lucide-react'
 import type { Toast } from './context'
 
@@ -35,6 +37,7 @@ const pageMeta: Record<Exclude<PageKey, 'settings'>, { title: string; subtitle: 
   probation: { title: '试用期管理', subtitle: '记录转正结果' },
   team: { title: '部门协同', subtitle: '业务与 HR 同频协作' },
   reports: { title: '招聘数据', subtitle: '用数据优化招聘决策' },
+  admin: { title: '管理后台', subtitle: '业务设置、接入配置与审计' },
 }
 
 export default function App() {
@@ -48,6 +51,15 @@ export default function App() {
   const [showInterview, setShowInterview] = useState(false)
   const [interviewOpenKey, setInterviewOpenKey] = useState(0)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [me, setMe] = useState<CurrentUser | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void getCurrentUser()
+      .then((user) => { if (active) setMe(user) })
+      .catch(() => { if (active) setMe(null) })
+    return () => { active = false }
+  }, [])
 
   const addToast = useCallback((message: string, type?: Toast['type']) => {
     const id = Date.now() + Math.floor(Math.random() * 1000)
@@ -82,9 +94,9 @@ export default function App() {
 
   return <AppProvider {...{ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, addToast, toasts, dismissToast }}>
     <div className="app-shell">
-      <Sidebar page={page} onNavigate={navigate} onSettings={() => setShowSettings(true)} />
+      <Sidebar page={page} onNavigate={navigate} onSettings={() => setShowSettings(true)} me={me} />
       <div className="app-main">
-        <TopBar title={meta.title} subtitle={meta.subtitle} onSearch={setSearch} onOpenSettings={() => setShowSettings(true)} />
+        <TopBar title={meta.title} subtitle={meta.subtitle} onSearch={setSearch} onOpenSettings={() => setShowSettings(true)} me={me} onOpenAdmin={() => navigate('admin')} />
         <main className="content">
           {page === 'dashboard' && <Dashboard onNavigate={navigate} onOpenCandidate={openCandidate} />}
           {page === 'positions' && <Positions />}
@@ -98,6 +110,7 @@ export default function App() {
           {page === 'probation' && <Probation onOpenCandidate={openCandidate} refreshKey={selectedCandidateId} />}
           {page === 'team' && <Team onOpenCandidate={openCandidate} />}
           {page === 'reports' && <Reports />}
+          {page === 'admin' && <Admin />}
         </main>
       </div>
       {selectedCandidateId && <CandidateDrawer candidateId={selectedCandidateId} onClose={() => setSelectedCandidateId(null)} onSchedule={scheduleCandidate} />}

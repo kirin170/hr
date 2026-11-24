@@ -57,7 +57,13 @@ const makeService = (options: {
     },
   );
   const prisma = {
-    department: { findFirst: vi.fn().mockResolvedValue({ id: 'dept-1' }) },
+    department: {
+      findFirst: vi.fn().mockResolvedValue({ id: 'dept-1' }),
+      findMany: vi.fn().mockResolvedValue([{ id: 'dept-1', name: '研发部' }]),
+    },
+    // ATS-024：字段配置为空时只保留固定必填
+    fieldConfig: { findMany: vi.fn().mockResolvedValue([]) },
+    interviewPlan: { findFirst: vi.fn().mockResolvedValue(null) },
     user: { findUnique: vi.fn().mockResolvedValue({ id: 'user-1' }) },
     jobRequisition: { findUnique: vi.fn().mockResolvedValue({ id: 'req-1' }) },
     job: {
@@ -240,5 +246,46 @@ describe('JobsService 职位筛选（FR-JOB-2）', () => {
     await expect(service.list(actor, { status: 'PAUSED' })).rejects.toBeInstanceOf(
       BadRequestException,
     );
+  });
+});
+
+describe('JobsService 部门名称与字段配置（ATS-024）', () => {
+  it('职位返回服务端补全的 departmentName', async () => {
+    const { service } = makeService({ findMany: [makeJob()] });
+
+    const result = await service.list(actor, {});
+
+    expect(result.items[0].departmentName).toBe('研发部');
+  });
+
+  it('部门名称查询失败时 departmentName 回退为空串，不影响职位返回', async () => {
+    const { service, prisma } = makeService({ findMany: [makeJob()] });
+    (prisma.department.findMany as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('boom'));
+
+    const result = await service.list(actor, {});
+
+    expect(result.items[0].departmentName).toBe('');
+    expect(result.items[0].departmentId).toBe('dept-1');
+  });
+
+  it('后台配置为必填的字段缺失时拒绝新建职位', async () => {
+    const { service, prisma } = makeService({ lastCode: null });
+    (prisma.fieldConfig.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { fieldKey: 'location', required: true },
+    ]);
+
+    await expect(service.create({ title: '前端工程师', departmentId: 'dept-1' }, actor)).rejects.toThrow(
+      '工作地点不能为空',
+    );
+    expect(prisma.job.create).not.toHaveBeenCalled();
+  });
+
+  it('面试方案停用后不能被新职位选用', async () => {
+    const { service, prisma } = makeService({ lastCode: null });
+
+    await expect(
+      service.create({ title: '前端工程师', departmentId: 'dept-1', interviewPlanId: 'plan-1' }, actor),
+    ).rejects.toThrow('面试方案不存在或已停用');
+    expect(prisma.job.create).not.toHaveBeenCalled();
   });
 });

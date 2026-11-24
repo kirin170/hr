@@ -16,6 +16,7 @@ import {
   saveCandidateFilter,
 } from '../api'
 import type { Candidate, CandidateFilter, CandidateMainStage, CandidateStageFilter, JobListItem, SavedCandidateFilter } from '../types'
+import { useEffectiveSettings } from '../useEffectiveSettings'
 import { cn, stageMeta } from '../utils'
 
 type CandidatesProps = { search: string; onOpenCandidate: (id: string) => void; onAddCandidate: () => void; onBulkImport?: () => void }
@@ -57,6 +58,9 @@ const poolPageSizes = [20, 50, 100] as const
 
 export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImport }: CandidatesProps) {
   const { data, setData, candidatesLoading, candidatesError, apiJobs, toast } = useApp()
+  const effective = useEffectiveSettings()
+  const channelOptions = effective?.dicts.CHANNEL ?? []
+  const tagOptions = effective?.dicts.TAG ?? []
   const [rows, setRows] = useState<Candidate[]>([])
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [total, setTotal] = useState(0)
@@ -97,9 +101,12 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
   const departmentGroups = useMemo(() => {
     const groups = new Map<string, typeof apiJobs>()
     apiJobs.forEach((job) => groups.set(job.departmentId, [...(groups.get(job.departmentId) ?? []), job]))
+    // ATS-024：部门名称以服务端返回的 departmentName 为准；非管理员拿不到部门清单时不再回退为原始 ID
     return [...groups.entries()].map(([departmentId, jobs]) => ({
       departmentId,
-      name: getDepartment(departmentId)?.name || data.candidates.find((candidate) => candidate.departmentId === departmentId)?.departmentName || departmentId,
+      name: getDepartment(departmentId)?.name || jobs.find((job) => job.departmentName)?.departmentName
+        || data.candidates.find((candidate) => candidate.departmentId === departmentId && candidate.departmentName)?.departmentName
+        || '部门待补充',
       jobs,
     }))
   }, [apiJobs, data.candidates])
@@ -286,6 +293,9 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
 
   return (
     <div className="page-stack candidates-page">
+      {/* 渠道与标签候选项来自管理后台字典（ATS-024），筛选仍允许自由输入 */}
+      <datalist id="candidate-channel-options">{channelOptions.map((item) => <option key={item} value={item} />)}</datalist>
+      <datalist id="candidate-tag-options">{tagOptions.map((item) => <option key={item} value={item} />)}</datalist>
       <div className="page-title-row">
         <div><div className="eyebrow">候选人 <span className="eyebrow-separator">·</span> {allCount} 位</div><h2>简历库</h2><p>按招聘阶段和职位管理候选人，状态变更均由明确动作触发。</p></div>
         <div className="page-title-actions">
@@ -307,8 +317,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
       {stage === 'ARCHIVED' && (
         <div className="panel pool-summary">
           <div><strong>人才库</strong><span>人才库总量（已归档真实计数）：{archivedCount} 人。归档候选人自动入池，选择职位即可激活回人才推荐，归档与激活历史全部保留。</span></div>
-          <label className="candidate-filter-input"><span>标签检索</span><input value={filters.tag ?? ''} onChange={(event) => patchFilter('tag', event.target.value)} placeholder="如：Java、华为" /></label>
-          <label className="candidate-filter-input"><span>归档渠道</span><input value={filters.channel ?? ''} onChange={(event) => patchFilter('channel', event.target.value)} placeholder="渠道" /></label>
+          <label className="candidate-filter-input"><span>标签检索</span><input list="candidate-tag-options" value={filters.tag ?? ''} onChange={(event) => patchFilter('tag', event.target.value)} placeholder="如：Java、华为" /></label>
+          <label className="candidate-filter-input"><span>归档渠道</span><input list="candidate-channel-options" value={filters.channel ?? ''} onChange={(event) => patchFilter('channel', event.target.value)} placeholder="渠道" /></label>
         </div>
       )}
 
@@ -321,7 +331,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
           <button className={cn('candidate-tree-item', !filters.departmentId && !filters.jobId && 'active')} onClick={() => { patchFilter('departmentId', ''); patchFilter('jobId', '') }}>全部职位</button>
           {departmentGroups.map((group) => <section key={group.departmentId}>
             <button className={cn('candidate-tree-item department', filters.departmentId === group.departmentId && 'active')} onClick={() => { patchFilter('departmentId', group.departmentId); patchFilter('jobId', '') }}>{group.name}</button>
-            {group.jobs.map((job) => <button key={job.id} className={cn('candidate-tree-item job', filters.jobId === job.id && 'active')} onClick={() => { patchFilter('departmentId', group.departmentId); patchFilter('jobId', job.id) }}>{job.title}<small>{job.id}</small></button>)}
+            {group.jobs.map((job) => <button key={job.id} className={cn('candidate-tree-item job', filters.jobId === job.id && 'active')} onClick={() => { patchFilter('departmentId', group.departmentId); patchFilter('jobId', job.id) }}>{job.title}<small>{job.code || job.id}</small></button>)}
           </section>)}
         </aside>
 
@@ -340,9 +350,9 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
             <FilterSelect label="部门" value={filters.departmentId ?? ''} onChange={(value) => patchFilter('departmentId', value)} options={[{ value: '', label: '全部部门' }, ...departmentGroups.map((item) => ({ value: item.departmentId, label: item.name }))]} />
             <FilterSelect label="职位" value={filters.jobId ?? ''} onChange={(value) => patchFilter('jobId', value)} options={[{ value: '', label: '全部职位' }, ...apiJobs.map((job) => ({ value: job.id, label: job.title }))]} />
             <label className="candidate-filter-input"><span>公司</span><input value={filters.company ?? ''} onChange={(event) => patchFilter('company', event.target.value)} placeholder="公司名称" /></label>
-            <label className="candidate-filter-input"><span>渠道</span><input value={filters.channel ?? ''} onChange={(event) => patchFilter('channel', event.target.value)} placeholder="渠道" /></label>
+            <label className="candidate-filter-input"><span>渠道</span><input list="candidate-channel-options" value={filters.channel ?? ''} onChange={(event) => patchFilter('channel', event.target.value)} placeholder="渠道" /></label>
             <label className="candidate-filter-input"><span>来源</span><input value={filters.source ?? ''} onChange={(event) => patchFilter('source', event.target.value)} placeholder="来源" /></label>
-            <label className="candidate-filter-input"><span>标签</span><input value={filters.tag ?? ''} onChange={(event) => patchFilter('tag', event.target.value)} placeholder="标签" /></label>
+            <label className="candidate-filter-input"><span>标签</span><input list="candidate-tag-options" value={filters.tag ?? ''} onChange={(event) => patchFilter('tag', event.target.value)} placeholder="标签" /></label>
             <FilterSelect label="锁定状态" value={filters.lockedState ?? ''} onChange={(value) => patchFilter('lockedState', value || undefined)} options={[{ value: '', label: '全部状态' }, { value: 'NONE', label: '未锁定' }, { value: 'OPERABLE', label: '可操作' }, { value: 'INOPERABLE', label: '不可操作' }]} />
             <label className="candidate-filter-input"><span>未处理至</span><input type="date" value={filters.updatedBefore?.slice(0, 10) ?? ''} onChange={(event) => patchFilter('updatedBefore', event.target.value ? `${event.target.value}T23:59:59.999Z` : '')} /></label>
             <div className="saved-filter-actions"><input value={savedFilterName} onChange={(event) => setSavedFilterName(event.target.value)} placeholder="筛选名称" /><button className="text-button" disabled={!savedFilterName.trim()} onClick={saveCurrentFilter}>保存当前筛选</button></div>
@@ -380,7 +390,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
           <div className="table-footer"><span>显示 {total ? (page - 1) * pageSize + 1 : 0}-{Math.min(page * pageSize, total)}，共 {total} 条{archivedCount >= POOL_ABBREVIATE_THRESHOLD ? `（人才库总量 ${formatCount(archivedCount, true)}）` : ''}</span><div className="pagination"><button disabled={page === 1} onClick={() => goToPage(page - 1)}><ChevronLeft size={15} /></button>{Array.from({ length: Math.min(pages, 5) }, (_, index) => { const pageNumber = Math.max(1, Math.min(pages - 4, page - 2)) + index; return pageNumber <= pages ? <button key={pageNumber} className={page === pageNumber ? 'active' : ''} onClick={() => goToPage(pageNumber)}>{pageNumber}</button> : null })}<button disabled={page === pages} onClick={() => goToPage(page + 1)}><ChevronRight size={15} /></button><input className="page-jump" value={jumpPage} onChange={(event) => setJumpPage(event.target.value.replace(/\D/g, ''))} onKeyDown={(event) => { if (event.key === 'Enter' && jumpPage) { goToPage(Number(jumpPage)); setJumpPage('') } }} placeholder="跳至" aria-label="跳转页码" /><span className="page-jump-total">/ {pages}</span><select className="page-size" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1) }} aria-label="每页条数">{poolPageSizes.map((size) => <option key={size} value={size}>{size} 条/页</option>)}</select></div></div>
         </div>
       </div>
-      {assignCandidateId && <div className="drawer-backdrop candidate-assign-backdrop" onClick={() => setAssignCandidateId(null)}><section className="candidate-assign-dialog" onClick={(event) => event.stopPropagation()}><h3>{activatingCandidate ? '从人才库激活' : '分配到职位'}</h3><label><span>目标职位</span><select value={assignJobId} onChange={(event) => setAssignJobId(event.target.value)}>{jobOptions.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentId}</option>)}</select></label>{activatingCandidate && <p className="hint">激活后候选人回流至「人才推荐」，原归档记录与原因全部保留。</p>}<div><button className="button button-secondary" onClick={() => setAssignCandidateId(null)}>取消</button><button className="button button-primary" disabled={!assignJobId || busy} onClick={confirmAssignCandidate}>{activatingCandidate ? '确认激活' : '确认分配'}</button></div></section></div>}
+      {assignCandidateId && <div className="drawer-backdrop candidate-assign-backdrop" onClick={() => setAssignCandidateId(null)}><section className="candidate-assign-dialog" onClick={(event) => event.stopPropagation()}><h3>{activatingCandidate ? '从人才库激活' : '分配到职位'}</h3><label><span>目标职位</span><select value={assignJobId} onChange={(event) => setAssignJobId(event.target.value)}>{jobOptions.map((job) => <option key={job.id} value={job.id}>{job.title} · {job.departmentName || '部门待补充'}</option>)}</select></label>{activatingCandidate && <p className="hint">激活后候选人回流至「人才推荐」，原归档记录与原因全部保留。</p>}<div><button className="button button-secondary" onClick={() => setAssignCandidateId(null)}>取消</button><button className="button button-primary" disabled={!assignJobId || busy} onClick={confirmAssignCandidate}>{activatingCandidate ? '确认激活' : '确认分配'}</button></div></section></div>}
     </div>
   )
 }
@@ -390,7 +400,7 @@ function CandidateRow({ candidate, selected, onSelect, onOpen, onAssign }: { can
   return <tr>
     <td className="check-column"><input type="checkbox" checked={selected} onChange={onSelect} onClick={(event) => event.stopPropagation()} /></td>
     <td><button className="candidate-cell" onClick={onOpen}><span className="avatar avatar-md" style={{ background: `${candidate.avatarColor}18`, color: candidate.avatarColor }}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany} · {candidate.currentTitle}</small></span></button></td>
-    <td><button className="job-cell" onClick={onOpen}><strong>{candidate.jobTitle || '待分配职位'}</strong><small>{candidate.departmentName || candidate.departmentId || '部门待补充'} · {candidate.jobLocation || '地点待补充'}</small></button></td>
+    <td><button className="job-cell" onClick={onOpen}><strong>{candidate.jobTitle || '待分配职位'}</strong><small>{candidate.departmentName || '部门待补充'} · {candidate.jobLocation || '地点待补充'}</small></button></td>
     <td><StageBadge stage={candidate.stage} /></td>
     <td><span className="source-cell">{candidate.source}</span>{candidate.channel && <small className="candidate-channel">{candidate.channel}</small>}</td>
     <td><span className="rating-cell"><Star size={14} fill="#EEA23E" stroke="#EEA23E" />{candidate.rating}.0</span></td>

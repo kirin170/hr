@@ -12,6 +12,7 @@ import { AuditService } from './audit.service.js';
 export class AuditController {
   constructor(private readonly audit: AuditService) {}
 
+  /** 审计检索：支持按操作人、时间段、对象与动作（或动作前缀）查询，返回内容已脱敏。 */
   @Get()
   @RequirePermission('audit:read')
   @AuditAction('audit.read', 'AuditLog')
@@ -20,12 +21,17 @@ export class AuditController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('limit') limit?: string,
+    @Query('resourceType') resourceType?: string,
+    @Query('resourceId') resourceId?: string,
+    @Query('action') action?: string,
+    @Query('actionPrefix') actionPrefix?: string,
   ) {
     return this.audit.list({
       actorId,
       from: this.parseDate(from, 'from'),
       to: this.parseDate(to, 'to'),
       limit: this.parseLimit(limit, 1000),
+      ...this.filters({ resourceType, resourceId, action, actionPrefix }),
     });
   }
 
@@ -39,16 +45,22 @@ export class AuditController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('limit') limit?: string,
+    @Query('resourceType') resourceType?: string,
+    @Query('resourceId') resourceId?: string,
+    @Query('action') action?: string,
+    @Query('actionPrefix') actionPrefix?: string,
   ): Promise<string> {
     const items = await this.audit.list({
       actorId,
       from: this.parseDate(from, 'from'),
       to: this.parseDate(to, 'to'),
       limit: this.parseLimit(limit, 10000),
+      ...this.filters({ resourceType, resourceId, action, actionPrefix }),
     });
     const columns = [
       'id',
       'actorId',
+      'actorName',
       'action',
       'resourceType',
       'resourceId',
@@ -64,6 +76,20 @@ export class AuditController {
       columns.map((column) => this.csvCell(item[column])).join(','),
     );
     return `\uFEFF${columns.join(',')}\r\n${rows.join('\r\n')}`;
+  }
+
+  private filters(input: {
+    resourceType?: string;
+    resourceId?: string;
+    action?: string;
+    actionPrefix?: string;
+  }) {
+    for (const [name, value] of Object.entries(input)) {
+      if (value !== undefined && !/^[\w.:\-]{1,191}$/.test(value)) {
+        throw new BadRequestException(`${name} 筛选值无效`);
+      }
+    }
+    return { ...input, action: input.action || undefined, actionPrefix: input.actionPrefix || undefined };
   }
 
   private parseDate(value: string | undefined, name: string): Date | undefined {

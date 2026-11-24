@@ -162,7 +162,7 @@ function PoolTab({ jobs, users }: { jobs: JobListItem[]; users: ApiUser[] }) {
           <select value={jobId} onChange={(event) => setJobId(event.target.value)}>
             <option value="">选择职位</option>
             {jobs.map((job) => (
-              <option key={job.id} value={job.id}>{job.code} · {job.title}{job.isVirtual ? '（虚拟职位）' : ''}</option>
+              <option key={job.id} value={job.id}>{job.code} · {job.title}{job.isVirtual ? '（虚拟职位）' : ''} · {job.departmentName || '部门待补充'}</option>
             ))}
           </select>
         </label>

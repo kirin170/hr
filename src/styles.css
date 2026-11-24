@@ -1033,3 +1033,67 @@ body:has(.campus-portal) { min-width: 0; background: #f4f6fc; }
 
 .onboarding-notifications { position: absolute; right: 70px; top: 58px; z-index: 20; width: 320px; max-height: 320px; overflow: auto; background: white; padding: 16px; border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow-sm); }
 .onboarding-notifications > div { display: flex; justify-content: space-between; gap: 8px; padding-top: 12px; }
+
+/* ---------- 管理后台 / 业务设置（ATS-024） ---------- */
+.admin-page { display: grid; grid-template-columns: 208px minmax(0, 1fr); gap: 18px; align-items: start; }
+.admin-tabs { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 88px; }
+.admin-tab { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; padding: 10px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-2); text-align: left; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.admin-tab strong { font-size: 13px; font-weight: 600; }
+.admin-tab small { font-size: 11px; color: var(--muted); }
+.admin-tab:hover { background: var(--surface); color: var(--text); }
+.admin-tab-active { background: var(--surface); border-color: var(--line); color: var(--primary); box-shadow: var(--shadow-sm); }
+.admin-tab-active small { color: var(--text-2); }
+.admin-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.admin-error { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid #f3d3d8; border-radius: 10px; background: #fdf2f4; color: #b03a48; font-size: 12px; }
+.admin-section { padding: 18px 20px; }
+.admin-subsection { margin-top: 16px; }
+.admin-subsection h4 { margin: 0 0 8px; font-size: 13px; color: var(--text); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.admin-table th { padding: 8px 10px; text-align: left; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--line); white-space: nowrap; }
+.admin-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; color: var(--text-2); }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table td strong { color: var(--text); font-weight: 600; }
+.admin-table td small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.admin-note { color: var(--text-2); }
+.admin-danger { color: var(--red); }
+.admin-input { height: 34px; padding: 0 10px; border: 1px solid var(--line-dark); border-radius: 8px; background: white; color: var(--text); font-size: 12.5px; }
+.admin-input-sm { max-width: 120px; }
+.admin-select { height: 34px; padding: 0 8px; border: 1px solid var(--line-dark); border-radius: 8px; background: white; color: var(--text); font-size: 12.5px; }
+.admin-inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
+.admin-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.admin-check { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-2); }
+.admin-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.admin-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.admin-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.admin-card p { margin: 0; font-size: 12px; color: var(--text-2); line-height: 1.6; }
+.admin-card small { display: block; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.admin-kv { display: flex; flex-wrap: wrap; gap: 24px; margin: 12px 0; }
+.admin-kv dt { font-size: 11px; color: var(--muted); }
+.admin-kv dd { margin: 2px 0 0; font-size: 13px; color: var(--text); font-weight: 600; }
+.admin-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.admin-rules li { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-left: 3px solid var(--primary-soft); background: var(--surface-soft); border-radius: 0 8px 8px 0; }
+.admin-rules strong { font-size: 12.5px; color: var(--text); }
+.admin-rules span { font-size: 12px; color: var(--text-2); }
+
+/* ---------- 用户菜单（ATS-024） ---------- */
+.profile-anchor { position: relative; }
+.profile-compact-open { background: var(--primary-soft); color: var(--primary); }
+.user-menu { position: absolute; right: 0; top: 42px; z-index: 30; width: 280px; padding: 14px; display: flex; flex-direction: column; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-md); }
+.user-menu-head { display: flex; align-items: center; gap: 10px; }
+.user-menu-head strong { display: block; font-size: 13px; color: var(--text); }
+.user-menu-head small { font-size: 11px; color: var(--muted); }
+.user-menu-tabs { display: flex; gap: 6px; }
+.user-menu-tabs button { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: white; color: var(--text-2); font-size: 12px; cursor: pointer; }
+.user-menu-tabs button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-soft); }
+.user-menu-profile { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.user-menu-profile div { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+.user-menu-profile dt { color: var(--muted); }
+.user-menu-profile dd { margin: 0; color: var(--text); text-align: right; }
+.user-menu-notifications { display: flex; flex-direction: column; gap: 8px; }
+.user-menu-notifications label { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-2); }
+.user-menu-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+@media (max-width: 1180px) {
+  .admin-page { grid-template-columns: 1fr; }
+  .admin-tabs { position: static; flex-direction: row; flex-wrap: wrap; }
+}

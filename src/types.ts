@@ -12,6 +12,7 @@ export type PageKey =
   | 'team'
   | 'reports'
   | 'settings'
+  | 'admin'
 
 export type CandidateMainStage =
   | 'RECOMMENDED'
@@ -138,8 +139,12 @@ export type SavedCandidateFilter = {
 
 export type ApiJob = {
   id: string
+  /** 职位编号，服务端列表接口已返回；旧数据缺失时前端回退显示 id */
+  code?: string
   title: string
   departmentId: string
+  /** 服务端按 departmentId 补全的部门名称；查不到时为空串，前端显示“部门待补充”而不是原始 ID */
+  departmentName?: string
   location: string | null
   headcount: number
   hiredCount: number
@@ -165,6 +170,7 @@ export type ApiRequisition = {
   oaApprovalTitle: string | null
   title: string
   departmentId: string
+  departmentName?: string
   recruiterId: string | null
   jobLevel: string | null
   headcount: number
@@ -562,4 +568,243 @@ export type CampusAssignResult = {
   assigned: number
   failed: number
   results: { applicationId: string; ok: boolean; candidateId?: string | null; error?: string }[]
+}
+
+// ---------- 业务设置 / 管理后台（ATS-024） ----------
+
+export type RoleGrant = {
+  code: string
+  name: string
+  dataScope: string
+  permissions: string[]
+}
+
+export type CurrentUser = {
+  id: string
+  displayName: string
+  departmentId: string | null
+  departmentIds: string[]
+  groupIds: string[]
+  roles: RoleGrant[]
+}
+
+export type ConfigEntity = 'JOB' | 'REQUISITION' | 'CANDIDATE'
+
+export type EffectiveField = { key: string; label: string; required: boolean; visible: boolean }
+
+export type EffectiveSettings = {
+  fields: Record<ConfigEntity, EffectiveField[]>
+  dicts: Record<string, string[]>
+  archiveReasons: { id: string; label: string; isOther: boolean }[]
+  interviewPlans: { id: string; name: string; rounds: number }[]
+}
+
+export type FieldConfigView = {
+  id: string
+  entity: ConfigEntity
+  key: string
+  label: string
+  required: boolean
+  visible: boolean
+  requiredConfigurable: boolean
+  visibleConfigurable: boolean
+  effect: 'server' | 'form'
+  description: string
+  version: number
+}
+
+export type FieldConfigGroup = { entity: ConfigEntity; label: string; items: FieldConfigView[] }
+
+export type InterviewPlanView = {
+  id: string
+  name: string
+  rounds: number
+  description: string | null
+  active: boolean
+  sortOrder: number
+  version: number
+  usageCount: number
+  updatedAt: string
+}
+
+export type ReasonOptionView = {
+  id: string
+  type: 'ARCHIVE' | 'OFFER_REJECT' | 'ONBOARD_ABANDON'
+  setTypeLabel: string
+  label: string
+  active: boolean
+  sortOrder: number
+  version: number
+  isOther: boolean
+  usageCount: number
+  updatedAt: string
+}
+
+export type DictItemView = {
+  id: string
+  type: string
+  label: string
+  active: boolean
+  sortOrder: number
+  version: number
+  usageCount: number
+  updatedAt: string
+}
+
+export type FixedRule = { key: string; label: string; description: string }
+
+export type AdminOverview = {
+  reasons: { items: ReasonOptionView[]; stats: Record<string, { used: number; unfilled: number }>; unfilledNote: string }
+  dicts: { items: DictItemView[]; types: { type: string; label: string; description?: string }[] }
+  fields: FieldConfigGroup[]
+  interviewPlans: InterviewPlanView[]
+  rules: FixedRule[]
+}
+
+export type AuditLogRow = {
+  id: string
+  actorId: string
+  actorName?: string | null
+  action: string
+  resourceType: string
+  resourceId: string
+  requestId?: string | null
+  beforeSummary?: string | null
+  afterSummary?: string | null
+  ip?: string | null
+  userAgent?: string | null
+  outcome?: string | null
+  createdAt: string
+}
+
+export type NotificationEventInfo = {
+  key: string
+  label: string
+  description?: string
+  lowPriority?: boolean
+  sent24h?: number
+}
+
+export type MyNotificationPreferences = {
+  muted: string[]
+  closable: { key: string; label: string }[]
+  events: NotificationEventInfo[]
+}
+
+export type OperationsSnapshot = {
+  generatedAt: string
+  services: Record<string, { name: string; status: string; detail: string }>
+  integrations: { key: string; name: string; status: string; detail: string; permission?: string }[]
+  mail: {
+    mailboxes: {
+      id: string
+      address: string
+      provider: string
+      active: boolean
+      pollIntervalSeconds: number
+      lastPolledAt: string | null
+      lastPollStatus: string | null
+      lastError: string | null
+      consecutiveFailures: number
+      lastFetchedCount: number | null
+      lastCreatedCount: number | null
+    }[]
+    outcomes24h: Record<string, number>
+  }
+  dingtalk: {
+    events: {
+      id: string
+      eventType: string
+      status: string
+      attempts: number
+      receivedAt: string | null
+      processedAt: string | null
+      lastError: string | null
+      retryable: boolean
+    }[]
+  }
+  tokens: { active: number }
+  tasks: {
+    intakeFailures: {
+      id: string
+      source: string
+      entryMode: string
+      status: string
+      airRunId: string | null
+      attempts: number
+      errorCode: string | null
+      errorMessage: string | null
+      createdAt: string | null
+      retryable: boolean
+    }[]
+    browserImportFailures: {
+      taskId: string
+      errorStage: string | null
+      errorCode: string | null
+      errorMessage: string | null
+      createdAt: string | null
+      completedAt: string | null
+    }[]
+    aiFailures: {
+      id: string
+      type: string
+      attempts: number
+      errorCode: string | null
+      errorMessage: string | null
+      updatedAt: string | null
+    }[]
+    aiByStatus: Record<string, number>
+    retentionRuns: {
+      id: string
+      scope: string
+      cutoff: string | null
+      scanned: number
+      expired: number
+      deletedFiles: number
+      detachedIntakes: number
+      failedDeletes: number
+      dryRun: boolean
+      createdAt: string | null
+    }[]
+  }
+  notifications: { channel: string; integrated: boolean; events: NotificationEventInfo[] }
+}
+
+// 组织与权限：沿用 ATS-005 已交付的授权接口
+export type AuthzRole = {
+  code: string
+  name: string
+  dataScope: string
+  description?: string | null
+  permissions: { permission: { code: string; description: string } }[]
+}
+
+export type AuthzGroup = {
+  id: string
+  code: string
+  name: string
+  description?: string | null
+  _count?: { members: number }
+}
+
+export type AuthzUser = {
+  id: string
+  employeeNo: string | null
+  displayName: string
+  email: string | null
+  status: string
+  departmentId: string | null
+  roleAssignments: { role: { code: string; name: string } }[]
+}
+
+export type FieldGrantRow = {
+  id: string
+  field: string
+  userId: string | null
+  userGroupId: string | null
+  canRead: boolean
+  canWrite: boolean
+  grantedById: string
+  expiresAt: string | null
+  createdAt: string
 }

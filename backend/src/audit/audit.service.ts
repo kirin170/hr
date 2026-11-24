@@ -3,6 +3,7 @@ import { AuditOutcome, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { maskAuditValue } from './audit.mask.js';
 
 export type AuditWrite = {
   actorId?: string | null;
@@ -46,15 +47,35 @@ export class AuditService {
     return request.requestId ?? randomUUID();
   }
 
+  /** 供领域服务自行写审计时复用请求上下文（requestId / IP / UA）。 */
+  contextOf(request: AuthenticatedRequest): Pick<AuditWrite, 'requestId' | 'ip' | 'userAgent'> {
+    return {
+      requestId: this.requestId(request),
+      ip: request.ip,
+      userAgent: request.headers['user-agent'],
+    };
+  }
+
+  /**
+   * 审计查询（ATS-024 扩展）：支持按对象与动作检索，返回前统一脱敏。
+   * `actionPrefix` 用于按模块检索，例如 `setting.`、`authz.`。
+   */
   async list(options: {
     actorId?: string;
     from?: Date;
     to?: Date;
     limit: number;
+    resourceType?: string;
+    resourceId?: string;
+    action?: string;
+    actionPrefix?: string;
   }) {
-    return this.prisma.auditLog.findMany({
+    const rows = await this.prisma.auditLog.findMany({
       where: {
         actorId: options.actorId,
+        resourceType: options.resourceType,
+        resourceId: options.resourceId,
+        action: options.action ?? (options.actionPrefix ? { startsWith: options.actionPrefix } : undefined),
         createdAt: {
           gte: options.from,
           lte: options.to,
@@ -65,6 +86,7 @@ export class AuditService {
       select: {
         id: true,
         actorId: true,
+        actor: { select: { displayName: true } },
         action: true,
         resourceType: true,
         resourceId: true,
@@ -77,5 +99,11 @@ export class AuditService {
         createdAt: true,
       },
     });
+    return rows.map((row) => ({
+      ...row,
+      actorName: row.actor?.displayName ?? null,
+      beforeSummary: maskAuditValue(row.beforeSummary),
+      afterSummary: maskAuditValue(row.afterSummary),
+    }));
   }
 }

@@ -33,7 +33,10 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
     ...data.candidates.map(item => item.departmentId),
   ].filter(Boolean))).map(value => ({
     value,
-    label: getDepartment(value)?.name || data.candidates.find(item => item.departmentId === value)?.departmentName || value,
+    label: getDepartment(value)?.name
+      || apiJobs.find((item) => item.departmentId === value)?.departmentName
+      || data.candidates.find((item) => item.departmentId === value && item.departmentName)?.departmentName
+      || '部门待补充',
   }))
   const jobFilters = Array.from(new Map([
     ...jobs.map(item => [item.id, item.title] as const),

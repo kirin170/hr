@@ -52,10 +52,17 @@ export function Positions() {
   const [closingRequisition, setClosingRequisition] = useState<ApiRequisition | null>(null)
   const [startDateTarget, setStartDateTarget] = useState<ApiRequisition | null>(null)
 
+  // 部门名称优先用部门清单，其次用职位/需求单上服务端补全的 departmentName；都没有时提示待补充，不回退原始 ID
   const departmentName = useMemo(() => {
     const map = new Map(departments.map((department) => [department.id, department.name]))
-    return (id: string) => map.get(id) ?? id
-  }, [departments])
+    jobs.forEach((job) => {
+      if (job.departmentName && !map.has(job.departmentId)) map.set(job.departmentId, job.departmentName)
+    })
+    requisitions.forEach((requisition) => {
+      if (requisition.departmentName && !map.has(requisition.departmentId)) map.set(requisition.departmentId, requisition.departmentName)
+    })
+    return (id: string) => map.get(id) ?? '部门待补充'
+  }, [departments, jobs, requisitions])
 
   const userName = useMemo(() => {
     const map = new Map(users.map((user) => [user.id, user.displayName]))

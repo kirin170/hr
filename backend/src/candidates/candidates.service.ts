@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { canEnterPendingOnboard, failureReasonType, OFFER_STAGES, type FailureInitiator, type OfferStage } from '../offers/offer-contract.js';
+import { resolveDepartmentNames, resolveUserNames } from '../settings/display-names.js';
+import { assertDictValue, assertRequiredFields } from '../settings/config-rules.js';
 
 const uiStages = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
 type LegacyUiStage = (typeof uiStages)[number];
@@ -152,8 +154,13 @@ export class CandidatesService {
     const counts = Object.fromEntries(stageValues.map((stage) => [stage, 0])) as Record<DbCandidateStage, number>;
     for (const group of stageGroups) counts[group.stage] = group._count._all;
 
+    // 部门名称按当页职位批量补全，避免逐条查询
+    const departmentNames = await resolveDepartmentNames(this.prisma, items.map((item) => item.job?.departmentId));
+
     return {
-      items: items.map((candidate) => this.toCandidateDto(candidate, canReadContacts)),
+      items: await Promise.all(
+        items.map((candidate) => this.toCandidateDto(candidate, canReadContacts, departmentNames)),
+      ),
       page: safePage,
       pageSize: safePageSize,
       total,
@@ -189,7 +196,7 @@ export class CandidatesService {
       SensitiveField.CANDIDATE_CONTACT,
       'READ',
     );
-    return this.toCandidateDto(candidate, canReadContacts);
+    return await this.toCandidateDto(candidate, canReadContacts);
   }
 
   async timeline(id: string, actor: AuthenticatedUser) {
@@ -206,11 +213,16 @@ export class CandidatesService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+    // 时间线只保存 actorId，这里补全操作人显示名；查不到的按已删除用户/系统标注，不回退为原始 ID
+    const actorNames = await resolveUserNames(
+      this.prisma,
+      events.map((event) => event.actorId),
+    );
     return events.map((event) => ({
       id: event.id,
       action: event.action,
       payload: event.payload,
-      actor: event.actorId ?? '系统',
+      actor: event.actorId ? (actorNames.get(event.actorId) ?? '已删除用户') : '系统',
       createdAt: event.createdAt.toISOString(),
     }));
   }
@@ -249,6 +261,10 @@ export class CandidatesService {
     const rating = typeof input.rating === 'number' && Number.isFinite(input.rating)
       ? Math.min(Math.max(Math.round(input.rating), 0), 5)
       : null;
+    // ATS-024：字段必填与渠道取值按后台配置在服务端校验（固定必填条件始终生效）
+    await assertRequiredFields(this.prisma, 'CANDIDATE', input as Record<string, unknown>);
+    if (channel) await assertDictValue(this.prisma, 'CHANNEL', channel, '渠道');
+
     return this.prisma.$transaction(async (tx) => {
       const candidate = await tx.candidate.create({
         data: {
@@ -296,7 +312,7 @@ export class CandidatesService {
         },
       });
 
-      return this.toCandidateDto(candidate, canReadContacts);
+      return await this.toCandidateDto(candidate, canReadContacts);
     });
   }
 
@@ -305,6 +321,7 @@ export class CandidatesService {
     const nextStage = this.parseStage(input.stage);
     const reason = this.optionalText(input.reason);
     const reasonId = this.optionalText(input.reasonId);
+    let archivedReasonText = reason;
 
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.candidate.findFirst({
@@ -323,7 +340,7 @@ export class CandidatesService {
           SensitiveField.CANDIDATE_CONTACT,
           'READ',
         );
-        return this.toCandidateDto(current, canReadContacts);
+        return await this.toCandidateDto(current, canReadContacts);
       }
       if (current.stage === DbCandidateStage.PROBATION && nextStage === DbCandidateStage.ENDED) throw new ConflictException('请通过试用期结论动作记录是否转正');
       this.assertTransition(current.stage, nextStage);
@@ -360,7 +377,17 @@ export class CandidatesService {
         const option = await tx.reasonOption.findUniqueOrThrow({ where: { id: reasonId! } });
         await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'onboarding.abandoned', payload: { reasonType: 'ONBOARD_ABANDON', reasonId: option.id, reasonLabel: option.label, reasonText: reason } } });
       }
-      const result = await this.persistStageChange(tx, current, nextStage, actor, reason, reasonId);
+      if (nextStage === DbCandidateStage.ARCHIVED && current.stage !== DbCandidateStage.OFFERING
+        && current.stage !== DbCandidateStage.PENDING_ONBOARD && reasonId) {
+        // ATS-024：一般归档原因选填；填写时必须是集 A 启用中的选项，「其他」须补充说明。
+        // 未填说明时以选项名称留快照，后续改名或停用不影响历史显示与统计
+        const option = await tx.reasonOption.findUnique({ where: { id: reasonId } });
+        if (!option || !option.active || option.type !== 'ARCHIVE' || (option.label.startsWith('其他') && !reason)) {
+          throw new BadRequestException('归档原因无效或已停用；选择“其他”须填写说明');
+        }
+        archivedReasonText = reason ?? option.label;
+      }
+      const result = await this.persistStageChange(tx, current, nextStage, actor, archivedReasonText, reasonId);
       if (current.stage === DbCandidateStage.PENDING_ONBOARD && nextStage === DbCandidateStage.ONBOARDED) {
         if (!current.jobId) throw new ConflictException('候选人未关联职位');
         await tx.job.update({ where: { id: current.jobId }, data: { hiredCount: { increment: 1 } } });
@@ -375,7 +402,7 @@ export class CandidatesService {
     const [offer, probation, reasons] = await Promise.all([
       this.prisma.offerRecord.findUnique({ where: { candidateId: id }, select: { jobId: true, onboardDate: true } }),
       this.prisma.probationRecord.findUnique({ where: { candidateId: id } }),
-      this.prisma.reasonOption.findMany({ where: { type: 'ONBOARD_ABANDON', active: true }, orderBy: { label: 'asc' } }),
+      this.prisma.reasonOption.findMany({ where: { type: 'ONBOARD_ABANDON', active: true }, orderBy: [{ sortOrder: 'asc' }, { label: 'asc' }] }),
     ]);
     return { onboardDate: offer?.jobId === candidate.jobId ? offer.onboardDate : null, probation, reasons };
   }
@@ -410,7 +437,7 @@ export class CandidatesService {
       await tx.probationRecord.upsert({ where: { candidateId: id }, create: { candidateId: id, converted: body.converted as boolean, convertedAt }, update: { converted: body.converted as boolean, convertedAt } });
       await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'probation.completed', payload: { converted: body.converted as boolean, convertedAt: convertedAt?.toISOString() ?? null } } });
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -454,7 +481,7 @@ export class CandidatesService {
         },
       });
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -516,7 +543,7 @@ export class CandidatesService {
         },
       });
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -587,7 +614,7 @@ export class CandidatesService {
       });
       if (result !== 'PASS') {
         const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-        return this.toCandidateDto(updated, await this.canReadContacts(actor));
+        return await this.toCandidateDto(updated, await this.canReadContacts(actor));
       }
       await tx.timelineEvent.create({
         data: {
@@ -602,7 +629,7 @@ export class CandidatesService {
         },
       });
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -632,7 +659,7 @@ export class CandidatesService {
         });
       }
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -697,7 +724,7 @@ export class CandidatesService {
         },
       });
       const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
-      return this.toCandidateDto(updated, await this.canReadContacts(actor));
+      return await this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -941,7 +968,7 @@ export class CandidatesService {
       },
     });
     const updated = await tx.candidate.findUniqueOrThrow({ where: { id: current.id }, include: { job: true } });
-    return this.toCandidateDto(updated, await this.canReadContacts(actor));
+    return await this.toCandidateDto(updated, await this.canReadContacts(actor));
   }
 
   private async canReadContacts(actor: AuthenticatedUser): Promise<boolean> {
@@ -972,7 +999,13 @@ export class CandidatesService {
     return value as Record<string, unknown>;
   }
 
-  private toCandidateDto(candidate: CandidateWithJob, canReadContacts: boolean) {
+  private async toCandidateDto(
+    candidate: CandidateWithJob,
+    canReadContacts: boolean,
+    departmentNames?: Map<string, string>,
+  ) {
+    const departmentId = candidate.job?.departmentId ?? '';
+    const names = departmentNames ?? (await resolveDepartmentNames(this.prisma, [departmentId]));
     return {
       id: candidate.id,
       name: candidate.name,
@@ -982,7 +1015,7 @@ export class CandidatesService {
       jobTitle: candidate.job?.title ?? '',
       jobLocation: candidate.job?.location ?? '',
       departmentId: candidate.job?.departmentId ?? '',
-      departmentName: '',
+      departmentName: names.get(departmentId) ?? '',
       departmentColor: '#8390A5',
       stage: candidate.stage,
       poolType: candidate.poolType,

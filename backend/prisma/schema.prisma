@@ -495,13 +495,72 @@ model CandidateTalentPoolEntry {
   @@map("talent_pool_entries")
 }
 
+/// 原因选项（集 A 淘汰/归档、集 B Offer 拒绝、集 C 放弃入职）：稳定 ID，停用不删除以保留历史含义（ATS-024 补排序/版本）
 model ReasonOption {
-  id     String @id @default(cuid())
-  type   ReasonType
-  label  String
-  active Boolean @default(true)
+  id          String     @id @default(cuid())
+  type        ReasonType
+  label       String
+  active      Boolean    @default(true)
+  /// 同集合内升序展示
+  sortOrder   Int        @default(0)
+  /// 乐观锁版本：并发修改返回冲突而不是静默覆盖
+  version     Int        @default(1)
+  updatedById String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
+  @@index([type, active, sortOrder])
   @@map("reason_options")
+}
+
+/// 通用字典（ATS-024）：职能类型、职级、需求类型、渠道、标签；停用不删除
+model DictItem {
+  id          String   @id @default(cuid())
+  type        String
+  label       String
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  version     Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([type, label])
+  @@index([type, active, sortOrder])
+  @@map("dict_items")
+}
+
+/// 字段配置（ATS-024）：职位/需求/候选人字段的必填与显示；固定必填条件由服务端注册表强制，不可取消
+model FieldConfig {
+  id          String   @id @default(cuid())
+  entity      String
+  fieldKey    String
+  required    Boolean  @default(false)
+  visible     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  version     Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([entity, fieldKey])
+  @@map("field_configs")
+}
+
+/// 面试方案（ATS-024）：轮次模板，职位通过 interviewPlanId 引用；停用后已有职位保持原引用
+model InterviewPlan {
+  id          String   @id @default(cuid())
+  name        String
+  rounds      Int
+  description String?  @db.Text
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  version     Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("interview_plans")
 }
 
 enum ReasonType {
@@ -1150,7 +1209,7 @@ model RetentionRun {
   @@map("retention_runs")
 }
 
-/// ATS-016 保温提醒。
+/// 保温提醒投递到内部人事收件箱；钉钉发送由 ATS-018 适配。
 model OnboardingReminder {
   id            String   @id @default(cuid())
   candidateId   String

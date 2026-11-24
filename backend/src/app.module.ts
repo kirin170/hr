@@ -18,6 +18,7 @@ import { TimelineModule } from './timeline/timeline.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { AuthorizationModule } from './auth/authorization.module.js';
 import { AuditModule } from './audit/audit.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { AuditModule } from './audit/audit.module.js';
     DingTalkModule,
     MailModule,
     OffersModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

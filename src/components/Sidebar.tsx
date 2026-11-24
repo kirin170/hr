@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, Sparkles, Users, UsersRound } from 'lucide-react'
-import type { PageKey } from '../types'
+import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles, Users, UsersRound } from 'lucide-react'
+import type { CurrentUser, PageKey } from '../types'
 import { cn } from '../utils'
 
-type SidebarProps = { page: PageKey; onNavigate: (page: PageKey) => void; onSettings: () => void }
+type SidebarProps = { page: PageKey; onNavigate: (page: PageKey) => void; onSettings: () => void; me: CurrentUser | null }
 
 const navPrimary: { key: PageKey; label: string; icon: typeof LayoutDashboard; badge?: string }[] = [
   { key: 'dashboard', label: '工作台', icon: LayoutDashboard },
@@ -23,8 +23,10 @@ const navSecondary: { key: PageKey; label: string; icon: typeof LayoutDashboard 
   { key: 'reports', label: '招聘数据', icon: BarChart3 },
 ]
 
-export function Sidebar({ page, onNavigate, onSettings }: SidebarProps) {
+export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  // 管理后台只对具备设置读取权限的角色开放，其余角色看不到入口
+  const canManageSettings = me?.roles.some((role) => role.permissions.includes('setting:read')) ?? false
   return (
     <aside className={cn('sidebar', collapsed && 'sidebar-collapsed')}>
       <div className="sidebar-brand">
@@ -60,6 +62,13 @@ export function Sidebar({ page, onNavigate, onSettings }: SidebarProps) {
             </button>
           )
         })}
+        {canManageSettings && <>
+          <span className="nav-label nav-label-space">{!collapsed && '系统管理'}</span>
+          <button className={cn('nav-item', page === 'admin' && 'nav-item-active')} onClick={() => onNavigate('admin')} title="管理后台">
+            <ShieldCheck size={18} strokeWidth={1.9} />
+            {!collapsed && <span>管理后台</span>}
+          </button>
+        </>}
       </nav>
       {!collapsed && (
         <div className="sidebar-tip">
@@ -72,8 +81,8 @@ export function Sidebar({ page, onNavigate, onSettings }: SidebarProps) {
         <button className="nav-item" title="设置" onClick={onSettings}><Settings size={18} />{!collapsed && <span>设置</span>}</button>
         <button className="nav-item" title="帮助中心"><CircleHelp size={18} />{!collapsed && <span>帮助中心</span>}</button>
         <div className="sidebar-user">
-          <span className="avatar avatar-sm avatar-warm">邓</span>
-          {!collapsed && <span className="sidebar-user-copy"><strong>邓文文</strong><small>超级管理员</small></span>}
+          <span className="avatar avatar-sm avatar-warm">{(me?.displayName || '未').slice(0, 1)}</span>
+          {!collapsed && <span className="sidebar-user-copy"><strong>{me?.displayName || '未登录'}</strong><small>{me?.roles.map((role) => role.name).join(' · ') || '暂无角色'}</small></span>}
           {!collapsed && <button className="icon-button icon-button-small" title="退出登录"><LogOut size={15} /></button>}
         </div>
         <button className="collapse-button" onClick={() => setCollapsed(!collapsed)} title={collapsed ? '展开侧栏' : '收起侧栏'}>

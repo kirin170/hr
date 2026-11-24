@@ -10,6 +10,8 @@ import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { parseDateValue } from '../requisitions/requisition-cycle.js';
+import { resolveDepartmentNames, resolveUserNames } from '../settings/display-names.js';
+import { assertActiveInterviewPlan, assertRequiredFields } from '../settings/config-rules.js';
 
 export type JobListQuery = {
   page?: string;
@@ -41,6 +43,8 @@ export type JobDto = {
   code: string;
   title: string;
   departmentId: string;
+  /** 部门显示名（ATS-024）：由服务端按 departmentId 补全，前端不再回退为原始 ID */
+  departmentName: string;
   location: string | null;
   recruiterId: string | null;
   requirements: string | null;
@@ -109,8 +113,8 @@ export class JobsService {
       }),
       this.prisma.job.count({ where }),
     ]);
-
-    return { items: items.map((job) => this.toDto(job)), page, pageSize, total };
+    const names = await resolveDepartmentNames(this.prisma, items.map((job) => job.departmentId));
+    return { items: items.map((job) => this.toDto(job, names.get(job.departmentId))), page, pageSize, total };
   }
 
   /** 虚拟职位（校招容器）列表，仅用于入场容器，不进入普通职位筛选默认集。 */
@@ -122,7 +126,8 @@ export class JobsService {
       orderBy: { code: 'asc' },
       take: 200,
     });
-    return { items: items.map((job) => this.toDto(job)), total: items.length };
+    const names = await resolveDepartmentNames(this.prisma, items.map((job) => job.departmentId));
+    return { items: items.map((job) => this.toDto(job, names.get(job.departmentId))), total: items.length };
   }
 
   async get(id: string, actor: AuthenticatedUser) {
@@ -134,8 +139,9 @@ export class JobsService {
       },
     });
     if (!job) throw new NotFoundException('职位不存在');
+    const names = await resolveDepartmentNames(this.prisma, [job.departmentId]);
     return {
-      ...this.toDto(job),
+      ...this.toDto(job, names.get(job.departmentId)),
       candidateCount: job._count.candidates,
       requirementsEditableBy:
         job.recruiterId ?? '未指定招聘负责人，需先指定后才能维护招聘要求',
@@ -167,10 +173,21 @@ export class JobsService {
       ),
       requisitionId,
     };
+    // ATS-024：按后台字段配置校验必填（以归一化后的取值为准，未传的招聘人数沿用默认 0），
+    // 并要求引用启用中的面试方案
+    await assertRequiredFields(this.prisma, 'JOB', {
+      ...input,
+      headcount: data.headcount,
+      location: data.location,
+      recruiterId: data.recruiterId,
+      requirements: data.requirements,
+      interviewPlanId: data.interviewPlanId,
+    });
+    if (data.interviewPlanId) await assertActiveInterviewPlan(this.prisma, data.interviewPlanId);
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        const created = await this.prisma.$transaction(async (tx) => {
           const code = await this.nextJobCode(tx);
           const job = await tx.job.create({ data: { ...data, code } });
           await tx.timelineEvent.create({
@@ -182,8 +199,9 @@ export class JobsService {
               payload: { code, title, departmentId, headcount, isVirtual: data.isVirtual },
             },
           });
-          return this.toDto(job);
+          return job;
         });
+        return this.toDtoNamed(created);
       } catch (error) {
         if (!this.isUniqueViolation(error, 'code')) throw error;
       }
@@ -240,7 +258,9 @@ export class JobsService {
       assign('sources', this.optionalText(input.sources), current.sources);
     }
     if ('interviewPlanId' in input) {
-      assign('interviewPlanId', this.optionalText(input.interviewPlanId), current.interviewPlanId);
+      const next = this.optionalText(input.interviewPlanId);
+      if (next) await assertActiveInterviewPlan(this.prisma, next);
+      assign('interviewPlanId', next, current.interviewPlanId);
     }
     if ('isVirtual' in input) {
       assign(
@@ -260,7 +280,7 @@ export class JobsService {
     }
 
     if (Object.keys(changes).length === 0) {
-      return this.toDto(current);
+      return await this.toDtoNamed(current);
     }
 
     const updated = await this.prisma.job.update({ where: { id }, data });
@@ -273,7 +293,7 @@ export class JobsService {
         payload: { changes, operator: actor.id } as unknown as Prisma.InputJsonObject,
       },
     });
-    return this.toDto(updated);
+    return await this.toDtoNamed(updated);
   }
 
   /** 关闭职位：仅停止新简历进入，不淘汰也不改动流程中候选人。 */
@@ -284,7 +304,7 @@ export class JobsService {
     });
     if (current.status === JobStatus.CLOSED) {
       return {
-        job: this.toDto(current),
+        job: await this.toDtoNamed(current),
         changed: false,
         candidatesInProcess,
         note: '职位已关闭；关闭仅停止新简历进入，不影响流程中候选人',
@@ -309,7 +329,7 @@ export class JobsService {
       },
     });
     return {
-      job: this.toDto(updated),
+      job: await this.toDtoNamed(updated),
       changed: true,
       candidatesInProcess,
       note: '职位关闭仅停止新简历进入，不影响流程中候选人',
@@ -323,13 +343,24 @@ export class JobsService {
       orderBy: { createdAt: 'desc' },
       take: 100,
     });
+    // 时间线只保存 actorId，这里补全操作人显示名；查不到的按已删除用户/系统标注，不回退为原始 ID
+    const actorNames = await resolveUserNames(
+      this.prisma,
+      events.map((event) => event.actorId),
+    );
     return events.map((event) => ({
       id: event.id,
       action: event.action,
       payload: event.payload,
-      actor: event.actorId ?? '系统',
+      actor: event.actorId ? (actorNames.get(event.actorId) ?? '已删除用户') : '系统',
       createdAt: event.createdAt.toISOString(),
     }));
+  }
+
+  /** 单条职位补全部门名称。 */
+  private async toDtoNamed(job: Parameters<JobsService['toDto']>[0]): Promise<JobDto> {
+    const names = await resolveDepartmentNames(this.prisma, [job.departmentId]);
+    return this.toDto(job, names.get(job.departmentId));
   }
 
   private toDto(job: {
@@ -350,13 +381,14 @@ export class JobsService {
     createdAt: Date;
     updatedAt: Date;
     requisition?: { id: string; oaApprovalId: string; title: string; status: string } | null;
-  }): JobDto {
+  }, departmentName = ''): JobDto {
     const headcountFull = job.headcount > 0 && job.hiredCount >= job.headcount;
     return {
       id: job.id,
       code: job.code,
       title: job.title,
       departmentId: job.departmentId,
+      departmentName: departmentName ?? '',
       location: job.location,
       recruiterId: job.recruiterId,
       requirements: job.requirements,

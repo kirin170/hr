@@ -1,4 +1,5 @@
 import type {
+  AdminOverview,
   ApiCampusApplication,
   ApiDepartment,
   ApiJob,
@@ -16,13 +17,28 @@ import type {
   CandidateStage,
   LegacyCandidateStage,
   CandidateTimelineEvent,
+  CurrentUser,
+  DictItemView,
+  EffectiveSettings,
   ExcelImportResult,
+  FieldConfigView,
+  FixedRule,
+  InterviewPlanView,
+  NotificationEventInfo,
+  ReasonOptionView,
+  AuditLogRow,
+  AuthzGroup,
+  AuthzRole,
+  AuthzUser,
+  FieldGrantRow,
   IntakeList,
   IntakeMonitor,
   IntakePoolList,
   IntakeResult,
   JobListItem,
   MailboxConfig,
+  MyNotificationPreferences,
+  OperationsSnapshot,
   RequisitionList,
   SavedCandidateFilter,
   SourceRecordList,
@@ -714,4 +730,239 @@ export function uploadOfferMaterial(candidateId: string, category: string, file:
   form.append('category', category)
   form.append('file', file)
   return requestForm(`/v1/candidates/${encodeURIComponent(candidateId)}/offer/materials`, form)
+}
+
+// ---------- 业务设置 / 管理后台（ATS-024） ----------
+
+const settingsBase = '/v1/admin/settings'
+const auditBase = '/v1/audit-logs'
+const mailBase = '/v1/mail/mailboxes'
+const authzBase = '/v1/authz'
+
+export function getCurrentUser(): Promise<CurrentUser> {
+  return request<CurrentUser>(`${authzBase}/me`)
+}
+
+/** 任何登录用户可读的有效配置：表单必填/显示标记、启用中的字典与原因、启用中的面试方案。 */
+export function getEffectiveSettings(): Promise<EffectiveSettings> {
+  return request<EffectiveSettings>(`${settingsBase}/effective`)
+}
+
+export function getAdminOverview(): Promise<AdminOverview> {
+  return request<AdminOverview>(`${settingsBase}/overview`)
+}
+
+export function getSettingRules(): Promise<{ items: FixedRule[] }> {
+  return request<{ items: FixedRule[] }>(`${settingsBase}/rules`)
+}
+
+export function getOperationsSnapshot(): Promise<OperationsSnapshot> {
+  return request<OperationsSnapshot>(`${settingsBase}/operations`)
+}
+
+export function getNotificationSettings(): Promise<{ channel: string; integrated: boolean; note: string; events: NotificationEventInfo[] }> {
+  return request(`${settingsBase}/notifications`)
+}
+
+export function getMyNotificationPreferences(): Promise<MyNotificationPreferences> {
+  return request<MyNotificationPreferences>(`${settingsBase}/me/notification-preferences`)
+}
+
+export function updateMyNotificationPreferences(muted: string[]): Promise<MyNotificationPreferences> {
+  return request<MyNotificationPreferences>(`${settingsBase}/me/notification-preferences`, {
+    method: 'PUT',
+    body: JSON.stringify({ muted }),
+  })
+}
+
+export function createReasonOption(payload: { type: string; label: string }): Promise<ReasonOptionView> {
+  return request<ReasonOptionView>(`${settingsBase}/reasons`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateReasonOption(
+  id: string,
+  payload: { version: number; label?: string; active?: boolean },
+): Promise<ReasonOptionView> {
+  return request<ReasonOptionView>(`${settingsBase}/reasons/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function reorderReasonOptions(type: string, ids: string[]) {
+  return request<{ items: ReasonOptionView[] }>(`${settingsBase}/reasons/reorder`, {
+    method: 'POST',
+    body: JSON.stringify({ type, ids }),
+  })
+}
+
+export function createDictItem(payload: { type: string; label: string }): Promise<DictItemView> {
+  return request<DictItemView>(`${settingsBase}/dicts`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateDictItem(
+  id: string,
+  payload: { version: number; label?: string; active?: boolean },
+): Promise<DictItemView> {
+  return request<DictItemView>(`${settingsBase}/dicts/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function reorderDictItems(type: string, ids: string[]) {
+  return request<{ items: DictItemView[] }>(`${settingsBase}/dicts/reorder`, {
+    method: 'POST',
+    body: JSON.stringify({ type, ids }),
+  })
+}
+
+export function updateFieldConfig(
+  id: string,
+  payload: { version: number; required?: boolean; visible?: boolean },
+): Promise<FieldConfigView> {
+  return request<FieldConfigView>(`${settingsBase}/fields/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function createInterviewPlan(payload: {
+  name: string
+  rounds: number
+  description?: string
+}): Promise<InterviewPlanView> {
+  return request<InterviewPlanView>(`${settingsBase}/interview-plans`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateInterviewPlan(
+  id: string,
+  payload: { version: number; name?: string; rounds?: number; description?: string | null; active?: boolean },
+): Promise<InterviewPlanView> {
+  return request<InterviewPlanView>(`${settingsBase}/interview-plans/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export type AuditLogQuery = {
+  actorId?: string
+  from?: string
+  to?: string
+  limit?: number
+  resourceType?: string
+  resourceId?: string
+  action?: string
+  actionPrefix?: string
+}
+
+export function listAuditLogs(query: AuditLogQuery = {}): Promise<AuditLogRow[]> {
+  return request<AuditLogRow[]>(`${auditBase}${toQuery({ ...query })}`)
+}
+
+export async function exportAuditLogs(query: AuditLogQuery = {}): Promise<void> {
+  const { blob, filename } = await requestBlob(`${auditBase}/export.csv${toQuery({ ...query })}`)
+  saveBlob(blob, filename || 'audit-logs.csv')
+}
+
+export function getRetentionPolicy(): Promise<{ resumeDays: number; sensitiveDays: number; batchSize: number; note: string }> {
+  return request('/v1/retention/policy')
+}
+
+export function runRetentionPurge(dryRun: boolean): Promise<Record<string, unknown>> {
+  return request('/v1/retention/purge', { method: 'POST', body: JSON.stringify({ dryRun }) })
+}
+
+export function listMailboxConfigs(): Promise<{ items: MailboxConfig[]; total: number }> {
+  return request<{ items: MailboxConfig[]; total: number }>(mailBase)
+}
+
+export function createMailboxConfig(payload: Record<string, unknown>): Promise<MailboxConfig> {
+  return request<MailboxConfig>(mailBase, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function updateMailboxConfig(id: string, payload: Record<string, unknown>): Promise<MailboxConfig> {
+  return request<MailboxConfig>(`${mailBase}/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteMailboxConfig(id: string): Promise<{ deleted: boolean }> {
+  return request(`${mailBase}/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export function testMailboxConfig(id: string): Promise<Record<string, unknown>> {
+  return request(`${mailBase}/${encodeURIComponent(id)}/test-connection`, { method: 'POST' })
+}
+
+export function pollMailboxConfig(id: string): Promise<Record<string, unknown>> {
+  return request(`${mailBase}/${encodeURIComponent(id)}/poll`, { method: 'POST' })
+}
+
+export function revokeBrowserImportTokens(operatorId: string): Promise<{ revoked: number }> {
+  return request<{ revoked: number }>(`/v1/browser-import/token/revoke/${encodeURIComponent(operatorId)}`, {
+    method: 'POST',
+  })
+}
+
+export function triggerDingTalkSync(): Promise<Record<string, unknown>> {
+  return request('/v1/admin/organization/dingtalk/sync', { method: 'POST', body: JSON.stringify({}) })
+}
+
+export function retryDingTalkEvent(id: string): Promise<Record<string, unknown>> {
+  return request(`/v1/admin/organization/dingtalk/events/${encodeURIComponent(id)}/retry`, { method: 'POST' })
+}
+
+// 组织与权限：沿用 ATS-005 已交付的授权接口，管理后台只做展示与最小维护
+export function listAuthzRoles(): Promise<AuthzRole[]> {
+  return request<AuthzRole[]>(`${authzBase}/roles`)
+}
+
+export function listAuthzGroups(): Promise<AuthzGroup[]> {
+  return request<AuthzGroup[]>(`${authzBase}/groups`)
+}
+
+export function listAuthzUsers(): Promise<AuthzUser[]> {
+  return request<AuthzUser[]>(`${authzBase}/users`)
+}
+
+export function listFieldGrants(): Promise<FieldGrantRow[]> {
+  return request<FieldGrantRow[]>(`${authzBase}/field-grants`)
+}
+
+export function createAuthzGroup(payload: { code: string; name: string; description?: string }): Promise<AuthzGroup> {
+  return request<AuthzGroup>(`${authzBase}/groups`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function createAuthzDepartment(payload: { code: string; name: string; parentId?: string }): Promise<unknown> {
+  return request(`${authzBase}/departments`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function assignUserRoles(
+  userId: string,
+  roles: { roleCode: string; scopeOverride?: string }[],
+): Promise<unknown> {
+  return request(`${authzBase}/users/${encodeURIComponent(userId)}/roles`, {
+    method: 'PUT',
+    body: JSON.stringify({ roles }),
+  })
+}
+
+export function createFieldGrant(payload: {
+  field: string
+  userId?: string
+  userGroupId?: string
+  canRead: boolean
+  canWrite: boolean
+  expiresAt?: string
+}): Promise<FieldGrantRow> {
+  return request<FieldGrantRow>(`${authzBase}/field-grants`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function revokeFieldGrant(id: string): Promise<{ revoked: boolean }> {
+  return request(`${authzBase}/field-grants/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }

@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
@@ -40,6 +42,22 @@ export class BrowserImportController {
   @AuditAction('import.token_issue', 'SystemToken')
   async issueToken(@CurrentUser() actor: AuthenticatedUser) {
     return this.imports.issueToken(actor);
+  }
+
+  /**
+   * 吊销系统令牌（ATS-024 / FR-ADM-6）：操作者可吊销本人名下的全部有效令牌；
+   * 吊销他人令牌须同时具备授权管理权限。令牌只存哈希，吊销后立即失效。
+   */
+  @Post('token/revoke/:operatorId')
+  @HttpCode(200)
+  @RequirePermission('intake:manage')
+  @AuditAction('import.token_revoke', 'SystemToken')
+  async revokeTokens(@Param('operatorId') operatorId: string, @CurrentUser() actor: AuthenticatedUser) {
+    const canManageOthers = actor.roles.some((role) => role.permissions.includes('authz:admin'));
+    if (operatorId !== actor.id && !canManageOthers) {
+      throw new ForbiddenException('只能撤销本人签发的系统令牌');
+    }
+    return { operatorId, revoked: await this.imports.revokeTokens(operatorId) };
   }
 
   /** 创建导入任务：返回任务资源（同步完成落库与投递解析），同 requestId 幂等 */
