@@ -19,8 +19,10 @@ const MAX_SEGMENTS = 20_000;
 const DENIED_PATTERN = /(auth|login|token|expired|permission|forbidden|unauthor|no.?permission|403)/i;
 const NOT_FOUND_PATTERN = /(not.?found|not.?exist|deleted|404)/i;
 const SAFE_CODE_PATTERN = /^[A-Za-z0-9_.:-]{1,64}$/;
-/** 逐字稿容器字段：dws 不同版本可能用其中之一 */
-const SEGMENT_KEYS = ['segments', 'paragraphs', 'sentences', 'sentencesList', 'items'] as const;
+/** 逐字稿容器字段：dws 1.0.x 用 paragraphList，其余为兼容旧输出 */
+const SEGMENT_KEYS = ['paragraphList', 'segments', 'paragraphs', 'sentences', 'sentencesList', 'items'] as const;
+/** 时间戳超过该阈值视为绝对时间（epoch 毫秒），需换算成相对录音起点的偏移 */
+const ABSOLUTE_TIME_THRESHOLD = 1e11;
 
 export type MinutesSegment = {
   index: number;
@@ -155,7 +157,10 @@ export class DingTalkMinutesClient implements MinutesSource {
     ]);
     const detailData = this.data(detail);
     this.assertSameId(detailData, minutesId);
-    const title = this.text(detailData.title ?? this.asRecord(detailData.basic)?.title, 191);
+    const title = this.text(
+      detailData.title ?? this.deep(detailData, ['basic', 'result', 'title']) ?? this.deep(detailData, ['basic', 'title']),
+      191,
+    );
     const summary = this.summary(detailData);
 
     let segments: MinutesSegment[] = [];
@@ -263,7 +268,10 @@ export class DingTalkMinutesClient implements MinutesSource {
     if (direct) return direct;
     const nested = this.asRecord(data.summary) ?? this.asRecord(this.asRecord(data.artifacts)?.summary);
     if (!nested) return null;
-    return this.text(nested.content ?? nested.text ?? nested.markdown, MAX_MATERIAL_CHARS);
+    return this.text(
+      nested.content ?? nested.text ?? nested.markdown ?? this.deep(nested, ['result', 'fullSummary']),
+      MAX_MATERIAL_CHARS,
+    );
   }
 
   private originalText(data: Record<string, unknown>, segments: MinutesSegment[]): string | null {
@@ -290,18 +298,37 @@ export class DingTalkMinutesClient implements MinutesSource {
       if (this.hasAnySegmentKey(data, container)) return [];
       throw new MinutesSourceError('UNSUPPORTED', 'MINUTES_TRANSCRIPT_SHAPE_UNSUPPORTED');
     }
-    return list.slice(0, MAX_SEGMENTS).flatMap((item, index) => {
+    const rows = list.slice(0, MAX_SEGMENTS).flatMap((item, index) => {
       const record = this.asRecord(item);
-      const text = this.text(record?.text ?? record?.content ?? record?.sentence, 20_000);
+      const text = this.text(record?.text ?? record?.paragraph ?? record?.content ?? record?.sentence, 20_000);
       if (!record || !text) return [];
       return [{
         index,
         startMs: this.milliseconds(record.startMs ?? record.startTime ?? record.beginTime ?? record.start),
         endMs: this.milliseconds(record.endMs ?? record.endTime ?? record.end ?? record.stop),
-        speaker: this.text(record.speaker ?? record.speakerName ?? record.nickName ?? record.name, 191),
+        speaker: this.text(
+          record.speaker ?? record.speakerName ?? record.nickName ?? this.deep(record, ['speakerDisplay', 'nickName']) ?? record.name,
+          191,
+        ),
         text,
       }];
     });
+    return this.relativeTimes(rows);
+  }
+
+  /** 逐字稿时间轴按“相对录音起点”存库；若输出给的是绝对时间则统一减去最早起点 */
+  private relativeTimes(rows: MinutesSegment[]): MinutesSegment[] {
+    const base = rows.reduce<number | null>((min, row) => {
+      const value = row.startMs;
+      if (value === null || value < ABSOLUTE_TIME_THRESHOLD) return min;
+      return min === null ? value : Math.min(min, value);
+    }, null);
+    if (base === null) return rows;
+    return rows.map((row) => ({
+      ...row,
+      startMs: row.startMs === null ? null : Math.max(0, row.startMs - base),
+      endMs: row.endMs === null ? null : Math.max(0, row.endMs - base),
+    }));
   }
 
   private hasAnySegmentKey(data: Record<string, unknown>, container: Record<string, unknown> | null) {
@@ -318,6 +345,16 @@ export class DingTalkMinutesClient implements MinutesSource {
     if (typeof value === 'string') return value;
     if (typeof value === 'number' || typeof value === 'boolean') return String(value);
     return null;
+  }
+
+  private deep(record: Record<string, unknown> | null, path: readonly string[]): unknown {
+    let current: unknown = record;
+    for (const key of path) {
+      const node = this.asRecord(current);
+      if (!node) return undefined;
+      current = node[key];
+    }
+    return current;
   }
 
   private asRecord(value: unknown): Record<string, unknown> | null {

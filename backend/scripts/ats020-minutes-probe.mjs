@@ -56,5 +56,8 @@ for (const [label, args] of commands) {
   } catch (error) {
     // 错误输出可能含听记正文，只打印进程状态码
     console.log(`\n=== ${label} 失败 === code=${String(error.code ?? '')} killed=${error.killed === true}`);
+    if (error.code === 'ENOENT' || error.code === 'EINVAL') {
+      console.log('提示：Windows 下不能直接执行 dws.cmd，请把 DINGTALK_MINUTES_DWS_BIN 指向 ...\\dingtalk-workspace-cli\\vendor\\dws.exe；未登录时先执行 dws auth login --device。');
+    }
   }
 }

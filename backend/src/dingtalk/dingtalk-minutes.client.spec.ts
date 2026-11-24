@@ -165,4 +165,62 @@ describe('DingTalkMinutesClient dws 适配边界', () => {
     await expect(new DingTalkMinutesClient().fetch('a1b2c3d4e5f60718', 'hr-1'))
       .rejects.toMatchObject({ kind: 'UNAVAILABLE', code: 'MINUTES_CLI_TIMEOUT' });
   });
+
+  /** 真实 dws 1.0.69 输出：摘要在 summary.result.fullSummary，逐字稿在 data.paragraphList */
+  describe('dws 1.0.x 真实输出结构', () => {
+    const detail = (taskUuid: string, title: string, fullSummary: string) => JSON.stringify({
+      basic: {
+        success: true,
+        dingOpenErrcode: 0,
+        errorMsg: '',
+        result: { title, duration: 1247220, startTime: 1795152758000, endTime: 1795154023000, taskUuid, url: 'https://shanji.dingtalk.com/app/transcribes/x' },
+      },
+      summary: { success: 'true', errorMsg: '', result: { fullSummary, generatingStatus: 'finished' } },
+      taskUuid,
+      complete: true,
+      failureCount: 0,
+    });
+    const transcript = (taskUuid: string, paragraphList: unknown[]) => JSON.stringify({
+      ok: true,
+      outcome: 'success',
+      data: { complete: true, pages: 2, paragraphCount: paragraphList.length, taskUuid, paragraphList },
+      meta: { count: paragraphList.length, pagination: { pages: 2, items: paragraphList.length, endpoint_exhausted: true } },
+    });
+    const paragraph = (text: string, speaker: string, startTime: number, endTime: number) => ({
+      paragraph: text,
+      nickName: speaker,
+      speakerDisplay: { nickName: speaker },
+      startTime,
+      endTime,
+      sentenceList: [{ sentence: text, startTime, endTime, unionId: 'u1', wordList: [] }],
+    });
+
+    it('从 basic.result / summary.result 取标题与摘要，从 paragraphList 取逐字稿', async () => {
+      stdoutByCommand['+detail'] = detail('a1b2c3d4e5f60718', '一面听记', '候选人介绍了项目经历');
+      stdoutByCommand['+transcript'] = transcript('a1b2c3d4e5f60718', [
+        paragraph('请介绍项目', '面试官', 9250, 23950),
+        paragraph('负责订单系统', '候选人', 23950, 30000),
+      ]);
+      const material = await new DingTalkMinutesClient().fetch('a1b2c3d4e5f60718', 'hr-1');
+      expect(material.title).toBe('一面听记');
+      expect(material.summary).toBe('候选人介绍了项目经历');
+      expect(material.transcriptUnavailable).toBeNull();
+      expect(material.segments).toEqual([
+        { index: 0, startMs: 9250, endMs: 23950, speaker: '面试官', text: '请介绍项目' },
+        { index: 1, startMs: 23950, endMs: 30000, speaker: '候选人', text: '负责订单系统' },
+      ]);
+      expect(material.originalText).toBe('面试官：请介绍项目\n候选人：负责订单系统');
+    });
+
+    it('时间轴给绝对时间戳时按最早一段归一为相对偏移', async () => {
+      const base = 1795152758000;
+      stdoutByCommand['+detail'] = detail('a1b2c3d4e5f60718', '一面听记', '摘要');
+      stdoutByCommand['+transcript'] = transcript('a1b2c3d4e5f60718', [
+        paragraph('请介绍项目', '面试官', base + 9250, base + 23950),
+        paragraph('负责订单系统', '候选人', base + 23950, base + 30000),
+      ]);
+      const material = await new DingTalkMinutesClient().fetch('a1b2c3d4e5f60718', 'hr-1');
+      expect(material.segments.map((item) => [item.startMs, item.endMs])).toEqual([[0, 14700], [14700, 20750]]);
+    });
+  });
 });

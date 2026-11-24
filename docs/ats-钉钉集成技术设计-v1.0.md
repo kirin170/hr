@@ -89,14 +89,17 @@
   - 完整逐字稿：`dws minutes +transcript --id <id> --format json`（跨分页；`complete=false` 判为失败，不写入残缺素材）
   - 能力探测：`dws minutes +list-mine --format json`，结果缓存 60 秒
   - 单次调用超时 30 秒（`DINGTALK_MINUTES_DWS_TIMEOUT_MS`），输出上限 64MB，单条素材上限 200 万字符
-- 输出归一化：兼容 `{ success, data }` 包裹与 `segments/paragraphs/sentences` 容器；字段无法识别时返回 `MINUTES_TRANSCRIPT_SHAPE_UNSUPPORTED`，不把未知结构当成“没有发言”。逐字稿失败但摘要可读时按部分成功返回并记录 `transcriptUnavailable` 错误码。
+- 输出归一化（2026-11-24 用真实听记核对，20.8 分钟、2 页 168 段）：
+  - `+detail`：标题在 `basic.result.title`，摘要在 `summary.result.fullSummary`，`taskUuid` 在顶层
+  - `+transcript`：`data.complete` 表示分页是否追完，逐字稿在 `data.paragraphList[]`，每段取 `paragraph` 为文本、`speakerDisplay.nickName`（回退 `nickName`）为发言人、`startTime/endTime` 为相对录音起点的毫秒偏移
+  - 同时兼容 `{ success, data }` 包裹与 `segments/paragraphs/sentences` 旧容器；字段无法识别时返回 `MINUTES_TRANSCRIPT_SHAPE_UNSUPPORTED`，不把未知结构当成“没有发言”。逐字稿失败但摘要可读时按部分成功返回并记录 `transcriptUnavailable` 错误码
 - 错误与降级：ATS 数据范围越权按 404 处理；dws 认证/权限失败返回 403 并记录 `interview.transcript.material_denied` / `material_failed`（仅错误码，不落 stderr 文本）；未配置 dws 或二进制缺失返回 503 并提示人工录入；原文、摘要与令牌不进入日志、审计摘要或错误信息。
-- 部署约束：dws 授权凭证与设备绑定，换机器、重建容器或迁移服务器后需重新扫码授权；因此后端按单实例固定主机部署，不做多副本共享。
+- 部署约束：dws 授权凭证与设备绑定，换机器、重建容器或迁移服务器后需重新扫码授权；因此后端按单实例固定主机部署，不做多副本共享。Windows 下 `execFile` 不能直接执行 `.cmd`（`spawn EINVAL`），`DINGTALK_MINUTES_DWS_BIN` 必须指向 npm 包内的原生二进制 `...\dingtalk-workspace-cli\vendor\dws.exe`；Linux 直接指向 `dws` 即可。
 - 留存：素材写入 `interview_transcript_materials`，按「链接 + 内容哈希」唯一，重复读取不新增、不覆盖既有来源关联；链接表只补齐 `minutesId/source`，不改写 URL；听记链接仍按轮次追加。
 - 交付：`INTERVIEW_EVAL` 输入契约 `interview-eval.v1` 只保存素材引用（`materialId`、`sourceRef`、哈希、长度、分段数）与面试上下文、职位招聘要求、本轮评价；`boundaries` 写死「内置智能纪要不得作为结论、AI 输出为草稿、需人工确认」。职位无招聘要求时不发起评估（AI-5）。
 
 ### 7.3 待验证项
 
-- 部署机安装 dws 并完成服务账号授权后，用 `scripts/ats020-minutes-probe.mjs` 核对 `+detail` / `+transcript` 的真实输出结构（脚本只打印键名与类型，不打印正文），据此确认归一化映射。
-- 组织是否已放开 CLI 访问管理；听记分享给服务账号的实际流程与可见范围。
-- 真实听记的摘要质量、分段时间轴字段与长文本上限。
+- 2026-11-24 已用真实听记（`7632756964...5f35`，20.8 分钟）验证：`+detail` 取到 1693 字摘要、`+transcript` 取到 168 段共 6102 字逐字稿，时间轴为相对偏移，`complete=true`。
+- 待验证：招聘服务账号的授权与听记分享流程（当前验证用的是个人账号登录态），以及组织「CLI 访问管理」的实际放开状态。
+- 待验证：真实听记的摘要质量评估口径，以及长会议（1 小时以上、多页）的分页上限与耗时。
