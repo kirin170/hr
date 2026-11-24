@@ -1251,3 +1251,26 @@ model NotificationDelivery {
   @@index([recipientId, createdAt])
   @@map("notification_deliveries")
 }
+
+/// 面试与钉钉日程的一对一持久同步状态。
+model InterviewCalendarSync {
+  interviewId       String    @id
+  organizerId       String
+  organizerUnionId  String?
+  createToken       String
+  eventId           String?
+  desiredVersion    Int       @default(1)
+  claimedVersion    Int?
+  appliedVersion    Int       @default(0)
+  status            String    @default("PENDING")
+  attempts          Int       @default(0)
+  nextRetryAt       DateTime?
+  startedAt         DateTime?
+  checkedAt         DateTime?
+  lastError         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@map("interview_calendar_sync")
+}

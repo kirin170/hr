@@ -6,6 +6,7 @@ import { AuthorizationService } from '../auth/authorization.service.js';
 import { parseMinutesLink } from '../dingtalk/dingtalk-minutes.client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
+import { InterviewCalendarSyncService } from '../dingtalk/interview-calendar-sync.service.js';
 import { INTERVIEW_CALENDAR, INTERVIEW_NOTIFICATIONS, type InterviewCalendar, type InterviewNotifications } from './interview-adapters.js';
 
 type Input = Record<string, unknown>;
@@ -28,7 +29,7 @@ const ids = (raw: string | null) => (raw ?? '').split('|').filter(Boolean);
 export class InterviewsService {
   private readonly logger = new Logger(InterviewsService.name);
   constructor(private readonly db: PrismaService, private readonly auth: AuthorizationService,
-    @Inject(INTERVIEW_NOTIFICATIONS) private readonly notifications: InterviewNotifications, @Inject(INTERVIEW_CALENDAR) private readonly calendar: InterviewCalendar, @Optional() private readonly outbox?: NotificationOutboxService) {}
+    @Inject(INTERVIEW_NOTIFICATIONS) private readonly notifications: InterviewNotifications, @Inject(INTERVIEW_CALENDAR) private readonly calendar: InterviewCalendar, @Optional() private readonly outbox?: NotificationOutboxService, @Optional() private readonly calendarSync?: InterviewCalendarSyncService) {}
 
   private async canRead(candidateId: string, jobId: string, actor: AuthenticatedUser): Promise<boolean> {
     const scopes = this.auth.scopesFor(actor, 'candidate:read');
@@ -125,8 +126,17 @@ export class InterviewsService {
     if (count !== interviewerIds.length) throw new BadRequestException('面试官不存在或已停用');
     const { start, end } = await this.times(input); const availability = await this.checkConflicts(interviewerIds, start, end);
     const responses = Object.fromEntries(interviewerIds.map(id => [id, 'PENDING']));
-    const row = await this.db.interview.create({ data: { candidateId, jobId, round, mode, time: start, endTime: end, location: typeof input.location === 'string' ? input.location.trim() : null, interviewerIds: `|${interviewerIds.join('|')}|`, responses, status: 'TO_SCHEDULE' } });
-    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), ...availability, calendar: this.calendar.kind ?? 'MOCK' };
+    const data = { candidateId, jobId, round, mode, time: start, endTime: end, location: typeof input.location === 'string' ? input.location.trim() : null, interviewerIds: `|${interviewerIds.join('|')}|`, responses, status: 'TO_SCHEDULE' as const };
+    let calendarSyncStatus = 'DISABLED';
+    const row = process.env.DINGTALK_CALENDAR_QUEUE_ENABLED === 'true' && this.calendarSync
+      ? await this.db.$transaction(async tx => {
+        const created = await tx.interview.create({ data });
+        try { await this.calendarSync!.enqueue(tx, created.id, actor.id); calendarSyncStatus = 'PENDING'; }
+        catch { calendarSyncStatus = 'UNAVAILABLE'; this.logger.warn('日历同步入队失败，面试安排仍会保存'); }
+        return created;
+      })
+      : await this.db.interview.create({ data });
+    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), ...availability, calendar: this.calendar.kind ?? 'MOCK', calendarSyncStatus };
   }
   async change(id: string, value: unknown, actor: AuthenticatedUser) {
     const input = record(value); const row = await this.target(id, actor); await this.manageable(row.candidateId, row.jobId, actor);
@@ -138,12 +148,17 @@ export class InterviewsService {
       const { start, end } = await this.times(input); availability = await this.checkConflicts(ids(row.interviewerIds), start, end, id);
       update = { time: start, endTime: end, responses: Object.fromEntries(ids(row.interviewerIds).map(x => [x, 'PENDING'])) };
     } else update = { status: 'CANCELLED', cancelReason: reason };
+    let calendarSyncStatus = 'DISABLED';
     const result = await this.db.$transaction(async tx => {
       const changed = await tx.interview.update({ where: { id }, data: update });
       await tx.interviewChange.create({ data: { interviewId: id, action, actorId: actor.id, reason, before: { startAt: row.time.toISOString(), endAt: row.endTime?.toISOString() ?? null, status: row.status }, after: { startAt: changed.time.toISOString(), endAt: changed.endTime?.toISOString() ?? null, status: changed.status } } });
+      if (process.env.DINGTALK_CALENDAR_QUEUE_ENABLED === 'true' && this.calendarSync) {
+        try { await this.calendarSync.enqueue(tx, id, actor.id); calendarSyncStatus = 'PENDING'; }
+        catch { calendarSyncStatus = 'UNAVAILABLE'; this.logger.warn('日历同步入队失败，面试变更仍会保存'); }
+      }
       return changed;
     });
-    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), ...availability, calendar: this.calendar.kind ?? 'MOCK' };
+    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), ...availability, calendar: this.calendar.kind ?? 'MOCK', calendarSyncStatus };
   }
   async respond(id: string, value: unknown, actor: AuthenticatedUser) {
     const row = await this.target(id, actor); if (!ids(row.interviewerIds).includes(actor.id)) throw new ForbiddenException('仅受邀面试官可响应');

@@ -1,0 +1,20 @@
+CREATE TABLE `interview_calendar_sync` (
+  `interviewId` VARCHAR(191) NOT NULL,
+  `organizerId` VARCHAR(191) NOT NULL,
+  `organizerUnionId` VARCHAR(191) NULL,
+  `createToken` VARCHAR(191) NOT NULL,
+  `eventId` VARCHAR(191) NULL,
+  `desiredVersion` INTEGER NOT NULL DEFAULT 1,
+  `claimedVersion` INTEGER NULL,
+  `appliedVersion` INTEGER NOT NULL DEFAULT 0,
+  `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+  `attempts` INTEGER NOT NULL DEFAULT 0,
+  `nextRetryAt` DATETIME(3) NULL,
+  `startedAt` DATETIME(3) NULL,
+  `checkedAt` DATETIME(3) NULL,
+  `lastError` VARCHAR(191) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  INDEX `interview_calendar_sync_status_nextRetryAt_idx` (`status`, `nextRetryAt`),
+  PRIMARY KEY (`interviewId`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
