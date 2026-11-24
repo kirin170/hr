@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { ConflictException, Injectable } from '@nestjs/common';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { WorkNoticeError } from './dingtalk-work-notice.client.js';
 
@@ -8,10 +9,10 @@ import { WorkNoticeError } from './dingtalk-work-notice.client.js';
 export class NotificationOutboxService {
   constructor(private readonly db: PrismaService) {}
 
-  async enqueue(eventKey: string, sourceKey: string, recipientId: string, dueAt: Date) {
+  async enqueue(eventKey: string, sourceKey: string, recipientId: string, dueAt: Date, tx?: Prisma.TransactionClient) {
     if (!eventKey || !sourceKey || !recipientId || [eventKey, sourceKey, recipientId].some(v => v.length > 191) || !Number.isFinite(dueAt.getTime())) throw new Error('invalid_notification_event');
     const id = randomUUID();
-    await this.db.$executeRaw`INSERT INTO notification_deliveries (id, eventKey, sourceKey, recipientId, status, attempts, dueAt, createdAt, updatedAt)
+    await (tx ?? this.db).$executeRaw`INSERT INTO notification_deliveries (id, eventKey, sourceKey, recipientId, status, attempts, dueAt, createdAt, updatedAt)
       VALUES (${id}, ${eventKey}, ${sourceKey}, ${recipientId}, 'PENDING', 0, ${dueAt}, CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3))
       ON DUPLICATE KEY UPDATE id = id`;
   }

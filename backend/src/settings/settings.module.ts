@@ -22,6 +22,6 @@ import { SettingsController } from './settings.controller.js';
     NotificationOutboxService,
     OperationsService,
   ],
-  exports: [ReasonSettingsService, DictSettingsService, FieldConfigService],
+  exports: [ReasonSettingsService, DictSettingsService, FieldConfigService, NotificationPreferenceService],
 })
 export class SettingsModule {}

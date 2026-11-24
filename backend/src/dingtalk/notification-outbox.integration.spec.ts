@@ -6,6 +6,13 @@ import { InterviewReminderScanner } from './interview-reminder-scanner.js';
 import { NotificationDeliveryWorker } from './notification-delivery.worker.js';
 import type { DingTalkApiClient } from './dingtalk-api.client.js';
 import type { DingTalkWorkNoticeClient } from './dingtalk-work-notice.client.js';
+import type { AuthorizationService } from '../auth/authorization.service.js';
+import type { OnboardingRemindersService } from '../candidates/onboarding-reminders.service.js';
+import type { NotificationPreferenceService } from '../settings/notification-preference.service.js';
+import { AuthorizationService as RealAuthorizationService } from '../auth/authorization.service.js';
+import { InterviewsService } from '../interviews/interviews.service.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { DataScope } from '@prisma/client';
 
 const database = new URL(process.env.DATABASE_URL || 'mysql://invalid/invalid').pathname.slice(1);
 const isolated = process.env.ATS018_ISOLATED_TEST === '1' && /^ats018_tmp_[a-f0-9]+$/.test(database);
@@ -47,7 +54,7 @@ describe.skipIf(!isolated)('ATS-018 notification outbox isolated MySQL', () => {
     const rows = await db.$queryRaw<{ id: string; eventKey: string; sourceKey: string; recipientId: string }[]>`SELECT id, eventKey, sourceKey, recipientId FROM notification_deliveries WHERE sourceKey LIKE 'scan-interview:%'`;
     const sender = { send: vi.fn().mockResolvedValue('987') };
     const api = { getAppAccessToken: vi.fn().mockResolvedValue('fake-token') };
-    const worker = new NotificationDeliveryWorker(db, outbox, api as unknown as DingTalkApiClient, sender as unknown as DingTalkWorkNoticeClient);
+    const worker = new NotificationDeliveryWorker(db, outbox, api as unknown as DingTalkApiClient, sender as unknown as DingTalkWorkNoticeClient, {} as AuthorizationService, {} as OnboardingRemindersService, {} as NotificationPreferenceService);
     vi.stubEnv('DINGTALK_NOTIFICATION_DELIVERY_ENABLED', 'true');
     vi.stubEnv('DINGTALK_AGENT_ID', '42');
     try {
@@ -60,5 +67,16 @@ describe.skipIf(!isolated)('ATS-018 notification outbox isolated MySQL', () => {
       const retried = await db.$queryRaw<{ status: string; taskId: string | null }[]>`SELECT status, taskId FROM notification_deliveries WHERE id = ${rows[0].id}`;
       expect(retried[0]).toMatchObject({ status: 'PENDING', taskId: null });
     } finally { vi.unstubAllEnvs(); }
+  });
+  it('records the manual action and nudge atomically for only the remaining interviewer', async () => {
+    await db.interview.update({ where: { id: 'scan-interview' }, data: { endTime: new Date('2000-01-01T02:00:00Z') } });
+    const actor: AuthenticatedUser = { id: 'hr', displayName: 'HR', departmentId: null, departmentIds: [], groupIds: [], roles: [{ code: 'HR', name: 'HR', dataScope: DataScope.ALL, permissions: ['candidate:read', 'candidate:stage:update'] }] };
+    const service = new InterviewsService(db, new RealAuthorizationService(db), { notify: vi.fn() }, { conflicts: vi.fn() }, outbox);
+    expect(await service.nudgeFeedback('scan-interview', actor)).toEqual({ queued: 1 });
+    const changes = await db.interviewChange.findMany({ where: { interviewId: 'scan-interview', action: 'FEEDBACK_NUDGE' } });
+    expect(changes).toHaveLength(1);
+    const source = `scan-interview|${changes[0].id}`;
+    const deliveries = await db.$queryRaw<{ recipientId: string }[]>`SELECT recipientId FROM notification_deliveries WHERE eventKey = 'interview.FEEDBACK_NUDGE' AND sourceKey = ${source}`;
+    expect(deliveries).toEqual([{ recipientId: 'scan-u2' }]);
   });
 });

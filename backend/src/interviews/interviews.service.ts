@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { DataScope, InterviewMode, InterviewStatus, Prisma } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import { parseMinutesLink } from '../dingtalk/dingtalk-minutes.client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
 import { INTERVIEW_CALENDAR, INTERVIEW_NOTIFICATIONS, type InterviewCalendar, type InterviewNotifications } from './interview-adapters.js';
 
 type Input = Record<string, unknown>;
@@ -27,7 +28,7 @@ const ids = (raw: string | null) => (raw ?? '').split('|').filter(Boolean);
 export class InterviewsService {
   private readonly logger = new Logger(InterviewsService.name);
   constructor(private readonly db: PrismaService, private readonly auth: AuthorizationService,
-    @Inject(INTERVIEW_NOTIFICATIONS) private readonly notifications: InterviewNotifications, @Inject(INTERVIEW_CALENDAR) private readonly calendar: InterviewCalendar) {}
+    @Inject(INTERVIEW_NOTIFICATIONS) private readonly notifications: InterviewNotifications, @Inject(INTERVIEW_CALENDAR) private readonly calendar: InterviewCalendar, @Optional() private readonly outbox?: NotificationOutboxService) {}
 
   private async canRead(candidateId: string, jobId: string, actor: AuthenticatedUser): Promise<boolean> {
     const scopes = this.auth.scopesFor(actor, 'candidate:read');
@@ -157,6 +158,25 @@ export class InterviewsService {
     const row = await this.target(id, actor);
     const interviews = await this.db.interview.findMany({ where: { candidateId: row.candidateId, jobId: row.jobId }, select: { id: true } });
     return this.db.interviewFeedback.findMany({ where: { interviewId: { in: interviews.map(i => i.id) }, visibleToInterviewers: true }, orderBy: { createdAt: 'asc' } });
+  }
+  async nudgeFeedback(id: string, actor: AuthenticatedUser) {
+    const row = await this.target(id, actor); await this.manageable(row.candidateId, row.jobId, actor);
+    if (row.status === 'CANCELLED' || !row.endTime || row.endTime > new Date()) throw new BadRequestException('面试尚未结束或已取消');
+    if (!this.outbox) throw new ServiceUnavailableException('通知队列不可用');
+    const people = ids(row.interviewerIds);
+    const [feedback, active] = await Promise.all([
+      this.db.interviewFeedback.findMany({ where: { interviewId: id, interviewerId: { in: people } }, select: { interviewerId: true } }),
+      this.db.user.findMany({ where: { id: { in: people }, status: 'ACTIVE' }, select: { id: true } }),
+    ]);
+    const completed = new Set(feedback.map(item => item.interviewerId));
+    const recipients = active.filter(item => !completed.has(item.id));
+    if (!recipients.length) return { queued: 0 };
+    const outbox = this.outbox;
+    await this.db.$transaction(async tx => {
+      const change = await tx.interviewChange.create({ data: { interviewId: id, action: 'FEEDBACK_NUDGE', actorId: actor.id, reason: '人事催促面试评价' } });
+      for (const recipient of recipients) await outbox.enqueue('interview.FEEDBACK_NUDGE', `${id}|${change.id}`, recipient.id, new Date(), tx);
+    });
+    return { queued: recipients.length };
   }
   async addFeedback(id: string, value: unknown, actor: AuthenticatedUser) {
     const row = await this.target(id, actor); const input = record(value); const interviewerId = required(input.interviewerId, '面试官');

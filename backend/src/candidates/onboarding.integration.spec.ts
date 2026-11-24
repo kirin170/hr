@@ -1,9 +1,15 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { DataScope } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { OnboardingRemindersService } from './onboarding-reminders.service.js';
+import { NotificationPreferenceService } from '../settings/notification-preference.service.js';
+import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
+import { OnboardingNotificationScanner } from '../dingtalk/onboarding-notification-scanner.js';
+import { NotificationDeliveryWorker } from '../dingtalk/notification-delivery.worker.js';
+import type { DingTalkApiClient } from '../dingtalk/dingtalk-api.client.js';
+import type { DingTalkWorkNoticeClient } from '../dingtalk/dingtalk-work-notice.client.js';
 import { CandidatesService } from './candidates.service.js';
 const isolated = process.env.ATS016_ISOLATED_TEST === '1' && /^ats016_tmp_[a-f0-9]+$/.test(new URL(process.env.DATABASE_URL || 'mysql://invalid/invalid').pathname.slice(1));
 describe.skipIf(!isolated)('ATS-016 isolated MySQL', () => {
@@ -45,9 +51,22 @@ describe.skipIf(!isolated)('ATS-016 isolated MySQL', () => {
   await Promise.all([reminders.dispatch(now), reminders.dispatch(now)]);
   const actor = await auth.loadUserContext(hr.id);
   let items = await reminders.list(actor); expect(items.filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(1);
+  const reminderId = items.find(x=>x.candidateId==='ats016_reminder')!.id;
+  const prefs = new NotificationPreferenceService(db); const outbox = new NotificationOutboxService(db);
+  const scanner = new OnboardingNotificationScanner(db,auth,reminders,prefs,outbox);
+  await prefs.update(actor.id,{muted:['onboarding.REMINDER']}); await scanner.scan(now);
+  let deliveries = await db.$queryRaw<{id:string;eventKey:string;sourceKey:string;recipientId:string}[]>`SELECT id, eventKey, sourceKey, recipientId FROM notification_deliveries WHERE sourceKey = ${reminderId}`;
+  expect(deliveries).toHaveLength(0);
+  await prefs.update(actor.id,{muted:[]}); await Promise.all([scanner.scan(now),scanner.scan(now)]);
+  deliveries = await db.$queryRaw<{id:string;eventKey:string;sourceKey:string;recipientId:string}[]>`SELECT id, eventKey, sourceKey, recipientId FROM notification_deliveries WHERE sourceKey = ${reminderId}`;
+  expect(deliveries).toHaveLength(1);
   await reminders.markRead(items.find(x=>x.candidateId==='ats016_reminder')!.id,actor);
   expect((await reminders.list(actor)).find(x=>x.candidateId==='ats016_reminder')?.readAt).not.toBeNull();
   await service.rescheduleOnboarding('ats016_reminder',{onboardDate:'2027-02-10'},actor);
+  const sender = { send: vi.fn() }; const worker = new NotificationDeliveryWorker(db,outbox,{} as DingTalkApiClient,sender as unknown as DingTalkWorkNoticeClient,auth,reminders,prefs);
+  vi.stubEnv('DINGTALK_NOTIFICATION_DELIVERY_ENABLED','true');
+  try { await worker.process(deliveries[0],now); } finally { vi.unstubAllEnvs(); }
+  expect(sender.send).not.toHaveBeenCalled();
   expect((await reminders.list(actor)).filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(0);
   await reminders.dispatch(now); items = await reminders.list(actor); expect(items.filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(1);
   await service.updateStage('ats016_reminder',{stage:'ONBOARDED'},actor);

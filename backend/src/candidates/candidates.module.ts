@@ -8,5 +8,6 @@ import { AuthorizationModule } from '../auth/authorization.module.js';
   controllers: [CandidatesController],
   imports: [AuthorizationModule],
   providers: [CandidatesService, OnboardingRemindersService],
+  exports: [OnboardingRemindersService],
 })
 export class CandidatesModule {}

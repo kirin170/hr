@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import type { OnboardingReminder } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import { canEnterPendingOnboard, type OfferStage, type OfferStatus } from '../offers/offer-contract.js';
@@ -58,13 +59,24 @@ export class OnboardingRemindersService implements OnModuleInit, OnModuleDestroy
     const rows = await this.db.onboardingReminder.findMany({ where: { recipientId: actor.id }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 100 });
     const result: { id: string; candidateId: string; name: string; onboardDate: Date; dueAt: Date; readAt: Date | null }[] = [];
     for (const row of rows) {
-      const [candidate, offer] = await Promise.all([
-        this.db.candidate.findFirst({ where: { AND: [{ id: row.candidateId, jobId: row.jobId, stage: 'PENDING_ONBOARD', job: { is: { recruiterId: actor.id } } }, this.auth.candidateWhere(actor, 'candidate:stage:update')] }, select: { name: true } }),
-        this.db.offerRecord.findUnique({ where: { candidateId: row.candidateId }, select: { jobId: true, onboardDate: true } }),
-      ]);
-      if (candidate && offer?.jobId === row.jobId && offer.onboardDate?.getTime() === row.onboardDate.getTime()) result.push({ id: row.id, candidateId: row.candidateId, name: candidate.name, onboardDate: row.onboardDate, dueAt: row.dueAt, readAt: row.readAt });
+      const current = await this.currentRecord(row, actor);
+      if (current) result.push(current);
     }
     return result;
+  }
+  /** The same authorization and persisted facts used by the inbox, for external adapters. */
+  async current(id: string, actor: AuthenticatedUser) {
+    if (!actor.roles.some(r => r.code === 'RECRUITER' && r.permissions.includes('candidate:stage:update'))) return null;
+    const row = await this.db.onboardingReminder.findUnique({ where: { id } });
+    return row && row.recipientId === actor.id ? this.currentRecord(row, actor) : null;
+  }
+  private async currentRecord(row: OnboardingReminder, actor: AuthenticatedUser) {
+    const [candidate, offer] = await Promise.all([
+      this.db.candidate.findFirst({ where: { AND: [{ id: row.candidateId, jobId: row.jobId, stage: 'PENDING_ONBOARD', job: { is: { recruiterId: actor.id } } }, this.auth.candidateWhere(actor, 'candidate:stage:update')] }, select: { name: true } }),
+      this.db.offerRecord.findUnique({ where: { candidateId: row.candidateId } }),
+    ]);
+    if (!candidate || !offer || offer.jobId !== row.jobId || !offer.onboardDate || offer.onboardDate.getTime() !== row.onboardDate.getTime() || !canEnterPendingOnboard({ stage: offer.workflowStage as OfferStage, status: offer.stageStatus as OfferStatus }, offer.offerSentAt, offer.onboardDate, offer.writtenResult, offer.backgroundCheckStatus)) return null;
+    return { id: row.id, candidateId: row.candidateId, name: candidate.name, onboardDate: row.onboardDate, dueAt: row.dueAt, readAt: row.readAt };
   }
   async markRead(id: string, actor: AuthenticatedUser) {
     await this.db.onboardingReminder.updateMany({ where: { id, recipientId: actor.id, readAt: null }, data: { readAt: new Date() } });

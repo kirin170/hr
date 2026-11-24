@@ -33,6 +33,8 @@ export class InterviewsController {
   feedback(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.service.feedback(id, actor); }
   @Post(':id/feedback') @RequirePermission('candidate:read') @AuditAction('interview.feedback.create', 'Interview')
   addFeedback(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.service.addFeedback(id, body, actor); }
+  @Post(':id/feedback/nudge') @RequirePermission('candidate:stage:update') @AuditAction('interview.feedback.nudge', 'Interview')
+  nudgeFeedback(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.service.nudgeFeedback(id, actor); }
   @Get(':id/transcripts') @RequirePermission('candidate:read') @AuditAction('interview.transcripts.list', 'Interview')
   transcripts(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.service.transcripts(id, actor); }
   @Post(':id/transcripts') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcripts.create', 'Interview')
