@@ -93,6 +93,7 @@
   - `+detail`：标题在 `basic.result.title`，摘要在 `summary.result.fullSummary`，`taskUuid` 在顶层
   - `+transcript`：`data.complete` 表示分页是否追完，逐字稿在 `data.paragraphList[]`，每段取 `paragraph` 为文本、`speakerDisplay.nickName`（回退 `nickName`）为发言人、`startTime/endTime` 为相对录音起点的毫秒偏移
   - 同时兼容 `{ success, data }` 包裹与 `segments/paragraphs/sentences` 旧容器；字段无法识别时返回 `MINUTES_TRANSCRIPT_SHAPE_UNSUPPORTED`，不把未知结构当成“没有发言”。逐字稿失败但摘要可读时按部分成功返回并记录 `transcriptUnavailable` 错误码
+  - 能力边界：dws 把发言人匿名成「发言人 1/2」，`nickName` 与 `speakerDisplay.nickName` 取值相同，逐字稿里拿不到真实姓名；面试评估提示词不得依赖姓名区分面试官与候选人，只能按问答模式推断角色
 - 错误与降级：ATS 数据范围越权按 404 处理；dws 认证/权限失败返回 403 并记录 `interview.transcript.material_denied` / `material_failed`（仅错误码，不落 stderr 文本）；未配置 dws 或二进制缺失返回 503 并提示人工录入；原文、摘要与令牌不进入日志、审计摘要或错误信息。
 - 部署约束：dws 授权凭证与设备绑定，换机器、重建容器或迁移服务器后需重新扫码授权；因此后端按单实例固定主机部署，不做多副本共享。Windows 下 `execFile` 不能直接执行 `.cmd`（`spawn EINVAL`），`DINGTALK_MINUTES_DWS_BIN` 必须指向 npm 包内的原生二进制 `...\dingtalk-workspace-cli\vendor\dws.exe`；Linux 直接指向 `dws` 即可。
 - 留存：素材写入 `interview_transcript_materials`，按「链接 + 内容哈希」唯一，重复读取不新增、不覆盖既有来源关联；链接表只补齐 `minutesId/source`，不改写 URL；听记链接仍按轮次追加。
