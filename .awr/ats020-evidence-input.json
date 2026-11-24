@@ -1,0 +1,31 @@
+{
+  "work_item_key": "ATS-020",
+  "external_key": "ats020-transcript-materials-dws-v2",
+  "evidence_type": "verification_report",
+  "summary": "dws 子进程架构下的听记读取验收：真实租户听记读取成功（摘要 1693 字、168 段/4928 字、complete=true、时间轴偏差 0.8s），隔离库 ATS-020 7 项与 ATS-014 回归 4 项通过，后端 268 项单测与前后端构建通过。",
+  "locator": "docs/verification/ats020-report.json",
+  "level": "locally_verified",
+  "sha256": "a8ea6990e4be184990e75295d1b0a03a33be60bdc8c9f33e7491c0021ffe35f1",
+  "source_sha": "df8847a3a9ca66d6e384fac63f060b1690ac5ce8",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npx vitest run --prefix backend; npm run build --prefix backend; npm run build; node scripts/ats020-isolated-check.mjs; node scripts/ats014-isolated-check.mjs; node scripts/ats020-minutes-probe.mjs <真实听记 id>",
+  "scope": [
+    "backend/prisma/migrations/20261123190000_ats020_interview_minutes/migration.sql",
+    "backend/prisma/schema.prisma",
+    "backend/src/dingtalk/dingtalk-minutes.client.ts",
+    "backend/src/dingtalk/dingtalk-minutes.client.spec.ts",
+    "backend/src/interviews/interview-eval.contract.ts",
+    "backend/src/interviews/interview-transcripts.service.ts",
+    "backend/src/interviews/interview-transcripts.service.spec.ts",
+    "backend/src/interviews/interviews-minutes.integration.spec.ts",
+    "backend/src/interviews/interviews.controller.ts",
+    "backend/src/interviews/interviews.service.ts",
+    "backend/src/interviews/interviews.module.ts",
+    "backend/scripts/ats020-isolated-check.mjs",
+    "backend/scripts/ats020-minutes-probe.mjs",
+    "backend/.env.example",
+    "src/pages/Interviews.tsx",
+    "docs/ats-钉钉集成技术设计-v1.0.md",
+    "隔离临时数据库 ats020_tmp_*、ats014_tmp_*（验证后删除）"
+  ],
+  "verified_at": 1795496942723
+}

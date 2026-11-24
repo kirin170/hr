@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "source_sha": "df8847a3a9ca66d6e384fac63f060b1690ac5ce8",
+  "acceptance": [
+    {
+      "criterion": "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。",
+      "evidence": ["ats020-transcript-materials-dws-v2"]
+    },
+    {
+      "criterion": "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。",
+      "evidence": ["ats020-transcript-materials-dws-v2"]
+    }
+  ]
+}

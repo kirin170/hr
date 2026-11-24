@@ -389,7 +389,7 @@ work_items:
   next_action: "已预派给 CodeBuddy（第4批，待 ATS-015 完成后启动）：先确认招聘需求与录用审批两类 OA 表单字段映射和测试实例，再分别验证签名/来源校验、唯一约束与事务下的幂等并发回调，以及录用结果手工回填兜底；不自建审批流、不反向更改 OA 原单。"
 - id: ATS-020
   kind: delivery
-  status: planned
+  status: completed
   owner: CodeBuddy
   goal: ats-integrations
   priority: P1
@@ -399,7 +399,9 @@ work_items:
   - "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。"
   - "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。"
   depends_on: [ATS-017, ATS-014]
-  next_action: "已预派给 CodeBuddy（第3批，待 ATS-014 完成后启动）：用脱敏听记样本验证租户能力与越权拒绝，再按轮次接入原文/摘要读取与来源定位；不覆盖既有链接，素材统一交付 INTERVIEW_EVAL 接口，不以听记内置智能纪要替代 AI 评估结论。"
+  next_action: "无；已按 ats020-transcript-materials-dws-v2 完成本地验收，服务账号生产授权链路见报告 limitations，由 ATS-025 上线清单承接。"
+  "evidence": ["docs/verification/ats020-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-021
   kind: delivery
   status: planned
