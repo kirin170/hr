@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
-import { request, uploadOfferMaterial } from '../api'
+import { request, uploadOfferMaterial, submitOfferOa, refreshOfferOa } from '../api'
 
-type Offer = { workflowStage: string | null; stageStatus: string | null; workflowVersion: number; oaApprovalId: string | null; hireLevel: string | null; salaryReturned: boolean; offerSentAt: string | null; onboardDate: string | null; oralResult: string | null; writtenResult: string | null }
+type Offer = { workflowStage: string | null; stageStatus: string | null; workflowVersion: number; oaApprovalId: string | null; oaInstanceId: string | null; oaInstanceStatus: string | null; oaInstanceResult: string | null; oaSource: string | null; oaSyncedAt: string | null; hireLevel: string | null; salaryReturned: boolean; offerSentAt: string | null; onboardDate: string | null; oralResult: string | null; writtenResult: string | null }
 type Reason = { id: string; type: string; label: string }
 type Material = { id: string; fileName: string; category: string; expiresAt: string }
 const labels: Record<string,string> = { APPROVAL_MATERIALS:'录用审批资料', OA_APPROVAL:'OA 审批中', ORAL_OFFER:'口头 Offer', BACKGROUND_MATERIALS:'背调信息整理中', BACKGROUND_APPROVAL:'背调审批', WRITTEN_OFFER:'书面 Offer' }
 const statuses: Record<string,string> = { PENDING:'待处理', ACCEPTED:'接受 / 通过', NOT_PASSED:'不通过' }
+const oaStatuses: Record<string,string> = { SUBMITTING:'发起中', NEW:'待审批', RUNNING:'审批中', COMPLETED:'已完成', TERMINATED:'已终止' }
+const oaResults: Record<string,string> = { agree:'同意', refuse:'拒绝' }
 export function OfferPanel({ candidateId, onChanged }: { candidateId: string; onChanged: () => void }) {
   const base = `/v1/candidates/${encodeURIComponent(candidateId)}/offer`
   const [offer, setOffer] = useState<Offer | null>(null)
@@ -40,6 +42,18 @@ export function OfferPanel({ candidateId, onChanged }: { candidateId: string; on
     catch (e) { setError(e instanceof Error ? e.message : '操作失败') } finally { setBusy(false) }
   }
   const showPreview = async () => { try { setPreview(await request(`${base}/preview`)) } catch(e) { setError(e instanceof Error ? e.message : '预览失败') } }
+  const submitOa = async () => {
+    setBusy(true); setError('')
+    try { await submitOfferOa(candidateId); await refresh(); onChanged() }
+    catch (e) { setError(e instanceof Error ? e.message : '发起 OA 审批失败') }
+    finally { setBusy(false) }
+  }
+  const refreshOa = async () => {
+    setBusy(true); setError('')
+    try { await refreshOfferOa(candidateId); await refresh() }
+    catch (e) { setError(e instanceof Error ? e.message : '刷新 OA 状态失败') }
+    finally { setBusy(false) }
+  }
   const sendFile = async () => { if (!file) return; setBusy(true); try { await uploadOfferMaterial(candidateId, category, file); setFile(null); await refresh() } catch(e) { setError(e instanceof Error ? e.message : '上传失败') } finally { setBusy(false) } }
   const openFile = async (id: string) => { try { const signed = await request<{url:string}>(`${base}/materials/${encodeURIComponent(id)}/read-url`); window.open(signed.url, '_blank', 'noopener,noreferrer') } catch(e) { setError(e instanceof Error ? e.message : '读取失败') } }
   if (loading) return <section className="drawer-section">正在加载 Offer…</section>
@@ -51,8 +65,11 @@ export function OfferPanel({ candidateId, onChanged }: { candidateId: string; on
     {!stage ? <><p>旧记录不能自动映射。核对后将从录用审批资料重新记录；原结果与发送、入职时间会保留在时间线。</p><button disabled={busy} onClick={() => { if (window.confirm('确认已核对旧记录，并从录用审批资料重新开始？')) void act('RECONCILE', { confirmLegacy: true }) }}>核对旧记录并重新开始</button></> : <>
       <p><strong>{labels[stage] || stage}</strong> · {statuses[offer.stageStatus || ''] || offer.stageStatus}</p>
       <p>口头结果：{offer.oralResult || '未记录'}；书面发送：{offer.offerSentAt ? new Date(offer.offerSentAt).toLocaleString() : '未发送'}；书面结果：{offer.writtenResult || '未记录'}</p>
-      <div className="form-grid"><label>录用职级<input value={level} onChange={e => setLevel(e.target.value)} /></label><label>OA 单号<input value={oa} onChange={e => setOa(e.target.value)} /></label>{stage === 'WRITTEN_OFFER' && <label>入职日期<input type="date" value={onboard} onChange={e => setOnboard(e.target.value)} /></label>}</div>
-      <div className="button-row"><button disabled={busy} onClick={() => void act('DETAILS', { ...(level.trim() && { hireLevel: level }), ...(oa.trim() && { oaApprovalId: oa }), ...(onboard && stage === 'WRITTEN_OFFER' && { onboardDate: onboard }) })}>保存资料</button><button disabled={busy} onClick={() => void act('DETAILS', { salaryReturned: !offer.salaryReturned })}>薪资{offer.salaryReturned ? '已返回' : '未返回'}（切换）</button><button onClick={() => void showPreview()}>预览 OA 材料</button></div>
+      <p>OA 审批：{offer.oaInstanceId
+        ? `系统发起 · ${oaStatuses[offer.oaInstanceStatus ?? ''] ?? offer.oaInstanceStatus}${offer.oaInstanceResult ? ` · 结论 ${oaResults[offer.oaInstanceResult] ?? offer.oaInstanceResult}` : ''}${offer.oaSyncedAt ? ` · 同步于 ${new Date(offer.oaSyncedAt).toLocaleString()}` : ''}`
+        : offer.oaApprovalId ? '人工回填单号（无系统发起实例）' : '未发起'}</p>
+      <div className="form-grid"><label>录用职级<input value={level} onChange={e => setLevel(e.target.value)} /></label><label>OA 单号<input value={oa} onChange={e => setOa(e.target.value)} disabled={!!offer.oaInstanceId} />{offer.oaInstanceId && <small>系统发起后不可手改</small>}</label>{stage === 'WRITTEN_OFFER' && <label>入职日期<input type="date" value={onboard} onChange={e => setOnboard(e.target.value)} /></label>}</div>
+      <div className="button-row"><button disabled={busy} onClick={() => void act('DETAILS', { ...(level.trim() && { hireLevel: level }), ...(oa.trim() && !offer.oaInstanceId && { oaApprovalId: oa }), ...(onboard && stage === 'WRITTEN_OFFER' && { onboardDate: onboard }) })}>保存资料</button><button disabled={busy} onClick={() => void act('DETAILS', { salaryReturned: !offer.salaryReturned })}>薪资{offer.salaryReturned ? '已返回' : '未返回'}（切换）</button><button onClick={() => void showPreview()}>预览 OA 材料</button>{['APPROVAL_MATERIALS','OA_APPROVAL'].includes(stage) && offer.stageStatus === 'PENDING' && !offer.oaInstanceId && <button disabled={busy || !offer.hireLevel?.trim()} title={!offer.hireLevel?.trim() ? '请先保存录用职级' : undefined} onClick={() => void submitOa()}>发起 OA 审批</button>}{offer.oaInstanceId && <button disabled={busy} onClick={() => void refreshOa()}>刷新 OA 状态</button>}</div>
       {preview != null && <pre style={{whiteSpace:'pre-wrap', overflowWrap:'anywhere'}}>{JSON.stringify(preview, null, 2)}</pre>}
       {stage === 'WRITTEN_OFFER' && !offer.offerSentAt && <button disabled={busy} onClick={() => void act('DETAILS', { markSent: true })}>标记书面 Offer 已发送</button>}
       {offer.stageStatus === 'PENDING' && <><div className="button-row"><button disabled={busy} onClick={() => void act('ACCEPT')}>记录接受 / 通过</button><label>不通过发起方<select value={initiator} onChange={e => { setInitiator(e.target.value); setReasonId('') }}><option value="COMPANY">企业</option>{['ORAL_OFFER','WRITTEN_OFFER'].includes(stage) && <option value="CANDIDATE">候选人拒绝</option>}</select></label><label>原因<select value={reasonId} onChange={e => setReasonId(e.target.value)}><option value="">请选择</option>{options.map(r => <option value={r.id} key={r.id}>{r.label}</option>)}</select></label><label>补充说明<input value={reasonText} onChange={e => setReasonText(e.target.value)} /></label><button disabled={busy || !reasonId} onClick={() => void act('FAIL', { initiator, reasonId, reasonText })}>记录不通过并归档</button></div></>}

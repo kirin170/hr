@@ -6,15 +6,19 @@ import {
   closeJob,
   closeRequisition,
   createJob,
+  getOaCapability,
   listDepartments,
   listJobs,
+  listOaSyncEvents,
   listRequisitions,
   listUsers,
+  retryOaSyncEvent,
   revertRequisition,
   syncRequisition,
   updateJob,
   updateRequisition,
 } from '../api'
+import type { OaCapability, OaSyncEvent } from '../api'
 import { useApp } from '../context'
 import type { ApiDepartment, ApiRequisition, ApiUser, JobListItem } from '../types'
 import { cn } from '../utils'
@@ -51,6 +55,7 @@ export function Positions() {
   const [requisitionForm, setRequisitionForm] = useState<ApiRequisition | 'new' | null>(null)
   const [closingRequisition, setClosingRequisition] = useState<ApiRequisition | null>(null)
   const [startDateTarget, setStartDateTarget] = useState<ApiRequisition | null>(null)
+  const [oaEventsOpen, setOaEventsOpen] = useState(false)
 
   // 部门名称优先用部门清单，其次用职位/需求单上服务端补全的 departmentName；都没有时提示待补充，不回退原始 ID
   const departmentName = useMemo(() => {
@@ -157,7 +162,10 @@ export function Positions() {
         <button className="button button-secondary" onClick={refreshAll}><RefreshCw size={16} />刷新</button>
         {tab === 'jobs'
           ? <button className="button button-primary" onClick={() => setJobForm('new')}><Plus size={17} />新建职位</button>
-          : <button className="button button-primary" onClick={() => setRequisitionForm('new')}><Plus size={17} />同步 OA 需求</button>}
+          : <>
+            <button className="button button-secondary" onClick={() => setOaEventsOpen(true)}><RefreshCw size={16} />OA 同步记录</button>
+            <button className="button button-primary" onClick={() => setRequisitionForm('new')}><Plus size={17} />同步 OA 需求</button>
+          </>}
       </div>
     </div>
 
@@ -199,7 +207,7 @@ export function Positions() {
 
     {tab === 'requisitions' && <section className="panel">
       <div className="filter-panel">
-        <label className="table-search"><Search size={15} /><input placeholder="搜索需求名称或 OA 单号" value={requisitionKeyword} onChange={(event) => setRequisitionKeyword(event.target.value)} />{requisitionKeyword && <button onClick={() => setRequisitionKeyword('')}><X size={13} /></button>}</label>
+        <label className="table-search"><Search size={15} /><input placeholder="搜索需求名称" value={requisitionKeyword} onChange={(event) => setRequisitionKeyword(event.target.value)} />{requisitionKeyword && <button onClick={() => setRequisitionKeyword('')}><X size={13} /></button>}</label>
         <label className="filter-select"><span>状态</span><select value={requisitionStatus} onChange={(event) => setRequisitionStatus(event.target.value)}><option value="">全部</option><option value="ACTIVE">招聘中</option><option value="CLOSED">已关闭</option></select><ChevronDown size={13} /></label>
         <label className="filter-select"><span>周期 ≥</span><input className="mini-input" inputMode="numeric" value={cycleMin} onChange={(event) => setCycleMin(event.target.value.replace(/\D/g, ''))} placeholder="天" /></label>
         <label className="filter-select"><span>周期 ≤</span><input className="mini-input" inputMode="numeric" value={cycleMax} onChange={(event) => setCycleMax(event.target.value.replace(/\D/g, ''))} placeholder="天" /></label>
@@ -212,10 +220,10 @@ export function Positions() {
         <div><span>周期口径</span><strong>自然日</strong><small>同日计 1 天</small></div>
       </div>
       <table className="candidate-table">
-        <thead><tr><th>OA 单号</th><th>需求</th><th>部门</th><th>状态</th><th>提报时间</th><th>开始招聘时间</th><th>关闭时间</th><th>招聘周期</th><th>操作</th></tr></thead>
+        <thead><tr><th>OA 编号</th><th>需求</th><th>部门</th><th>状态</th><th>提报时间</th><th>开始招聘时间</th><th>关闭时间</th><th>招聘周期</th><th>操作</th></tr></thead>
         <tbody>
           {requisitions.map((requisition) => <tr key={requisition.id}>
-            <td><span className="mono-cell">{requisition.oaApprovalId}</span></td>
+            <td><span className="mono-cell">{requisition.oaBusinessId ?? requisition.oaApprovalId}</span>{requisition.oaBusinessId && <small className="cell-sub">实例 {requisition.oaApprovalId}</small>}</td>
             <td><strong>{requisition.title}</strong><small className="cell-sub">{requisition.headcount} HC · {userName(requisition.recruiterId)}</small></td>
             <td>{departmentName(requisition.departmentId)}</td>
             <td><span className={cn('status-chip', requisition.status === 'ACTIVE' ? 'status-on' : 'status-off')}>{statusLabel[requisition.status]}</span></td>
@@ -240,7 +248,8 @@ export function Positions() {
     </section>}
 
     {jobForm && <JobFormModal job={jobForm} departments={departments} users={users} onClose={() => setJobForm(null)} onSaved={() => { setJobForm(null); void loadJobs() }} />}
-    {requisitionForm && <RequisitionFormModal requisition={requisitionForm} departments={departments} users={users} onClose={() => setRequisitionForm(null)} onSaved={() => { setRequisitionForm(null); void loadRequisitions() }} />}
+    {requisitionForm && <RequisitionFormModal requisition={requisitionForm} users={users} onClose={() => setRequisitionForm(null)} onSaved={() => { setRequisitionForm(null); void loadRequisitions() }} />}
+    {oaEventsOpen && <OaEventsModal onClose={() => setOaEventsOpen(false)} />}
     {closingRequisition && <DateActionModal title="关闭招聘需求" description="关闭后系统写入关闭时间并计算需求级自然日周期；HC 满员仅提示，不会自动关闭。" initialDate={today()} confirmLabel="确认关闭" onClose={() => setClosingRequisition(null)} onSubmit={async (date) => { await closeRequisition(closingRequisition.id, date); toast('需求已关闭并计算招聘周期'); setClosingRequisition(null); void loadRequisitions() }} />}
     {startDateTarget && <DateActionModal title="修改开始招聘时间" description="仅招聘中可修改；修改后重算在招天数，招聘周期按关闭时的最新开始时间计算。" initialDate={startDateTarget.recruitmentStartDate ?? today()} confirmLabel="保存并重算" onClose={() => setStartDateTarget(null)} onSubmit={async (date) => { await changeRequisitionStartDate(startDateTarget.id, date); toast('开始招聘时间已更新'); setStartDateTarget(null); void loadRequisitions() }} />}
   </div>
@@ -335,34 +344,43 @@ function JobFormModal({ job, departments, users, onClose, onSaved }: {
   </Modal>
 }
 
-function RequisitionFormModal({ requisition, departments, users, onClose, onSaved }: {
+function RequisitionFormModal({ requisition, users, onClose, onSaved }: {
   requisition: ApiRequisition | 'new'
-  departments: ApiDepartment[]
   users: ApiUser[]
   onClose: () => void
   onSaved: () => void
 }) {
   const isNew = requisition === 'new'
   const current = isNew ? null : requisition
-  const [oaApprovalId, setOaApprovalId] = useState(current?.oaApprovalId ?? '')
+  const [processInstanceRef, setProcessInstanceRef] = useState('')
+  const [startDate, setStartDate] = useState('')
   const [title, setTitle] = useState(current?.title ?? '')
-  const [departmentId, setDepartmentId] = useState(current?.departmentId ?? departments[0]?.id ?? '')
   const [headcount, setHeadcount] = useState(String(current?.headcount ?? 1))
   const [recruiterId, setRecruiterId] = useState(current?.recruiterId ?? '')
   const [jobLevel, setJobLevel] = useState(current?.jobLevel ?? '')
-  const [submittedAt, setSubmittedAt] = useState(current?.submittedAt ?? today())
-  const [startDate, setStartDate] = useState(current?.recruitmentStartDate ?? today())
   const [note, setNote] = useState(current?.note ?? '')
   const [requirements, setRequirements] = useState(current?.requirements ?? '')
+  const [capability, setCapability] = useState<OaCapability | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isNew) return
+    getOaCapability().then(setCapability).catch(() => setCapability(null))
+  }, [isNew])
+
+  const oaUnavailable = isNew && capability !== null && !capability.requisition.configured
+  const canSubmit = isNew ? processInstanceRef.trim().length > 0 && !oaUnavailable : true
 
   const submit = async () => {
     setSaving(true)
     setError(null)
     try {
       if (isNew) {
-        await syncRequisition({ oaApprovalId, title, departmentId, headcount: Number(headcount) || 0, submittedAt, recruitmentStartDate: startDate, recruiterId: recruiterId || undefined, jobLevel, note, requirements })
+        await syncRequisition({
+          processInstanceRef: processInstanceRef.trim(),
+          ...(startDate ? { recruitmentStartDate: startDate } : {}),
+        })
       } else {
         await updateRequisition(current!.id, { title, headcount: Number(headcount) || 0, recruiterId: recruiterId || null, jobLevel, note, requirements })
       }
@@ -375,32 +393,93 @@ function RequisitionFormModal({ requisition, departments, users, onClose, onSave
   }
 
   return <Modal
-    title={isNew ? '同步 OA 招聘需求（Mock）' : `编辑需求 ${current?.oaApprovalId ?? ''}`}
-    subtitle={isNew ? '按 OA 审批单号幂等生成需求；开始招聘时间必填，提报时间只读' : '同步信息与人事修改保存在同一条需求记录'}
+    title={isNew ? '同步 OA 招聘需求' : `编辑需求 ${current?.oaBusinessId ?? current?.oaApprovalId ?? ''}`}
+    subtitle={isNew ? '只填审批实例 ID 或详情链接；需求名称、部门、人数、提报时间由服务端回读 OA 核实' : '同步信息与人事修改保存在同一条需求记录；OA 编号只读'}
     onClose={onClose}
-    footer={<><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" disabled={saving} onClick={() => void submit()}>{saving ? '保存中…' : '保存'}</button></>}
+    footer={<><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" disabled={saving || !canSubmit} onClick={() => void submit()}>{saving ? '同步中…' : isNew ? '同步' : '保存'}</button></>}
   >
     {error && <Notice tone="error">{error}</Notice>}
-    {isNew && <label className="form-field"><span>OA 审批单号 <em>*</em></span><input value={oaApprovalId} onChange={(event) => setOaApprovalId(event.target.value)} placeholder="例如：OA-2026-0001" /></label>}
-    <label className="form-field"><span>需求名称 <em>*</em></span><input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-    {isNew && <label className="form-field"><span>部门 <em>*</em></span>
-      <select value={departmentId} onChange={(event) => setDepartmentId(event.target.value)}>
-        <option value="">请选择部门</option>
-        {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
-      </select>
-    </label>}
-    <label className="form-field"><span>招聘人数</span><input inputMode="numeric" value={headcount} onChange={(event) => setHeadcount(event.target.value.replace(/\D/g, ''))} /></label>
-    <label className="form-field"><span>招聘负责人</span>
-      <select value={recruiterId} onChange={(event) => setRecruiterId(event.target.value)}>
-        <option value="">未指定</option>
-        {users.map((user) => <option key={user.id} value={user.id}>{user.displayName}</option>)}
-      </select>
-    </label>
-    <label className="form-field"><span>职级</span><input value={jobLevel} onChange={(event) => setJobLevel(event.target.value)} placeholder="例如：P6" /></label>
-    {isNew && <label className="form-field"><span>需求提报时间 <em>*</em></span><input type="date" value={submittedAt} onChange={(event) => setSubmittedAt(event.target.value)} /><small>仅记录，不参与周期计算</small></label>}
-    {isNew && <label className="form-field"><span>开始招聘时间 <em>*</em></span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /><small>周期计算起点，不可事后补录</small></label>}
-    <label className="form-field"><span>备注</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} /></label>
-    <label className="form-field"><span>招聘要求</span><textarea rows={3} value={requirements} onChange={(event) => setRequirements(event.target.value)} /></label>
+    {isNew ? <>
+      {oaUnavailable && <Notice tone="info">{`OA 模板未配置${capability?.code ? `（${capability.code}）` : ''}，暂不能同步；请先完成部署配置，或由人事人工维护需求。`}</Notice>}
+      <label className="form-field"><span>OA 审批实例 ID 或详情链接 <em>*</em></span><input value={processInstanceRef} onChange={(event) => setProcessInstanceRef(event.target.value)} placeholder="例如：abc123-def456 或审批详情 URL" /><small>只接受已配置的招聘需求审批模板，且审批结论为同意</small></label>
+      <label className="form-field"><span>开始招聘时间</span><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} /><small>OA 表单已带出时忽略；表单缺少时必须在此补录，否则同步失败</small></label>
+    </> : <>
+      <label className="form-field"><span>OA 编号</span><input value={current?.oaBusinessId ?? current?.oaApprovalId ?? ''} readOnly /><small>审批实例 {current?.oaApprovalId}，由 OA 回读写入，不可修改</small></label>
+      <label className="form-field"><span>需求名称 <em>*</em></span><input value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+      <label className="form-field"><span>招聘人数</span><input inputMode="numeric" value={headcount} onChange={(event) => setHeadcount(event.target.value.replace(/\D/g, ''))} /></label>
+      <label className="form-field"><span>招聘负责人</span>
+        <select value={recruiterId} onChange={(event) => setRecruiterId(event.target.value)}>
+          <option value="">未指定</option>
+          {users.map((user) => <option key={user.id} value={user.id}>{user.displayName}</option>)}
+        </select>
+      </label>
+      <label className="form-field"><span>职级</span><input value={jobLevel} onChange={(event) => setJobLevel(event.target.value)} placeholder="例如：P6" /></label>
+      <label className="form-field"><span>备注</span><textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} /></label>
+      <label className="form-field"><span>招聘要求</span><textarea rows={3} value={requirements} onChange={(event) => setRequirements(event.target.value)} /></label>
+    </>}
+  </Modal>
+}
+
+const oaEventStatus: Record<string, string> = { RECEIVED: '待处理', PROCESSING: '处理中', SUCCEEDED: '已完成', FAILED: '失败', SKIPPED: '已跳过' }
+
+function OaEventsModal({ onClose }: { onClose: () => void }) {
+  const [events, setEvents] = useState<OaSyncEvent[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      setEvents(await listOaSyncEvents())
+      setError(null)
+    } catch (loadError) {
+      setEvents([])
+      setError(loadError instanceof Error ? loadError.message : 'OA 同步记录加载失败')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { void load() }, [load])
+
+  const retry = async (id: string) => {
+    setBusyId(id)
+    try {
+      await retryOaSyncEvent(id)
+      await load()
+    } catch (retryError) {
+      setError(retryError instanceof Error ? retryError.message : '重试失败')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  return <Modal
+    title="OA 同步记录"
+    subtitle="只展示招聘需求审批事件；失败项可重试，OA 原单不会被修改"
+    onClose={onClose}
+    footer={<><button className="button button-secondary" onClick={onClose}>关闭</button><button className="button button-primary" disabled={loading} onClick={() => void load()}><RefreshCw size={15} />刷新</button></>}
+  >
+    {error && <Notice tone="error">{error}</Notice>}
+    {loading
+      ? <p>加载中…</p>
+      : events.length === 0
+        ? <p className="cell-sub">暂无 OA 同步事件</p>
+        : <table className="candidate-table">
+          <thead><tr><th>实例 ID</th><th>类型</th><th>状态</th><th>尝试</th><th>接收时间</th><th>最近错误</th><th>操作</th></tr></thead>
+          <tbody>
+            {events.map((event) => <tr key={event.id}>
+              <td><span className="mono-cell">{event.subjectId ?? '—'}</span></td>
+              <td>{event.eventType.split(':').slice(1).join(' / ')}</td>
+              <td>{oaEventStatus[event.status] ?? event.status}</td>
+              <td>{event.attempts}</td>
+              <td>{new Date(event.receivedAt).toLocaleString()}</td>
+              <td className="cell-sub">{event.lastError ?? '—'}</td>
+              <td>{event.status === 'FAILED' ? <button className="text-button" disabled={busyId === event.id} onClick={() => void retry(event.id)}>{busyId === event.id ? '重试中…' : '重试'}</button> : '—'}</td>
+            </tr>)}
+          </tbody>
+        </table>}
   </Modal>
 }
 

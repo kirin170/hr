@@ -359,19 +359,55 @@ export function getRequisition(id: string): Promise<ApiRequisition> {
   return request<ApiRequisition>(`/requisitions/${encodeURIComponent(id)}`)
 }
 
+/** 人工触发 OA 需求同步：只提交审批实例标识，需求字段一律由服务端回读 OA 核实，不接受前端直传。 */
 export function syncRequisition(payload: {
-  oaApprovalId: string
-  title: string
-  departmentId: string
-  headcount: number
-  submittedAt: string
-  recruitmentStartDate: string
-  recruiterId?: string
-  jobLevel?: string
-  note?: string
-  requirements?: string
+  processInstanceRef: string
+  /** OA 表单缺少开始招聘时间时由人事补录；OA 已带出时忽略 */
+  recruitmentStartDate?: string
 }): Promise<{ created: boolean; requisition: ApiRequisition }> {
-  return request('/requisitions/oa-sync', { method: 'POST', body: JSON.stringify(payload) })
+  return request('/requisitions/sync-from-oa', { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export type OaCapability = {
+  valid: boolean
+  code: string | null
+  requisition: { configured: boolean }
+  offer: { configured: boolean; approverLevelSizes: number[]; approverAction: 'AND' | 'OR' | 'NONE' }
+  note: string
+}
+
+/** 管理端展示真实 OA 模板配置状态；未配置时只保留人工通道。 */
+export function getOaCapability(): Promise<OaCapability> {
+  return request<OaCapability>('/requisitions/oa-sync/capability')
+}
+
+export type OaSyncEvent = {
+  id: string
+  eventType: string
+  subjectId: string | null
+  status: string
+  attempts: number
+  receivedAt: string
+  processedAt: string | null
+  lastError: string | null
+}
+
+export function listOaSyncEvents(): Promise<OaSyncEvent[]> {
+  return request<OaSyncEvent[]>('/requisitions/oa-sync/events')
+}
+
+export function retryOaSyncEvent(id: string): Promise<{ id: string; status: string }> {
+  return request(`/requisitions/oa-sync/events/${encodeURIComponent(id)}/retry`, { method: 'POST' })
+}
+
+/** 由系统发起录用审批（材料固定为简历信息、面试登记表、录用职级）。 */
+export function submitOfferOa(candidateId: string): Promise<{ offer: Record<string, unknown> }> {
+  return request(`/candidates/${encodeURIComponent(candidateId)}/offer/oa`, { method: 'POST' })
+}
+
+/** 刷新系统发起的 OA 实例状态；只更新展示字段，不改变 Offer 阶段结果。 */
+export function refreshOfferOa(candidateId: string): Promise<{ offer: Record<string, unknown> }> {
+  return request(`/candidates/${encodeURIComponent(candidateId)}/offer/oa/refresh`, { method: 'POST' })
 }
 
 export function updateRequisition(id: string, payload: Record<string, unknown>): Promise<ApiRequisition> {

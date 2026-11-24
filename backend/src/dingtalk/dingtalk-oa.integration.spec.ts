@@ -107,18 +107,25 @@ describe.skipIf(!isolated)('ATS-019 isolated MySQL', () => {
   let token = '';
   let readerToken = '';
   const callbackCrypto = new DingTalkCallbackCrypto();
+  const envBackup = new Map<string, string | undefined>();
+  /** vi.stubEnv 在 beforeAll 中的值到测试执行时会被恢复，这里直接写 process.env 并在 afterAll 还原。 */
+  const setEnv = (key: string, value: string) => {
+    if (!envBackup.has(key)) envBackup.set(key, process.env[key]);
+    process.env[key] = value;
+  };
 
   beforeAll(async () => {
-    vi.stubEnv('DINGTALK_CLIENT_ID', 'ats019-app-key');
-    vi.stubEnv('DINGTALK_CLIENT_SECRET', 'ats019-app-secret');
-    vi.stubEnv('DINGTALK_CORP_ID', CORP_ID);
-    vi.stubEnv('DINGTALK_CALLBACK_TOKEN', 'ats019-callback-token');
-    vi.stubEnv('DINGTALK_CALLBACK_AES_KEY', randomBytes(32).toString('base64').slice(0, 43));
-    vi.stubEnv('DINGTALK_OA_REQUISITION_PROCESS_CODE', 'PROC-REQ');
-    vi.stubEnv('DINGTALK_OA_OFFER_PROCESS_CODE', 'PROC-OFFER');
-    vi.stubEnv('DINGTALK_OA_OFFER_APPROVERS_LEVEL_1', 'mgr-a,mgr-b');
-    vi.stubEnv('DINGTALK_OA_OFFER_APPROVERS_LEVEL_2', 'dir-a');
-    vi.stubEnv('JWT_ACCESS_SECRET', 'ats019-isolated-test-secret-at-least-32-bytes');
+    setEnv('DINGTALK_CLIENT_ID', 'ats019-app-key');
+    setEnv('DINGTALK_CLIENT_SECRET', 'ats019-app-secret');
+    setEnv('DINGTALK_CORP_ID', CORP_ID);
+    setEnv('DINGTALK_CALLBACK_TOKEN', 'ats019-callback-token');
+    setEnv('DINGTALK_CALLBACK_AES_KEY', randomBytes(32).toString('base64').slice(0, 43));
+    setEnv('DINGTALK_CALLBACK_OWNER_KEY', 'ats019-app-key');
+    setEnv('DINGTALK_OA_REQUISITION_PROCESS_CODE', 'PROC-REQ');
+    setEnv('DINGTALK_OA_OFFER_PROCESS_CODE', 'PROC-OFFER');
+    setEnv('DINGTALK_OA_OFFER_APPROVERS_LEVEL_1', 'mgr-a,mgr-b');
+    setEnv('DINGTALK_OA_OFFER_APPROVERS_LEVEL_2', 'dir-a');
+    setEnv('JWT_ACCESS_SECRET', 'ats019-isolated-test-secret-at-least-32-bytes');
     vi.stubGlobal('fetch', vi.fn(async (input: string | URL, init?: RequestInit) => {
       const url = new URL(String(input));
       if (url.pathname === '/v1.0/oauth2/accessToken') return Response.json({ accessToken: 'app-token', expireIn: 7_200 });
@@ -178,6 +185,10 @@ describe.skipIf(!isolated)('ATS-019 isolated MySQL', () => {
   afterAll(async () => {
     await app?.close();
     await db.$disconnect();
+    for (const [key, value] of envBackup) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });

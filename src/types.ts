@@ -166,7 +166,10 @@ export type JobListItem = ApiJob & {
 
 export type ApiRequisition = {
   id: string
+  /** 钉钉审批实例 ID，作为幂等键；不是审批单上展示的编号 */
   oaApprovalId: string
+  /** 钉钉审批编号（审批单上展示的 businessId）；人工需求为空 */
+  oaBusinessId: string | null
   oaApprovalTitle: string | null
   title: string
   departmentId: string

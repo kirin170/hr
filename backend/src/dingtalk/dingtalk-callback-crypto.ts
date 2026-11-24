@@ -92,7 +92,8 @@ export class DingTalkCallbackCrypto {
   private configuration() {
     const token = process.env.DINGTALK_CALLBACK_TOKEN;
     const encodedKey = process.env.DINGTALK_CALLBACK_AES_KEY;
-    const ownerKey = process.env.DINGTALK_CALLBACK_OWNER_KEY ?? process.env.DINGTALK_CLIENT_ID;
+    // .env 里留空键是常见写法，空字符串要回退到应用标识，否则回调会被判为未配置。
+    const ownerKey = process.env.DINGTALK_CALLBACK_OWNER_KEY || process.env.DINGTALK_CLIENT_ID;
     if (!token || !encodedKey || !ownerKey) {
       throw new ServiceUnavailableException('钉钉事件回调尚未配置');
     }
