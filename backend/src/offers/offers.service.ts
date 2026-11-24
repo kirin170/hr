@@ -130,6 +130,7 @@ export class OffersService {
       if (status !== 'PENDING') throw new ConflictException('当前阶段结果已记录');
       if (stage === 'WRITTEN_OFFER' && !offer.offerSentAt) throw new ConflictException('请先标记书面 Offer 已发送');
       data.stageStatus = 'ACCEPTED';
+      if (stage === 'BACKGROUND_APPROVAL') data.backgroundCheckStatus = 'CONFIRMED_OK';
       if (stage === 'ORAL_OFFER') data.oralResult = 'ACCEPTED';
       if (stage === 'WRITTEN_OFFER') data.writtenResult = 'ACCEPTED';
     } else if (action === 'ADVANCE') {
@@ -141,10 +142,11 @@ export class OffersService {
       const option = await this.db.reasonOption.findUnique({ where: { id: text(body.reasonId, '原因') } });
       failure = validateFailureReason(stage, initiator, option, body.reasonText);
       data.stageStatus = 'NOT_PASSED'; data.failureInitiator = initiator; data.failureReasonType = failure.reasonType; data.rejectReasonId = failure.reasonId; data.failureReasonLabel = option!.label; data.failureReasonText = failure.reasonText;
+      if (stage === 'BACKGROUND_APPROVAL') data.backgroundCheckStatus = 'CONFIRMED_FAILED';
       if (initiator === 'CANDIDATE' && stage === 'ORAL_OFFER') data.oralResult = 'REJECTED';
       if (initiator === 'CANDIDATE' && stage === 'WRITTEN_OFFER') data.writtenResult = 'REJECTED';
       detail = { ...detail, initiator, ...failure, reasonLabel: option!.label };
-    } else if (!canEnterPendingOnboard({ stage, status }, offer.offerSentAt, offer.onboardDate)) throw new ConflictException('须书面 Offer 已发送、候选人已接受且确定入职时间');
+    } else if (!canEnterPendingOnboard({ stage, status }, offer.offerSentAt, offer.onboardDate, offer.writtenResult, offer.backgroundCheckStatus)) throw new ConflictException('须书面 Offer 已发送、候选人已接受且确定入职时间');
     const updated = await this.db.$transaction(async tx => {
       const candidateGuard = await tx.candidate.updateMany({ where: { id, jobId: offer.jobId, stage: 'OFFERING', lockedState: { not: 'INOPERABLE' } }, data: action === 'FAIL' ? { stage: 'ARCHIVED', archiveReasonId: failure!.reasonId, archiveReasonText: failure!.reasonText, archiveChannel: candidate.channel } : action === 'ONBOARD' ? { stage: 'PENDING_ONBOARD' } : { stage: 'OFFERING' } });
       if (candidateGuard.count !== 1) throw new ConflictException('候选人状态已变化');

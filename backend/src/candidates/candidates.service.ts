@@ -8,6 +8,7 @@ import { CandidateStage as DbCandidateStage, Prisma, SensitiveField } from '@pri
 import { PrismaService } from '../prisma/prisma.service.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { canEnterPendingOnboard, failureReasonType, OFFER_STAGES, type FailureInitiator, type OfferStage } from '../offers/offer-contract.js';
 
 const uiStages = ['new', 'screening', 'interview', 'offer', 'hired', 'rejected'] as const;
 type LegacyUiStage = (typeof uiStages)[number];
@@ -248,7 +249,6 @@ export class CandidatesService {
     const rating = typeof input.rating === 'number' && Number.isFinite(input.rating)
       ? Math.min(Math.max(Math.round(input.rating), 0), 5)
       : null;
-
     return this.prisma.$transaction(async (tx) => {
       const candidate = await tx.candidate.create({
         data: {
@@ -325,8 +325,92 @@ export class CandidatesService {
         );
         return this.toCandidateDto(current, canReadContacts);
       }
+      if (current.stage === DbCandidateStage.PROBATION && nextStage === DbCandidateStage.ENDED) throw new ConflictException('请通过试用期结论动作记录是否转正');
       this.assertTransition(current.stage, nextStage);
-      return this.persistStageChange(tx, current, nextStage, actor, reason, reasonId);
+      // Serialize with Offer mutations, which acquire the same candidate row first.
+      if ((current.stage === DbCandidateStage.OFFERING || current.stage === DbCandidateStage.PENDING_ONBOARD)) {
+        const locked = await tx.candidate.updateMany({ where: { id, stage: current.stage, jobId: current.jobId, lockedState: { not: 'INOPERABLE' } }, data: { stage: current.stage } });
+        if (!locked.count) throw new ConflictException('候选人状态已变化，请刷新后重试');
+      }
+      if (current.stage === DbCandidateStage.OFFERING && nextStage === DbCandidateStage.PENDING_ONBOARD) {
+        const offer = await tx.offerRecord.findUnique({ where: { candidateId: id } });
+        if (!offer || offer.jobId !== current.jobId ||
+            !canEnterPendingOnboard({ stage: offer.workflowStage as OfferStage, status: offer.stageStatus as 'ACCEPTED' }, offer.offerSentAt, offer.onboardDate, offer.writtenResult, offer.backgroundCheckStatus)) {
+          throw new ConflictException('须书面 Offer 已发送、候选人已接受且确定入职时间');
+        }
+      }
+      if (nextStage === DbCandidateStage.ARCHIVED && current.stage === DbCandidateStage.OFFERING) {
+        const offer = await tx.offerRecord.findUnique({ where: { candidateId: id } });
+        if (!offer || offer.jobId !== current.jobId || offer.stageStatus !== 'NOT_PASSED' ||
+            !offer.rejectReasonId || !offer.failureReasonLabel || !OFFER_STAGES.includes(offer.workflowStage as OfferStage) ||
+            !['COMPANY', 'CANDIDATE'].includes(offer.failureInitiator ?? '') ||
+            failureReasonType(offer.workflowStage as OfferStage, offer.failureInitiator as FailureInitiator) !== offer.failureReasonType ||
+            (offer.failureReasonLabel.startsWith('其他') && !offer.failureReasonText) ||
+            reasonId !== offer.rejectReasonId || reason !== offer.failureReasonText) {
+          throw new ConflictException('请通过 Offer 不通过动作记录原因并归档');
+        }
+      }
+      if (nextStage === DbCandidateStage.ARCHIVED && current.stage === DbCandidateStage.PENDING_ONBOARD) {
+        const option = reasonId ? await tx.reasonOption.findUnique({ where: { id: reasonId } }) : null;
+        if (!option || !option.active || option.type !== 'ONBOARD_ABANDON' || (option.label.startsWith('其他') && !reason)) {
+          throw new BadRequestException('请选择有效的放弃入职原因；其他原因须填写说明');
+        }
+      }
+      if (current.stage === DbCandidateStage.PENDING_ONBOARD && nextStage === DbCandidateStage.ARCHIVED) {
+        const option = await tx.reasonOption.findUniqueOrThrow({ where: { id: reasonId! } });
+        await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'onboarding.abandoned', payload: { reasonType: 'ONBOARD_ABANDON', reasonId: option.id, reasonLabel: option.label, reasonText: reason } } });
+      }
+      const result = await this.persistStageChange(tx, current, nextStage, actor, reason, reasonId);
+      if (current.stage === DbCandidateStage.PENDING_ONBOARD && nextStage === DbCandidateStage.ONBOARDED) {
+        if (!current.jobId) throw new ConflictException('候选人未关联职位');
+        await tx.job.update({ where: { id: current.jobId }, data: { hiredCount: { increment: 1 } } });
+      }
+      return result;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }
+
+  async onboardingInfo(id: string, actor: AuthenticatedUser) {
+    const candidate = await this.prisma.candidate.findFirst({ where: { AND: [{ id }, this.authorization.candidateWhere(actor, 'candidate:stage:update')] } });
+    if (!candidate) throw new NotFoundException('候选人不存在');
+    const [offer, probation, reasons] = await Promise.all([
+      this.prisma.offerRecord.findUnique({ where: { candidateId: id }, select: { jobId: true, onboardDate: true } }),
+      this.prisma.probationRecord.findUnique({ where: { candidateId: id } }),
+      this.prisma.reasonOption.findMany({ where: { type: 'ONBOARD_ABANDON', active: true }, orderBy: { label: 'asc' } }),
+    ]);
+    return { onboardDate: offer?.jobId === candidate.jobId ? offer.onboardDate : null, probation, reasons };
+  }
+
+  async rescheduleOnboarding(id: string, value: unknown, actor: AuthenticatedUser) {
+    const body = this.asRecord<{ onboardDate?: unknown }>(value);
+    const date = new Date(this.requiredText(body.onboardDate, '入职时间必填'));
+    if (!Number.isFinite(date.getTime())) throw new BadRequestException('入职时间无效');
+    return this.prisma.$transaction(async tx => {
+      const current = await this.findOperableCandidate(tx, id, actor);
+      if (current.stage !== DbCandidateStage.PENDING_ONBOARD || !current.jobId) throw new ConflictException('仅待入职阶段可改期');
+      const locked = await tx.candidate.updateMany({ where: { id, jobId: current.jobId, stage: 'PENDING_ONBOARD', lockedState: { not: 'INOPERABLE' } }, data: { stage: 'PENDING_ONBOARD' } });
+      if (!locked.count) throw new ConflictException('候选人状态已变化');
+      const offer = await tx.offerRecord.findUnique({ where: { candidateId: id } });
+      if (!offer || offer.jobId !== current.jobId || offer.writtenResult !== 'ACCEPTED') throw new ConflictException('有效 Offer 不存在');
+      await tx.offerRecord.update({ where: { id: offer.id }, data: { onboardDate: date, workflowVersion: { increment: 1 } } });
+      await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'onboarding.rescheduled', payload: { before: offer.onboardDate?.toISOString() ?? null, after: date.toISOString() } } });
+      return { onboardDate: date };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted });
+  }
+
+  async completeProbation(id: string, value: unknown, actor: AuthenticatedUser) {
+    const body = this.asRecord<{ converted?: unknown; convertedAt?: unknown }>(value);
+    if (typeof body.converted !== 'boolean') throw new BadRequestException('请选择是否转正');
+    const convertedAt = body.converted ? new Date(this.requiredText(body.convertedAt, '转正时间必填')) : null;
+    if (convertedAt && !Number.isFinite(convertedAt.getTime())) throw new BadRequestException('转正时间无效');
+    return this.prisma.$transaction(async tx => {
+      const current = await this.findOperableCandidate(tx, id, actor);
+      if (current.stage !== DbCandidateStage.PROBATION) throw new ConflictException('仅试用期可记录最终结论');
+      const changed = await tx.candidate.updateMany({ where: { id, stage: 'PROBATION', lockedState: { not: 'INOPERABLE' } }, data: { stage: 'ENDED' } });
+      if (!changed.count) throw new ConflictException('候选人状态已变化');
+      await tx.probationRecord.upsert({ where: { candidateId: id }, create: { candidateId: id, converted: body.converted as boolean, convertedAt }, update: { converted: body.converted as boolean, convertedAt } });
+      await tx.timelineEvent.create({ data: { entityType: 'Candidate', entityId: id, actorId: actor.id, action: 'probation.completed', payload: { converted: body.converted as boolean, convertedAt: convertedAt?.toISOString() ?? null } } });
+      const updated = await tx.candidate.findUniqueOrThrow({ where: { id }, include: { job: true } });
+      return this.toCandidateDto(updated, await this.canReadContacts(actor));
     });
   }
 
@@ -578,12 +662,19 @@ export class CandidatesService {
       }
       if (Object.hasOwn(payload, 'previousArchiveReasonText')) {
         data.archiveReasonText = typeof payload.previousArchiveReasonText === 'string' ? payload.previousArchiveReasonText : null;
+        data.archiveReasonId = typeof payload.previousArchiveReasonId === 'string' ? payload.previousArchiveReasonId : null;
+        data.archiveChannel = typeof payload.previousArchiveChannel === 'string' ? payload.previousArchiveChannel : null;
       }
       const changed = await tx.candidate.updateMany({
         where: { id, stage: current.stage, lockedState: { not: 'INOPERABLE' } },
         data,
       });
       if (changed.count !== 1) throw new ConflictException('候选人状态已变化，请刷新后重试');
+      if (from === 'PENDING_ONBOARD' && to === 'ONBOARDED') {
+        if (!current.jobId) throw new ConflictException('候选人未关联职位');
+        const job = await tx.job.updateMany({ where: { id: current.jobId, hiredCount: { gt: 0 } }, data: { hiredCount: { decrement: 1 } } });
+        if (!job.count) throw new ConflictException('职位入职人数异常，无法撤销');
+      }
       const screeningRecordId = typeof payload.screeningRecordId === 'string' ? payload.screeningRecordId : null;
       if (screeningRecordId) {
         await tx.candidateDepartmentScreening.updateMany({
@@ -762,21 +853,15 @@ export class CandidatesService {
     if (from === DbCandidateStage.ARCHIVED) {
       throw new ConflictException('已归档候选人需通过人才库激活动作恢复');
     }
-    if (to === DbCandidateStage.ARCHIVED
-      && (from === DbCandidateStage.OFFERING || from === DbCandidateStage.PENDING_ONBOARD)) {
-      throw new ConflictException('当前阶段归档需要 Offer 或放弃入职原因集；待 ATS-015 接入权威事实与原因校验');
-    }
     if (to === DbCandidateStage.ARCHIVED) return;
     if (from === DbCandidateStage.UNASSIGNED || from === DbCandidateStage.VIRTUAL_POOL) {
       throw new ConflictException('待分配候选人需先通过职位分配动作进入人才推荐');
-    }
-    if (from === DbCandidateStage.OFFERING && to === DbCandidateStage.PENDING_ONBOARD) {
-      throw new ConflictException('尚无已持久化的书面 Offer 接受、发送时间和入职日期；ATS-015 接入后方可推进');
     }
     const next: Partial<Record<DbCandidateStage, DbCandidateStage>> = {
       [DbCandidateStage.RECOMMENDED]: DbCandidateStage.HR_SCREENING,
       [DbCandidateStage.HR_SCREENING]: DbCandidateStage.DEPT_SCREENING,
       [DbCandidateStage.INTERVIEWING]: DbCandidateStage.OFFERING,
+      [DbCandidateStage.OFFERING]: DbCandidateStage.PENDING_ONBOARD,
       [DbCandidateStage.PENDING_ONBOARD]: DbCandidateStage.ONBOARDED,
       [DbCandidateStage.ONBOARDED]: DbCandidateStage.PROBATION,
       [DbCandidateStage.PROBATION]: DbCandidateStage.ENDED,
@@ -851,7 +936,7 @@ export class CandidatesService {
           reason,
           reasonId,
           ...(isArchive && !alreadyArchived ? { poolEntryId, archiveReasonMissing: !reason && !reasonId } : {}),
-          ...(isArchive ? { previousArchiveReasonText: current.archiveReasonText } : {}),
+          ...(isArchive ? { previousArchiveReasonText: current.archiveReasonText, previousArchiveReasonId: current.archiveReasonId, previousArchiveChannel: current.archiveChannel } : {}),
         },
       },
     });

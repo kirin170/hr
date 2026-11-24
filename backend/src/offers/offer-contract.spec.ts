@@ -28,10 +28,12 @@ describe('Offer contract (PRD §4.2)', () => {
   it('requires accepted written offer, send time and start date independently', () => {
     const date = new Date('2026-12-01T00:00:00Z');
     const state = { stage: 'WRITTEN_OFFER' as const, status: 'ACCEPTED' as const };
-    expect(canEnterPendingOnboard(state, date, date)).toBe(true);
-    expect(canEnterPendingOnboard(state, null, date)).toBe(false);
-    expect(canEnterPendingOnboard(state, date, null)).toBe(false);
-    expect(canEnterPendingOnboard({ ...state, status: 'PENDING' }, date, date)).toBe(false);
-    expect(canEnterPendingOnboard({ stage: 'BACKGROUND_APPROVAL', status: 'ACCEPTED' }, date, date)).toBe(false);
+    expect(canEnterPendingOnboard(state, date, date, 'ACCEPTED', 'CONFIRMED_OK')).toBe(true);
+    expect(canEnterPendingOnboard(state, date, date, null, 'CONFIRMED_OK')).toBe(false);
+    expect(canEnterPendingOnboard(state, date, date, 'ACCEPTED', 'CONFIRMED_FAILED')).toBe(false);
+    expect(canEnterPendingOnboard(state, null, date, 'ACCEPTED', 'CONFIRMED_OK')).toBe(false);
+    expect(canEnterPendingOnboard(state, date, null, 'ACCEPTED', 'CONFIRMED_OK')).toBe(false);
+    expect(canEnterPendingOnboard({ ...state, status: 'PENDING' }, date, date, 'ACCEPTED', 'CONFIRMED_OK')).toBe(false);
+    expect(canEnterPendingOnboard({ stage: 'BACKGROUND_APPROVAL', status: 'ACCEPTED' }, date, date, 'ACCEPTED', 'CONFIRMED_OK')).toBe(false);
   });
 });

@@ -32,7 +32,7 @@ const pageMeta: Record<Exclude<PageKey, 'settings'>, { title: string; subtitle: 
   candidates: { title: '简历库', subtitle: '人才档案与筛选' },
   pipeline: { title: '招聘流程', subtitle: '推进候选人阶段' },
   interviews: { title: '面试安排', subtitle: '协调面试与反馈' },
-  probation: { title: '试用期管理', subtitle: '关注新员工成长' },
+  probation: { title: '试用期管理', subtitle: '记录转正结果' },
   team: { title: '部门协同', subtitle: '业务与 HR 同频协作' },
   reports: { title: '招聘数据', subtitle: '用数据优化招聘决策' },
 }
@@ -95,7 +95,7 @@ export default function App() {
           {page === 'candidates' && <Candidates search={search} onOpenCandidate={openCandidate} onAddCandidate={() => setShowAddCandidate(true)} onBulkImport={() => navigate('intake')} />}
           {page === 'pipeline' && <Pipeline onOpenCandidate={openCandidate} onAddCandidate={() => setShowAddCandidate(true)} />}
           {page === 'interviews' && <Interviews onOpenCandidate={openCandidate} openNew={interviewOpenKey} />}
-          {page === 'probation' && <Probation />}
+          {page === 'probation' && <Probation onOpenCandidate={openCandidate} refreshKey={selectedCandidateId} />}
           {page === 'team' && <Team onOpenCandidate={openCandidate} />}
           {page === 'reports' && <Reports />}
         </main>

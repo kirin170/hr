@@ -1137,3 +1137,19 @@ model RetentionRun {
   @@index([createdAt])
   @@map("retention_runs")
 }
+
+/// ATS-016 保温提醒。
+model OnboardingReminder {
+  id            String   @id @default(cuid())
+  candidateId   String
+  jobId         String
+  recipientId   String
+  onboardDate   DateTime
+  dueAt         DateTime
+  createdAt     DateTime @default(now())
+  readAt        DateTime?
+
+  @@unique([candidateId, recipientId, onboardDate, dueAt], map: "onboarding_reminder_dedupe")
+  @@index([recipientId, createdAt])
+  @@map("onboarding_reminders")
+}

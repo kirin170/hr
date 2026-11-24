@@ -1,11 +1,21 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query } from '@nestjs/common';
 import { AuditAction, CurrentUser, RequirePermission } from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { OnboardingRemindersService } from './onboarding-reminders.service.js';
 import { CandidatesService } from './candidates.service.js';
 
 @Controller()
 export class CandidatesController {
-  constructor(private readonly candidates: CandidatesService) {}
+  constructor(private readonly candidates: CandidatesService, private readonly reminders: OnboardingRemindersService) {}
+
+  @Get('onboarding-reminders')
+  @RequirePermission('candidate:stage:update')
+  remindersList(@CurrentUser() actor: AuthenticatedUser) { return this.reminders.list(actor); }
+
+  @Post('onboarding-reminders/:id/read')
+  @RequirePermission('candidate:stage:update')
+  @AuditAction('onboarding.reminder.read', 'OnboardingReminder')
+  reminderRead(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.reminders.markRead(id, actor); }
 
   @Get('candidates')
   @RequirePermission('candidate:read')
@@ -104,6 +114,20 @@ export class CandidatesController {
   ) {
     return this.candidates.updateStage(id, body, actor);
   }
+
+  @Get('candidates/:id/onboarding')
+  @RequirePermission('candidate:stage:update')
+  onboardingInfo(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.candidates.onboardingInfo(id, actor); }
+
+  @Patch('candidates/:id/onboarding/date')
+  @RequirePermission('candidate:stage:update')
+  @AuditAction('onboarding.reschedule', 'Candidate')
+  rescheduleOnboarding(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.candidates.rescheduleOnboarding(id, body, actor); }
+
+  @Post('candidates/:id/probation/complete')
+  @RequirePermission('candidate:stage:update')
+  @AuditAction('probation.complete', 'Candidate')
+  completeProbation(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.candidates.completeProbation(id, body, actor); }
 
   @Post('candidates/:id/assign-job')
   @RequirePermission('candidate:stage:update')

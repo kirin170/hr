@@ -46,7 +46,7 @@ export function validateFailureReason(stage: OfferStage, initiator: FailureIniti
   return { reasonType, reasonId: option.id, reasonText };
 }
 
-export function canEnterPendingOnboard(state: OfferState, sentAt: Date | null, onboardDate: Date | null): boolean {
-  return state.stage === 'WRITTEN_OFFER' && state.status === 'ACCEPTED' &&
+export function canEnterPendingOnboard(state: OfferState, sentAt: Date | null, onboardDate: Date | null, writtenResult: string | null, backgroundCheckStatus: string): boolean {
+  return state.stage === 'WRITTEN_OFFER' && state.status === 'ACCEPTED' && writtenResult === 'ACCEPTED' && backgroundCheckStatus !== 'CONFIRMED_FAILED' &&
     !!sentAt && Number.isFinite(sentAt.getTime()) && !!onboardDate && Number.isFinite(onboardDate.getTime());
 }

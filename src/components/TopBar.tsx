@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell, ChevronDown, Command, HelpCircle, Search, Settings2 } from 'lucide-react'
 import { cn } from '../utils'
+import { request } from '../api'
 
 export type TopBarProps = {
   title: string
@@ -11,7 +12,14 @@ export type TopBarProps = {
 
 export function TopBar({ title, subtitle, onSearch, onOpenSettings }: TopBarProps) {
   const [search, setSearch] = useState('')
-  const [notifications, setNotifications] = useState(true)
+  const [open, setOpen] = useState(false)
+  const [notifications, setNotifications] = useState<{id:string; name:string; onboardDate:string; readAt:string | null}[]>([])
+  useEffect(() => {
+    let active = true
+    const load = () => request<typeof notifications>('/onboarding-reminders').then(rows => { if (active) setNotifications(rows) }).catch(() => { if (active) setNotifications([]) })
+    void load(); const timer = window.setInterval(load, 60_000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [])
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -42,10 +50,11 @@ export function TopBar({ title, subtitle, onSearch, onOpenSettings }: TopBarProp
           <kbd><Command size={11} /> K</kbd>
         </label>
         <button className="icon-button help-button" title="帮助中心"><HelpCircle size={19} /></button>
-        <button className="icon-button notification-button" title="通知" onClick={() => setNotifications(false)}>
+        <button className="icon-button notification-button" title="通知" onClick={() => setOpen(!open)}>
           <Bell size={19} />
-          {notifications && <span className="notification-dot" />}
+          {notifications.some(n => !n.readAt) && <span className="notification-dot" />}
         </button>
+        {open && <div className="onboarding-notifications" role="region" aria-label="保温提醒"><strong>待入职保温提醒</strong>{notifications.length === 0 ? <p>暂无提醒</p> : notifications.map(item => <div key={item.id}><span>{item.name} · 入职日期 {item.onboardDate.slice(0,10)}</span>{!item.readAt && <button onClick={() => { void request(`/onboarding-reminders/${encodeURIComponent(item.id)}/read`, {method:'POST'}).then(() => setNotifications(current => current.map(row => row.id === item.id ? {...row,readAt:new Date().toISOString()} : row))) }}>标为已读</button>}</div>)}</div>}
         <button className="icon-button" title="设置" onClick={onOpenSettings}><Settings2 size={18} /></button>
         <button className="profile-compact">
           <span className="avatar avatar-sm avatar-warm">邓</span>

@@ -1,0 +1,65 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { DataScope } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { AuthorizationService } from '../auth/authorization.service.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { OnboardingRemindersService } from './onboarding-reminders.service.js';
+import { CandidatesService } from './candidates.service.js';
+const isolated = process.env.ATS016_ISOLATED_TEST === '1' && /^ats016_tmp_[a-f0-9]+$/.test(new URL(process.env.DATABASE_URL || 'mysql://invalid/invalid').pathname.slice(1));
+describe.skipIf(!isolated)('ATS-016 isolated MySQL', () => {
+ const db = new PrismaService(); const auth = new AuthorizationService(db); const service = new CandidatesService(db, auth);
+ const hr: AuthenticatedUser = { id:'ats016_hr', displayName:'HR', departmentId:null, departmentIds:[], groupIds:[], roles:[{code:'hr',name:'HR',dataScope:DataScope.ALL,permissions:['candidate:read','candidate:stage:update']}] };
+ beforeAll(async () => { await db.$connect(); await db.user.create({data:{id:hr.id,displayName:'HR'}}); await db.job.create({data:{id:'ats016_j',code:'ats016_j',title:'工程师',departmentId:'d'}}); });
+ afterAll(async () => { await db.$disconnect() });
+ it('enforces persisted Offer facts, confirms exactly once, and reverses the count', async () => {
+  await db.candidate.create({data:{id:'ats016_c',name:'候选人',jobId:'ats016_j',stage:'OFFERING'}});
+  await db.offerRecord.create({data:{candidateId:'ats016_c',jobId:'ats016_j',workflowStage:'WRITTEN_OFFER',stageStatus:'ACCEPTED',writtenResult:'ACCEPTED',offerSentAt:new Date(),onboardDate:new Date('2027-01-01')}});
+  await service.updateStage('ats016_c',{stage:'PENDING_ONBOARD'},hr);
+  await service.rescheduleOnboarding('ats016_c',{onboardDate:'2027-02-01'},hr);
+  expect((await db.offerRecord.findUniqueOrThrow({where:{candidateId:'ats016_c'}})).onboardDate?.toISOString()).toBe('2027-02-01T00:00:00.000Z');
+  await Promise.allSettled([service.updateStage('ats016_c',{stage:'ONBOARDED'},hr),service.updateStage('ats016_c',{stage:'ONBOARDED'},hr)]);
+  expect((await db.job.findUniqueOrThrow({where:{id:'ats016_j'}})).hiredCount).toBe(1);
+  await service.undoLatestStageChange('ats016_c',hr);
+  expect((await db.job.findUniqueOrThrow({where:{id:'ats016_j'}})).hiredCount).toBe(0);
+  await service.updateStage('ats016_c',{stage:'ONBOARDED'},hr); await service.updateStage('ats016_c',{stage:'PROBATION'},hr);
+  await expect(service.updateStage('ats016_c',{stage:'ENDED'},hr)).rejects.toThrow();
+  await service.completeProbation('ats016_c',{converted:true,convertedAt:'2027-05-01'},hr);
+  expect(await db.probationRecord.findUnique({where:{candidateId:'ats016_c'}})).toMatchObject({converted:true,convertedAt:new Date('2027-05-01')});
+ });
+ it('uses the persisted Offer failure snapshot rather than arbitrary archive reasons', async () => {
+  await db.candidate.create({data:{id:'ats016_f',name:'Offer 失败',jobId:'ats016_j',stage:'OFFERING'}});
+  const option=await db.reasonOption.findFirstOrThrow({where:{type:'ARCHIVE',label:'背调审批不通过'}});
+  await db.offerRecord.create({data:{candidateId:'ats016_f',jobId:'ats016_j',workflowStage:'BACKGROUND_APPROVAL',stageStatus:'NOT_PASSED',backgroundCheckStatus:'CONFIRMED_FAILED',failureInitiator:'COMPANY',failureReasonType:'ARCHIVE',failureReasonLabel:option.label,rejectReasonId:option.id}});
+  await expect(service.updateStage('ats016_f',{stage:'ARCHIVED'},hr)).rejects.toThrow();
+  await service.updateStage('ats016_f',{stage:'ARCHIVED',reasonId:option.id},hr);
+  expect(await db.candidateTalentPoolEntry.count({where:{candidateId:'ats016_f',reasonId:option.id}})).toBe(1);
+ });
+ it('delivers deduplicated internal reminders and invalidates stale dates and stages', async () => {
+  const permission = await db.permission.create({data:{code:'candidate:stage:update',description:'test'}});
+  const role = await db.role.create({data:{code:'RECRUITER',name:'HR',dataScope:'ALL',permissions:{create:{permissionId:permission.id}}}});
+  await db.userRole.create({data:{userId:hr.id,roleId:role.id}});
+  await db.job.update({where:{id:'ats016_j'},data:{recruiterId:hr.id}});
+  await db.candidate.create({data:{id:'ats016_reminder',name:'保温候选人',jobId:'ats016_j',stage:'PENDING_ONBOARD'}});
+  await db.offerRecord.create({data:{candidateId:'ats016_reminder',jobId:'ats016_j',onboardDate:new Date('2027-02-01T00:00:00Z'),writtenResult:'ACCEPTED',workflowStage:'WRITTEN_OFFER',stageStatus:'ACCEPTED',offerSentAt:new Date('2027-01-01')}});
+  const reminders = new OnboardingRemindersService(db,auth); const now = new Date('2027-01-20T02:00:00Z');
+  await Promise.all([reminders.dispatch(now), reminders.dispatch(now)]);
+  const actor = await auth.loadUserContext(hr.id);
+  let items = await reminders.list(actor); expect(items.filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(1);
+  await reminders.markRead(items.find(x=>x.candidateId==='ats016_reminder')!.id,actor);
+  expect((await reminders.list(actor)).find(x=>x.candidateId==='ats016_reminder')?.readAt).not.toBeNull();
+  await service.rescheduleOnboarding('ats016_reminder',{onboardDate:'2027-02-10'},actor);
+  expect((await reminders.list(actor)).filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(0);
+  await reminders.dispatch(now); items = await reminders.list(actor); expect(items.filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(1);
+  await service.updateStage('ats016_reminder',{stage:'ONBOARDED'},actor);
+  expect((await reminders.list(actor)).filter(x=>x.candidateId==='ats016_reminder')).toHaveLength(0);
+ });
+ it('requires set C and retains the reason snapshot', async () => {
+  await db.candidate.create({data:{id:'ats016_a',name:'放弃',jobId:'ats016_j',stage:'PENDING_ONBOARD'}});
+  const wrong=await db.reasonOption.findFirstOrThrow({where:{type:'ARCHIVE'}}); const other=await db.reasonOption.findFirstOrThrow({where:{type:'ONBOARD_ABANDON',label:'其他·可填写'}});
+  await expect(service.updateStage('ats016_a',{stage:'ARCHIVED',reasonId:wrong.id},hr)).rejects.toThrow();
+  await expect(service.updateStage('ats016_a',{stage:'ARCHIVED',reasonId:other.id},hr)).rejects.toThrow();
+  await service.updateStage('ats016_a',{stage:'ARCHIVED',reasonId:other.id,reason:'个人原因'},hr);
+  expect((await db.timelineEvent.findFirstOrThrow({where:{entityId:'ats016_a',action:'onboarding.abandoned'}})).payload).toMatchObject({reasonType:'ONBOARD_ABANDON',reasonLabel:other.label,reasonText:'个人原因'});
+  expect(await db.candidateTalentPoolEntry.count({where:{candidateId:'ats016_a',reasonId:other.id}})).toBe(1);
+ });
+});
