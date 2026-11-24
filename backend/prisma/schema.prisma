@@ -43,6 +43,8 @@ model JobRequisition {
   jobLevel             String?
   headcount            Int
   source               String   @default("DINGTALK_OA")
+  /// 钉钉审批编号（审批单上展示的 businessId）；oaApprovalId 保存审批实例 ID 作为幂等键
+  oaBusinessId         String?
   status               RequisitionStatus @default(ACTIVE)
   /// 需求提报时间：由 OA 同步带出，只读，不参与周期计算
   submittedAt          DateTime
@@ -394,6 +396,15 @@ model OfferRecord {
   failureReasonLabel String?
   failureReasonText String? @db.Text
   oaApprovalId    String?
+  /// 由系统发起的钉钉 OA 录用审批实例 ID；为空表示 OA 单号仍为人工回填
+  oaInstanceId    String?
+  /// 钉钉 OA 实例状态（NEW/RUNNING/COMPLETED/TERMINATED），仅展示，不驱动阶段结果
+  oaInstanceStatus String?
+  /// 钉钉 OA 实例结论（agree/refuse），仅展示，阶段结果仍由人事回填
+  oaInstanceResult String?
+  oaSyncedAt      DateTime?
+  /// OA 单号来源：DINGTALK 表示系统发起并回写，MANUAL 表示人事手工填写
+  oaSource        String?
   oralResult      OralResult?
   rejectReasonId  String?
   backgroundCheckStatus BgStatus @default(PENDING)
@@ -403,6 +414,7 @@ model OfferRecord {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@index([oaInstanceId])
   @@map("offer_records")
 }
 

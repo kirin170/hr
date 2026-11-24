@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { IdentityProvider, Prisma, UserStatus } from '@prisma/client';
@@ -17,6 +18,10 @@ import {
   type DingTalkUserRecord,
 } from './dingtalk-api.client.js';
 import { DingTalkSyncQueueService } from './dingtalk-sync.queue.js';
+import { dingtalkDepartmentCode } from './dingtalk-department-code.js';
+import { DingTalkOaService } from './dingtalk-oa.service.js';
+import { OaSyncError, oaErrorCode } from './dingtalk-oa.errors.js';
+import { APPROVAL_EVENT_TYPE } from './dingtalk-oa.client.js';
 
 const ROOT_DEPARTMENT_ID = 1;
 const ACCESS_LIMIT_DEPARTMENT_ID = -7;
@@ -42,20 +47,19 @@ export class DingTalkSyncService {
     private readonly prisma: PrismaService,
     private readonly api: DingTalkApiClient,
     private readonly queue: DingTalkSyncQueueService,
+    @Optional() private readonly oa?: DingTalkOaService,
   ) {}
 
   async acceptCallback(value: unknown): Promise<{ eventId?: string; accepted: boolean }> {
     const payload = this.record(value);
     const eventType = this.text(payload.EventType ?? payload.eventType)?.toLowerCase();
-    if (!eventType || !SUPPORTED_EVENTS.has(eventType)) return { accepted: false };
+    if (!eventType) return { accepted: false };
+    if (eventType === APPROVAL_EVENT_TYPE) return this.acceptApprovalCallback(payload);
+    if (!SUPPORTED_EVENTS.has(eventType)) return { accepted: false };
 
     const subjectIds = this.subjectIds(eventType, payload);
     if (!subjectIds.length) throw new BadRequestException('钉钉事件缺少用户或部门标识');
-    const corpId = this.corpId();
-    const callbackCorpId = this.text(payload.CorpId ?? payload.corpId);
-    if (callbackCorpId && callbackCorpId !== corpId) {
-      throw new BadRequestException('钉钉回调组织不匹配');
-    }
+    const corpId = this.assertCallbackCorp(payload);
     const nativeId = this.text(payload.EventId ?? payload.eventId ?? payload.BizId ?? payload.biz_id);
     const eventTime = this.text(payload.EventTime ?? payload.eventTime ?? payload.timeStamp);
     let firstEventId: string | undefined;
@@ -88,6 +92,56 @@ export class DingTalkSyncService {
       }
     }
     return { eventId: firstEventId, accepted: true };
+  }
+
+  /**
+   * OA 审批实例变更回调：签名与 AES 已在控制器校验，这里再核对企业与审批模板来源。
+   * 只保存最小元数据并异步入队，不在 HTTP 回调内调用钉钉 OA 接口。
+   */
+  private async acceptApprovalCallback(
+    payload: Record<string, unknown>,
+  ): Promise<{ eventId?: string; accepted: boolean }> {
+    if (!this.oa) return { accepted: false };
+    const inspected = this.oa.inspectApprovalCallback(payload);
+    // 非本系统配置的审批模板、缺 processCode 或实例 ID 非法：不落库、不处理。
+    if (!inspected) return { accepted: false };
+    const corpId = this.assertCallbackCorp(payload);
+
+    // 钉钉重推同一事件时 processInstanceId + 变更类型 + 结束时间不变，据此生成稳定的事件 ID 去重。
+    const eventBasis = `${corpId}:${APPROVAL_EVENT_TYPE}:${inspected.processInstanceId}:${inspected.kind}:${this.text(payload.finishTime) ?? ''}`;
+    const eventId = `callback:${createHash('sha256').update(eventBasis).digest('hex')}`;
+    const eventType = `${APPROVAL_EVENT_TYPE}:${inspected.kind}:${inspected.template}`;
+
+    let event;
+    try {
+      event = await this.prisma.dingTalkSyncEvent.create({
+        data: { eventId, eventType, subjectId: inspected.processInstanceId, corpId, status: 'RECEIVED' },
+        select: { id: true, status: true },
+      });
+    } catch (error) {
+      if (!this.isUniqueViolation(error)) throw error;
+      event = await this.prisma.dingTalkSyncEvent.findUnique({
+        where: { eventId },
+        select: { id: true, status: true },
+      });
+      if (!event) throw error;
+    }
+
+    if (event.status === 'RECEIVED' || event.status === 'QUEUED') {
+      void this.queue.dispatch(event.id).catch((error: unknown) => {
+        this.logger.warn(`DingTalk approval event ${event.id} awaits outbox retry: ${this.safeError(error)}`);
+      });
+    }
+    return { eventId: event.id, accepted: true };
+  }
+
+  private assertCallbackCorp(payload: Record<string, unknown>): string {
+    const corpId = this.corpId();
+    const callbackCorpId = this.text(payload.CorpId ?? payload.corpId);
+    if (callbackCorpId && callbackCorpId !== corpId) {
+      throw new BadRequestException('钉钉回调组织不匹配');
+    }
+    return corpId;
   }
 
   async enqueueManualSync(departmentId?: number) {
@@ -134,7 +188,10 @@ export class DingTalkSyncService {
     });
 
     try {
-      switch (event.eventType) {
+      if (event.eventType.startsWith(`${APPROVAL_EVENT_TYPE}:`)) {
+        if (!this.oa) throw new ServiceUnavailableException('钉钉 OA 对接未启用');
+        await this.oa.processApprovalEvent(event);
+      } else switch (event.eventType) {
         case 'MANUAL_FULL_SYNC':
           await this.fullSync(
             event.id,
@@ -655,7 +712,7 @@ export class DingTalkSyncService {
   }
 
   private departmentCode(departmentId: number): string {
-    return `${this.departmentPrefix()}${departmentId}`;
+    return dingtalkDepartmentCode(this.corpId(), departmentId);
   }
 
   private departmentPrefix(): string {
@@ -737,11 +794,14 @@ export class DingTalkSyncService {
       error instanceof ConflictException ||
       error instanceof ServiceUnavailableException ||
       (error instanceof DingTalkApiError && !error.retryable) ||
-      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')
+      (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') ||
+      // OA 业务失败（字段缺失、审批未通过等）重试也不会成功，直接置 FAILED 等人工处理。
+      error instanceof OaSyncError
     );
   }
 
   private safeError(error: unknown): string {
+    if (error instanceof OaSyncError) return oaErrorCode(error);
     if (error instanceof ConflictException) return 'data_conflict';
     if (error instanceof BadRequestException) return 'invalid_event';
     if (error instanceof ServiceUnavailableException) return 'configuration_missing';

@@ -185,6 +185,73 @@ export class DingTalkApiClient {
     this.appToken = null;
   }
 
+  /**
+   * 新版 OpenAPI（api.dingtalk.com/v1.0），使用应用令牌。
+   * 令牌失效时清除进程缓存后由 retryRead 重试；错误只保留平台错误码，不携带令牌或响应原文。
+   */
+  async requestOpenApi<T>(
+    method: 'GET' | 'POST',
+    path: string,
+    options: { query?: Record<string, string>; body?: unknown } = {},
+  ): Promise<T> {
+    return this.retryRead(async () => {
+      const url = new URL(`${API_BASE}${path}`);
+      for (const [key, value] of Object.entries(options.query ?? {})) {
+        url.searchParams.set(key, value);
+      }
+      const init: RequestInit = {
+        method,
+        headers: { 'x-acs-dingtalk-access-token': await this.getAppAccessToken() },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      };
+      if (options.body !== undefined) {
+        (init.headers as Record<string, string>)['content-type'] = 'application/json';
+        init.body = JSON.stringify(options.body);
+      }
+      let response: Response;
+      try {
+        response = await fetch(url.toString(), init);
+      } catch {
+        throw new DingTalkApiError('network_error', true);
+      }
+      return this.readOpenApiPayload<T>(response);
+    });
+  }
+
+  private async readOpenApiPayload<T>(response: Response): Promise<T> {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+    const record =
+      payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? (payload as Record<string, unknown>)
+        : null;
+
+    if (!response.ok) {
+      if (response.status === 401) this.invalidateAppToken();
+      throw new DingTalkApiError(
+        this.platformCode(record) ?? `http_${response.status}`,
+        response.status === 401 || response.status === 429 || response.status >= 500,
+      );
+    }
+    if (!record) throw new DingTalkApiError('invalid_response', false);
+    const code = this.platformCode(record);
+    if (code && !['0', '200', 'OK', 'success'].includes(code)) {
+      const tokenRejected = code.startsWith('InvalidAuthentication');
+      if (tokenRejected) this.invalidateAppToken();
+      throw new DingTalkApiError(code, tokenRejected);
+    }
+    return record as T;
+  }
+
+  private platformCode(record: Record<string, unknown> | null): string | null {
+    const code = record?.code;
+    return typeof code === 'string' && code ? code.slice(0, 120) : null;
+  }
+
   private async getAppAccessToken(): Promise<string> {
     if (this.appToken && this.appToken.expiresAt > Date.now() + 60_000) {
       return this.appToken.token;

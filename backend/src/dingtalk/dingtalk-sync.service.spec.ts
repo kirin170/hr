@@ -6,6 +6,9 @@ import type { PrismaService } from '../prisma/prisma.service.js';
 import type { DingTalkApiClient } from './dingtalk-api.client.js';
 import { DingTalkApiError } from './dingtalk-api.client.js';
 import type { DingTalkSyncQueueService } from './dingtalk-sync.queue.js';
+import { DingTalkOaError } from './dingtalk-oa.client.js';
+import { OaSyncError } from './dingtalk-oa.errors.js';
+import type { DingTalkOaService } from './dingtalk-oa.service.js';
 import { DingTalkSyncService } from './dingtalk-sync.service.js';
 
 afterEach(() => {
@@ -239,6 +242,133 @@ describe('DingTalkSyncService', () => {
     await expect(service.processEvent(event.id)).rejects.toBeInstanceOf(UnrecoverableError);
     expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
       data: { status: 'FAILED', lastError: 'invalid_event' },
+    }));
+  });
+});
+
+describe('DingTalkSyncService 审批回调入口（ATS-019）', () => {
+  const INSTANCE = 'ad253df6-e175caf-xxxxxxxxxxxx';
+  const callback = {
+    EventType: 'bpms_instance_change',
+    CorpId: 'corp-1',
+    processInstanceId: INSTANCE,
+    type: 'finish',
+    processCode: 'PROC-REQ',
+    finishTime: '1762058400000',
+  };
+  const inspected = { kind: 'finish', template: 'requisition', processInstanceId: INSTANCE };
+
+  function configure() {
+    vi.stubEnv('DINGTALK_CORP_ID', 'corp-1');
+    vi.stubEnv('DINGTALK_OA_REQUISITION_PROCESS_CODE', 'PROC-REQ');
+    vi.stubEnv('DINGTALK_OA_OFFER_PROCESS_CODE', 'PROC-OFFER');
+  }
+
+  function build(oaOverrides: Partial<Record<string, unknown>> = {}) {
+    const create = vi.fn().mockResolvedValue({ id: 'evt-1', status: 'RECEIVED' });
+    const findUnique = vi.fn();
+    const update = vi.fn().mockResolvedValue({});
+    const updateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const dispatch = vi.fn().mockResolvedValue(undefined);
+    const prisma = {
+      dingTalkSyncEvent: { create, findUnique, update, updateMany },
+    } as unknown as PrismaService;
+    const oa = {
+      inspectApprovalCallback: vi.fn().mockReturnValue(inspected),
+      processApprovalEvent: vi.fn().mockResolvedValue(undefined),
+      ...oaOverrides,
+    };
+    const service = new DingTalkSyncService(
+      prisma,
+      {} as DingTalkApiClient,
+      { dispatch } as unknown as DingTalkSyncQueueService,
+      oa as unknown as DingTalkOaService,
+    );
+    return { service, oa, create, findUnique, update, updateMany, dispatch };
+  }
+
+  it('stores only the instance id of a verified approval callback and dispatches it without calling DingTalk', async () => {
+    configure();
+    const { service, create, dispatch } = build();
+
+    await expect(service.acceptCallback(callback)).resolves.toEqual({ eventId: 'evt-1', accepted: true });
+
+    expect(create).toHaveBeenCalledWith({
+      data: {
+        eventId: expect.stringMatching(/^callback:[0-9a-f]{64}$/),
+        eventType: 'bpms_instance_change:finish:requisition',
+        subjectId: INSTANCE,
+        corpId: 'corp-1',
+        status: 'RECEIVED',
+      },
+      select: { id: true, status: true },
+    });
+    expect(dispatch).toHaveBeenCalledWith('evt-1');
+  });
+
+  it('deduplicates DingTalk retries of the same approval event', async () => {
+    configure();
+    const { service, create, findUnique, dispatch } = build();
+    create.mockRejectedValue(new Prisma.PrismaClientKnownRequestError('duplicate', { code: 'P2002', clientVersion: 'test' }));
+    findUnique.mockResolvedValue({ id: 'evt-1', status: 'PROCESSED' });
+
+    await expect(service.acceptCallback({ ...callback, finishTime: '1762058400000' })).resolves.toEqual({ eventId: 'evt-1', accepted: true });
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('ignores callbacks for templates the system did not configure and never stores them', async () => {
+    configure();
+    const { service, create } = build({ inspectApprovalCallback: vi.fn().mockReturnValue(null) });
+
+    await expect(service.acceptCallback({ ...callback, processCode: 'PROC-EXPENSE' })).resolves.toEqual({ accepted: false });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('rejects approval callbacks that belong to another organization', async () => {
+    configure();
+    const { service, create } = build();
+
+    await expect(service.acceptCallback({ ...callback, CorpId: 'corp-other' })).rejects.toMatchObject({ status: 400 });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it('does not persist approval callbacks while the OA integration is disabled', async () => {
+    configure();
+    const prisma = { dingTalkSyncEvent: { create: vi.fn() } } as unknown as PrismaService;
+    const service = new DingTalkSyncService(prisma, {} as DingTalkApiClient, {} as DingTalkSyncQueueService);
+
+    await expect(service.acceptCallback(callback)).resolves.toEqual({ accepted: false });
+    expect((prisma as unknown as { dingTalkSyncEvent: { create: unknown } }).dingTalkSyncEvent.create).not.toHaveBeenCalled();
+  });
+
+  it('routes approval events to the OA handler inside the worker pipeline', async () => {
+    configure();
+    const event = { id: 'evt-1', eventType: 'bpms_instance_change:finish:requisition', subjectId: INSTANCE, status: 'QUEUED' };
+    const { service, oa, findUnique, update } = build();
+    findUnique.mockResolvedValue(event);
+
+    await service.processEvent(event.id);
+
+    expect(oa.processApprovalEvent).toHaveBeenCalledWith(event);
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'PROCESSED' }) }));
+  });
+
+  it('marks OA business failures as permanently failed with their code and keeps transient ones queued', async () => {
+    configure();
+    const event = { id: 'evt-1', eventType: 'bpms_instance_change:finish:requisition', subjectId: INSTANCE, status: 'QUEUED' };
+
+    const permanent = build({ processApprovalEvent: vi.fn().mockRejectedValue(new OaSyncError('OA_FIELD_MISSING_TITLE', '缺少字段', 400)) });
+    permanent.findUnique.mockResolvedValue(event);
+    await expect(permanent.service.processEvent(event.id)).rejects.toBeInstanceOf(UnrecoverableError);
+    expect(permanent.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { status: 'FAILED', lastError: 'OA_FIELD_MISSING_TITLE' },
+    }));
+
+    const transient = build({ processApprovalEvent: vi.fn().mockRejectedValue(new DingTalkOaError('UNAVAILABLE', 'Throttling')) });
+    transient.findUnique.mockResolvedValue(event);
+    await expect(transient.service.processEvent(event.id)).rejects.toBeInstanceOf(DingTalkOaError);
+    expect(transient.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: { status: 'QUEUED', lastError: 'Throttling' },
     }));
   });
 });

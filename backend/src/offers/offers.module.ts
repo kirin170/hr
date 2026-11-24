@@ -5,5 +5,5 @@ import { OfferMaterialsService } from './offer-materials.service.js';
 import { AuthorizationModule } from '../auth/authorization.module.js';
 import { OffersController } from './offers.controller.js';
 import { OffersService } from './offers.service.js';
-@Module({ imports: [AuthorizationModule, AttachmentsModule], controllers: [OffersController, OfferMaterialsController], providers: [OffersService, OfferMaterialsService] })
+@Module({ imports: [AuthorizationModule, AttachmentsModule], controllers: [OffersController, OfferMaterialsController], providers: [OffersService, OfferMaterialsService], exports: [OffersService] })
 export class OffersModule {}

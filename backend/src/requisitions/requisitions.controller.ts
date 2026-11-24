@@ -28,19 +28,8 @@ export class RequisitionsController {
     return this.requisitions.cycleStats(actor);
   }
 
-  @Post('oa-sync')
-  @RequirePermission('requisition:sync')
-  @AuditAction('requisition.oa_sync', 'JobRequisition')
-  syncFromOa(@Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) {
-    return this.requisitions.syncFromOa(body, actor);
-  }
-
-  @Post('sync-from-oa')
-  @RequirePermission('requisition:sync')
-  @AuditAction('requisition.manual_sync', 'JobRequisition')
-  manualSync(@Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) {
-    return this.requisitions.syncFromOa(body, actor);
-  }
+  // OA 需求同步（POST requisitions/sync-from-oa、requisitions/oa-sync）已由钉钉 OA 对接控制器接管：
+  // 只接受审批实例 ID 并回读钉钉核实，不再接收请求体直传的需求字段。
 
   @Get(':id/timeline')
   @RequirePermission('requisition:read')

@@ -62,6 +62,7 @@ export type RequisitionDto = {
   id: string;
   oaApprovalId: string;
   oaApprovalTitle: string | null;
+  oaBusinessId: string | null;
   title: string;
   departmentId: string;
   recruiterId: string | null;
@@ -169,12 +170,21 @@ export class RequisitionsService {
   }
 
   /**
-   * 钉钉 OA 招聘需求审批通过回调（本期为 Mock 契约）。
-   * 按 oaApprovalId 幂等：重复回调与并发回调都不会重复落库。
+   * 按 OA 审批生成招聘需求（FR-REQ-1 / NFR-13）。
+   * 幂等：重复与并发回调都按 oaApprovalId 唯一约束 + 事务兜底，不会重复落库。
+   * 本方法只接受由 OA 对接层回读并核实后的审批数据，不再接收 HTTP 请求体直传的 Mock 负载。
    */
-  async syncFromOa(value: unknown, actor: AuthenticatedUser) {
+  async syncFromOa(
+    value: unknown,
+    actor: AuthenticatedUser,
+    context: { trigger: 'callback' | 'manual'; processCodeVerified: boolean } = {
+      trigger: 'manual',
+      processCodeVerified: false,
+    },
+  ) {
     const input = this.asRecord(value);
     const oaApprovalId = this.requiredText(input.oaApprovalId, 'OA 审批单号不能为空');
+    const oaBusinessId = this.optionalText(input.oaBusinessId);
     const title = this.requiredText(input.title, '需求名称不能为空');
     const departmentId = this.requiredText(input.departmentId, '部门不能为空');
     const headcount = this.requiredPositiveInt(input.headcount, '招聘人数必须为正整数');
@@ -200,6 +210,7 @@ export class RequisitionsService {
           data: {
             oaApprovalId,
             oaApprovalTitle,
+            oaBusinessId,
             title,
             departmentId,
             recruiterId,
@@ -219,9 +230,12 @@ export class RequisitionsService {
             action: 'requisition.created_from_oa',
             payload: {
               oaApprovalId,
+              oaBusinessId,
               submittedAt: toDateOnly(submittedAt),
               recruitmentStartDate: toDateOnly(recruitmentStartDate),
               headcount,
+              trigger: context.trigger,
+              processCodeVerified: context.processCodeVerified,
               operator: actor.id,
             },
           },
@@ -550,6 +564,7 @@ export class RequisitionsService {
     id: string;
     oaApprovalId: string;
     oaApprovalTitle: string | null;
+    oaBusinessId: string | null;
     title: string;
     departmentId: string;
     recruiterId: string | null;
@@ -567,15 +582,16 @@ export class RequisitionsService {
     version: number;
     createdAt: Date;
     updatedAt: Date;
-  }): RequisitionDto {
-    const inProgressDays =
-      record.status === RequisitionStatus.ACTIVE && record.recruitmentStartDate
-        ? calculateInProgressDays(record.recruitmentStartDate)
-        : null;
-    return {
-      id: record.id,
-      oaApprovalId: record.oaApprovalId,
-      oaApprovalTitle: record.oaApprovalTitle,
+    }): RequisitionDto {
+      const inProgressDays =
+        record.status === RequisitionStatus.ACTIVE && record.recruitmentStartDate
+          ? calculateInProgressDays(record.recruitmentStartDate)
+          : null;
+      return {
+        id: record.id,
+        oaApprovalId: record.oaApprovalId,
+        oaApprovalTitle: record.oaApprovalTitle,
+        oaBusinessId: record.oaBusinessId,
       title: record.title,
       departmentId: record.departmentId,
       recruiterId: record.recruiterId,

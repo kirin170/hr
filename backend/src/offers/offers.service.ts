@@ -30,6 +30,10 @@ export class OffersService {
     if (write && (candidate.stage !== 'OFFERING' || candidate.lockedState === 'INOPERABLE' || !candidate.jobId)) throw new ConflictException('候选人不处于可操作的 Offer 阶段');
     return candidate;
   }
+  /** 供 OA 对接复用同一套候选人范围与可操作校验（Offer 阶段且非不可操作）。 */
+  async assertOfferCandidate(id: string, actor: AuthenticatedUser) {
+    return this.candidate(id, actor, true);
+  }
   async read(id: string, actor: AuthenticatedUser) {
     const candidate = await this.db.candidate.findFirst({ where: { AND: [{ id }, this.auth.candidateWhere(actor, 'candidate:stage:update')] } });
     if (!candidate) throw new NotFoundException('候选人不存在');
@@ -54,7 +58,7 @@ export class OffersService {
         await tx.offerRecordHistory.create({ data: {
           candidateId: id, jobId: previous.jobId, materials: previous.materials, recordedBy: actor.id,
           snapshot: { id: previous.id, legacyStage: previous.stage, workflowStage: previous.workflowStage, stageStatus: previous.stageStatus,
-            workflowVersion: previous.workflowVersion, oaApprovalId: previous.oaApprovalId, hireLevel: previous.hireLevel,
+            workflowVersion: previous.workflowVersion, oaApprovalId: previous.oaApprovalId, oaInstanceId: previous.oaInstanceId, hireLevel: previous.hireLevel,
             salaryReturned: previous.salaryReturned, oralResult: previous.oralResult, writtenResult: previous.writtenResult,
             rejectReasonId: previous.rejectReasonId, failureInitiator: previous.failureInitiator, failureReasonType: previous.failureReasonType,
             failureReasonLabel: previous.failureReasonLabel, failureReasonText: previous.failureReasonText,
@@ -63,7 +67,8 @@ export class OffersService {
         } });
         offer = await tx.offerRecord.update({ where: { id: previous.id }, data: {
           jobId: candidate.jobId!, stage: 'MATERIAL_PENDING', workflowStage: 'APPROVAL_MATERIALS', stageStatus: 'PENDING', workflowVersion: { increment: 1 },
-          oaApprovalId: null, hireLevel: null, salaryReturned: false, oralResult: null, writtenResult: null, rejectReasonId: null,
+          oaApprovalId: null, oaInstanceId: null, oaInstanceStatus: null, oaInstanceResult: null, oaSyncedAt: null, oaSource: null,
+          hireLevel: null, salaryReturned: false, oralResult: null, writtenResult: null, rejectReasonId: null,
           failureInitiator: null, failureReasonType: null, failureReasonLabel: null, failureReasonText: null,
           backgroundCheckStatus: 'PENDING', materials: null, onboardDate: null, offerSentAt: null,
         } });
@@ -120,7 +125,11 @@ export class OffersService {
     let failure: ReturnType<typeof validateFailureReason> | null = null;
     if (action === 'DETAILS') {
       if (status === 'NOT_PASSED') throw new ConflictException('已终止的 Offer 不可修改');
-      if ('oaApprovalId' in body) data.oaApprovalId = text(body.oaApprovalId, 'OA 单号');
+      // 系统已发起 OA 审批时单号来自钉钉实例，不允许再手工改写，避免与 OA 原单脱节。
+      if ('oaApprovalId' in body) {
+        if (offer.oaInstanceId) throw new ConflictException('OA 审批已由系统发起，单号不可手工修改');
+        data.oaApprovalId = text(body.oaApprovalId, 'OA 单号'); data.oaSource = 'MANUAL';
+      }
       if ('hireLevel' in body) data.hireLevel = text(body.hireLevel, '录用职级');
       if ('salaryReturned' in body) { if (typeof body.salaryReturned !== 'boolean') throw new BadRequestException('薪资返回标志无效'); data.salaryReturned = body.salaryReturned; }
       if ('onboardDate' in body) { if (stage !== 'WRITTEN_OFFER') throw new ConflictException('背调通过后才能确定入职时间'); const d = new Date(text(body.onboardDate, '入职时间')); if (!Number.isFinite(d.getTime())) throw new BadRequestException('入职时间无效'); data.onboardDate = d; }
