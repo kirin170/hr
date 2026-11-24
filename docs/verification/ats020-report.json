@@ -1,26 +1,31 @@
 {
-  "version": 1,
+  "version": 2,
   "work_item": "ATS-020",
-  "date": "2026-11-23",
-  "verified_at": 1795419311027,
-  "source_sha": "5c80a8a0c1f026139014fbd1d7ab6d4e46119aaa",
-  "working_tree_dirty": false,
-  "summary": "ATS-020 在提交 5c80a8a 的独立快照验收：听记链接解析、按操作者钉钉身份读取原文/摘要、ATS 数据范围与钉钉侧越权拒绝、未开通时人工录入降级、素材按轮次追加并以内容哈希去重、来源可追溯且不改写既有链接；素材按 interview-eval.v1 契约交付 INTERVIEW_EVAL 草稿任务，输入只存素材引用且写死不使用内置智能纪要作结论。快照上类型检查、lint、前后端构建通过，183 项单元测试通过；临时 MySQL 重放 13 个迁移，7 项隔离集成测试（含真实 HTTP 鉴权）通过，临时库已删除。真实租户听记读取能力未验证。",
-  "command": "git archive 5c80a8a; 复用已安装依赖; npm run typecheck --prefix backend; npm run lint --prefix backend; npm test --prefix backend; npm run build --prefix backend; npm run build; node scripts/ats020-isolated-check.mjs (在快照 backend 目录运行)",
+  "date": "2026-11-24",
+  "verified_at": 1795496942723,
+  "source_sha": "df8847a3a9ca66d6e384fac63f060b1690ac5ce8",
+  "working_tree_dirty": true,
+  "dirty_scope_note": "工作区仅 backend/src/main.ts 为他人未提交改动，不在本任务 scope；本任务相关文件均已提交（a9fa844、2c2d1b2、9352cf2）。",
+  "summary": "ATS-020 在 df8847a 上验收：听记读取已由「部署侧 HTTP 网关 + 按操作者钉钉身份读取」改为「部署机服务账号 + 进程内调用 dws CLI」。链接解析、逐字稿与摘要读取、按轮次追加、内容哈希去重、来源可追溯、ATS 数据范围越权 404 与 dws 侧 403 拒绝、未配置时人工录入降级、INTERVIEW_EVAL 契约交付均通过隔离库验证；并用真实听记（浙江日发控股集团，20 分 47 秒）经 dws 1.0.69 读取成功：摘要 1693 字、逐字稿 168 段 4928 字、complete=true、时间轴为相对偏移且末段与录音时长偏差 0.8 秒。类型检查、lint（0 错误）、前后端构建通过，后端 268 项单元测试通过；临时 MySQL 重放全部迁移，ATS-020 隔离套件 7 项、ATS-014 回归 4 项通过，临时库已删除。生产侧服务账号授权链路尚未验证，见 limitations。",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npx vitest run --prefix backend; npm run build --prefix backend; npm run build; node scripts/ats020-isolated-check.mjs; node scripts/ats014-isolated-check.mjs; node scripts/ats020-minutes-probe.mjs <真实听记 id>",
   "scope": [
     "backend/prisma/migrations/20261123190000_ats020_interview_minutes/migration.sql",
     "backend/prisma/schema.prisma",
     "backend/src/dingtalk/dingtalk-minutes.client.ts",
+    "backend/src/dingtalk/dingtalk-minutes.client.spec.ts",
     "backend/src/interviews/interview-eval.contract.ts",
     "backend/src/interviews/interview-transcripts.service.ts",
+    "backend/src/interviews/interview-transcripts.service.spec.ts",
+    "backend/src/interviews/interviews-minutes.integration.spec.ts",
     "backend/src/interviews/interviews.controller.ts",
     "backend/src/interviews/interviews.service.ts",
     "backend/src/interviews/interviews.module.ts",
     "backend/scripts/ats020-isolated-check.mjs",
-    "backend/src/**/*.spec.ts",
+    "backend/scripts/ats020-minutes-probe.mjs",
+    "backend/.env.example",
     "src/pages/Interviews.tsx",
     "docs/ats-钉钉集成技术设计-v1.0.md",
-    "隔离临时数据库 ats020_tmp_*（验证后删除）"
+    "隔离临时数据库 ats020_tmp_*、ats014_tmp_*（验证后删除）"
   ],
   "checks": [
     {
@@ -29,31 +34,34 @@
       "criteria": [
         "已授权听记原文/摘要按轮次关联，读取越权被拒绝，来源可追溯且不覆盖既有链接。"
       ],
-      "details": "隔离库验证：按操作者钉钉身份读取后素材按轮次写入 interview_transcript_materials，来源为 DINGTALK 且 sourceRef 形如 dingtalk-minutes:<minutesId>#<hash12>；同一素材重复读取返回 deduplicated 且不新增记录；链接表仅补齐 minutesId/source，url 不变；同轮次追加第二条链接后两条并存。越权拒绝三路验证：ATS 数据范围外返回 404 且不调用钉钉；未绑定钉钉身份返回 403 并留痕 MINUTES_IDENTITY_MISSING；钉钉侧 403 映射为越权并记录 MINUTES_HTTP_403，错误信息不含原文。人工录入需 candidate:stage:update，素材标记 MANUAL_ENTRY。真实 HTTP 路由 /interviews/minutes/capability、/transcripts/:linkId/fetch、/materials、/interview-eval 均需鉴权。"
+      "details": "隔离库验证：读取后素材按轮次写入 interview_transcript_materials，来源为 DINGTALK，sourceRef 形如 dingtalk-minutes:<minutesId>#<hash12>；同一素材重复读取返回 deduplicated 且不新增记录；链接表仅补齐 minutesId/source，url 不变；同轮次追加第二条链接后两条并存。越权拒绝：ATS 数据范围外返回 404 且不调用 dws；dws 侧 403 映射为越权并只记录错误码 MINUTES_CLI_DENIED，错误信息与审计摘要不含原文。身份绑定限制已移除，操作者仅作审计归属，无钉钉绑定关系的 ATS 用户可正常读取。人工录入需 candidate:stage:update，素材标记 MANUAL_ENTRY。真实 HTTP 路由 /interviews/minutes/capability、/transcripts/:linkId/fetch、/materials、/interview-eval 均需鉴权。"
     },
     {
       "name": "tenant_capability_and_interview_eval_delivery",
-      "passed": false,
+      "passed": true,
       "criteria": [
         "验证实际租户能力；素材交付统一 INTERVIEW_EVAL 接口，不能以听记内置智能纪要替代 AI 评估结论。"
       ],
-      "details": "INTERVIEW_EVAL 交付已本地验证：职位无招聘要求时拒绝发起（AI-5）；成功时生成 interviewId 绑定的 INTERVIEW_EVAL 草稿任务，inputRefs 为 interview-eval.v1，只含素材引用、哈希、长度、分段数与面试上下文，不含原文，boundaries 写死 builtinMinutesSummaryUsedAsConclusion=false、aiOutputIsDraft=true、requiresManualConfirmation=true。真实租户听记能力未验证：2026-11-23 复核钉钉开放平台未向企业内部应用开放听记读取 REST 接口，官方通道为 CLI(dws)/MCP 或内置连接器，需组织管理员开通并由成员扫码授权；本地未配置听记网关，能力探测返回 UNSUPPORTED。因此本条整体不判为通过。"
+      "details": "真实租户能力已验证：2026-11-24 在浙江日发控股集团（corp_id ding21eaf760935339a6）用 dws 1.0.69 读取真实听记成功——摘要 1693 字，逐字稿 168 段共 4928 字（每分钟 237 字），data.complete=true，时间轴单调且为相对偏移，末段结束与 basic.result.duration 偏差 0.8 秒，发言人分布覆盖全时段。字段归一化按真实输出校准：标题 basic.result.title、摘要 summary.result.fullSummary、逐字稿 data.paragraphList（paragraph/speakerDisplay.nickName/startTime/endTime）。INTERVIEW_EVAL 交付本地验证：职位无招聘要求时拒绝发起（AI-5）；成功时生成 interviewId 绑定的 INTERVIEW_EVAL 草稿任务，inputRefs 为 interview-eval.v1，只含素材引用、哈希、长度、分段数与面试上下文，不含原文；boundaries 写死 builtinMinutesSummaryUsedAsConclusion=false、aiOutputIsDraft=true、requiresManualConfirmation=true。真实租户读取当前使用操作者个人账号登录态，服务账号部署链路见 limitations。"
     },
     {
       "name": "isolated_snapshot_and_regression",
       "passed": true,
       "criteria": [],
-      "details": "在 5c80a8a 独立快照执行：类型检查、oxlint（0 警告 0 错误）、后端 nest build、前端 vite build 通过；后端 183 项单元测试通过，11 项隔离测试按设计跳过；临时 MySQL 重放 13 个迁移全部成功，ATS-020 隔离套件 7 项通过，ATS-014 面试隔离套件 4 项回归通过；临时库已删除。"
+      "details": "在 df8847a 执行：tsc 类型检查通过；oxlint 0 错误（2 条既有告警位于 settings 模块，非本任务范围）；后端 nest build 与前端 vite build 通过；后端 268 项单元测试通过、29 项按设计跳过（297）；临时 MySQL 重放全部迁移成功，ATS-020 隔离套件 7 项通过，ATS-014 面试隔离套件 4 项回归通过；临时库均已删除。"
     }
   ],
   "limitations": [
-    "未在授权测试组织验证听记读取能力、权限点与审批路径；本地能力探测在未配置网关时为 UNSUPPORTED。",
-    "听记网关为部署侧契约（GET /v1/minutes/capability、POST /v1/minutes/transcripts），本地以 HTTP 桩验证协议与错误映射，未对接真实网关或钉钉真实接口。",
-    "AI 模型执行与人工复核属 ATS-021；本任务只交付 INTERVIEW_EVAL 输入契约与草稿任务，未产生评估结论。",
-    "前端仅构建通过与既有 ATS-014 无头浏览器用例回归，未对新增听记面板做独立浏览器走查。"
+    "真实读取使用的是操作者个人账号（021756 王棋林）的 dws 登录态，非招聘服务账号；组织「CLI 访问管理」放开状态、服务账号扫码授权、面试官把听记分享给服务账号的实际流程均未验证，生产部署前必须完成。",
+    "单实例固定主机约束未在真实服务器上验证：dws 凭证与设备绑定，换机或迁移需重新授权；Windows 下 execFile 不能执行 .cmd，DINGTALK_MINUTES_DWS_BIN 必须指向 npm 包内 vendor/dws.exe。",
+    "dws 将发言人匿名为「发言人 1/2」，逐字稿取不到真实姓名，面试评估提示词不得依赖姓名区分角色。",
+    "仅验证一篇 20 分 47 秒听记；长会议（1 小时以上、多分页）的分页上限、耗时与超时阈值未实测。",
+    "前端听记面板仅构建通过，未做独立浏览器走查。",
+    "AI 模型执行与人工复核属 ATS-021；本任务只交付 INTERVIEW_EVAL 输入契约与草稿任务，未产生评估结论。"
   ],
   "follow_up": [
-    "确认授权测试组织是否开通听记读取能力，并记录实际权限点与拒绝样例。",
-    "网关正式实现后补充真实听记读取、超时与限流证据。"
+    "生产服务器安装 dws 并用招聘服务账号执行 dws auth login --device，验证分享可见范围与读取身份一致。",
+    "补长会议样本，记录分页耗时、超时与限流表现。",
+    "前端听记面板登录态下浏览器走查。"
   ]
 }
