@@ -125,7 +125,7 @@ export class InterviewsService {
     const { start, end } = await this.times(input); const availability = await this.checkConflicts(interviewerIds, start, end);
     const responses = Object.fromEntries(interviewerIds.map(id => [id, 'PENDING']));
     const row = await this.db.interview.create({ data: { candidateId, jobId, round, mode, time: start, endTime: end, location: typeof input.location === 'string' ? input.location.trim() : null, interviewerIds: `|${interviewerIds.join('|')}|`, responses, status: 'TO_SCHEDULE' } });
-    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), ...availability, calendar: 'MOCK' };
+    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), ...availability, calendar: this.calendar.kind ?? 'MOCK' };
   }
   async change(id: string, value: unknown, actor: AuthenticatedUser) {
     const input = record(value); const row = await this.target(id, actor); await this.manageable(row.candidateId, row.jobId, actor);
@@ -142,7 +142,7 @@ export class InterviewsService {
       await tx.interviewChange.create({ data: { interviewId: id, action, actorId: actor.id, reason, before: { startAt: row.time.toISOString(), endAt: row.endTime?.toISOString() ?? null, status: row.status }, after: { startAt: changed.time.toISOString(), endAt: changed.endTime?.toISOString() ?? null, status: changed.status } } });
       return changed;
     });
-    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), ...availability, calendar: 'MOCK' };
+    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), ...availability, calendar: this.calendar.kind ?? 'MOCK' };
   }
   async respond(id: string, value: unknown, actor: AuthenticatedUser) {
     const row = await this.target(id, actor); if (!ids(row.interviewerIds).includes(actor.id)) throw new ForbiddenException('仅受邀面试官可响应');

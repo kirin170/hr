@@ -17,13 +17,14 @@ describe('DingTalk calendar REST client', () => {
     expect(JSON.parse(options.body)).toMatchObject({ attendees: [{ id: 'union-1' }], start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } });
   });
   it('updates by event id and notifies participants on cancellation', async () => {
-    const fetch = vi.fn().mockResolvedValueOnce(json({ id: 'event' })).mockResolvedValueOnce(new Response(null, { status: 200 })); vi.stubGlobal('fetch', fetch);
+    const fetch = vi.fn().mockResolvedValueOnce(json({ id: 'event' })).mockResolvedValueOnce(json({})); vi.stubGlobal('fetch', fetch);
     const client = new DingTalkCalendarClient();
     await client.update('secret', 'organizer', 'event', event);
-    await client.cancel('secret', 'organizer', 'event');
+    await client.cancel('secret', 'organizer', 'event', 'cancel-request');
     expect(JSON.parse(fetch.mock.calls[0][1].body).id).toBe('event');
-    expect(fetch.mock.calls[1][0]).toContain('/events/event?pushNotification=true');
-    expect(fetch.mock.calls[1][1].method).toBe('DELETE');
+    expect(fetch.mock.calls[1][0]).toContain('/events/event/cancel');
+    expect(fetch.mock.calls[1][1].method).toBe('POST');
+    expect(fetch.mock.calls[1][1].headers['x-client-token']).toBe('cancel-request');
   });
   it('reads all response pages and rejects pagination loops', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(json({ attendees: [{ id: 'a', responseStatus: 'accepted' }], nextToken: 'next' })).mockResolvedValueOnce(json({ attendees: [{ id: 'b', responseStatus: 'declined' }] })); vi.stubGlobal('fetch', fetch);

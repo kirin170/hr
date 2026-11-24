@@ -252,7 +252,7 @@ export class DingTalkApiClient {
     return typeof code === 'string' && code ? code.slice(0, 120) : null;
   }
 
-  private async getAppAccessToken(): Promise<string> {
+  async getAppAccessToken(): Promise<string> {
     if (this.appToken && this.appToken.expiresAt > Date.now() + 60_000) {
       return this.appToken.token;
     }

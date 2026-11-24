@@ -40,8 +40,9 @@ export class DingTalkCalendarClient {
     await this.request('PUT', this.eventPath(organizer, eventId), token, { id: eventId, ...this.eventBody(input) });
   }
 
-  async cancel(token: string, organizer: string, eventId: string): Promise<void> {
-    await this.request('DELETE', `${this.eventPath(organizer, eventId)}?pushNotification=true`, token);
+  async cancel(token: string, organizer: string, eventId: string, clientToken: string): Promise<void> {
+    if (!clientToken) throw new DingTalkCalendarError('missing_idempotency_key', false);
+    await this.request('POST', `${this.eventPath(organizer, eventId)}/cancel`, token, undefined, clientToken);
   }
 
   async attendees(token: string, organizer: string, eventId: string): Promise<Attendee[]> {

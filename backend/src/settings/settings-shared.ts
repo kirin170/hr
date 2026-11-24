@@ -191,7 +191,7 @@ export const FIXED_RULES = [
   },
 ] as const;
 
-/** 内置通知事件清单：当前只有面试模块的 Mock 通道事件，接收角色由业务规则确定，不开放配置。 */
+/** 内置通知事件清单，接收角色由业务规则确定。 */
 export const NOTIFICATION_EVENTS = [
   {
     key: 'interview.CREATE',
@@ -214,4 +214,9 @@ export const NOTIFICATION_EVENTS = [
     recipients: '受邀面试官、候选人负责人',
     channel: 'MOCK',
   },
+  { key: 'interview.START', label: '面试开始提醒', lowPriority: false, recipients: '受邀面试官', channel: 'PENDING' },
+  { key: 'interview.FEEDBACK_REMINDER', label: '面试评价提醒', lowPriority: false, recipients: '尚未评价的面试官', channel: 'PENDING' },
+  { key: 'interview.FEEDBACK_NUDGE', label: '面试评价催促', lowPriority: false, recipients: '尚未评价的面试官', channel: 'PENDING' },
+  { key: 'candidate.TIMEOUT', label: '简历超时提醒', lowPriority: true, recipients: '候选人负责人或招聘负责人', channel: 'PENDING' },
+  { key: 'onboarding.REMINDER', label: '待入职保温提醒', lowPriority: true, recipients: '招聘负责人', channel: 'PENDING' },
 ] as const;

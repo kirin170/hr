@@ -2,15 +2,16 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NOTIFICATION_EVENTS } from './settings-shared.js';
 
-/** 可由用户自行关闭的低优先级事件；正式通知接入前为空，后台如实显示“暂无可关闭项”。 */
+/** 可由用户自行关闭的低优先级事件。 */
 export const LOW_PRIORITY_NOTIFICATION_EVENTS = NOTIFICATION_EVENTS.filter((event) => event.lowPriority);
 
 function parseMuted(raw: string | null | undefined): string[] {
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item): item is string => typeof item === 'string');
+    const values = Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' && 'muted' in parsed ? parsed.muted : null;
+    if (!Array.isArray(values)) return [];
+    return values.filter((item): item is string => typeof item === 'string');
   } catch {
     return [];
   }

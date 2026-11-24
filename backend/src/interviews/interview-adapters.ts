@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export const INTERVIEW_CALENDAR = Symbol('INTERVIEW_CALENDAR');
 export const INTERVIEW_NOTIFICATIONS = Symbol('INTERVIEW_NOTIFICATIONS');
 export interface InterviewCalendar {
+  readonly kind?: string;
   conflicts(interviewerIds: string[], start: Date, end: Date, exceptId?: string): Promise<string[]>;
 }
 export interface InterviewNotifications {
