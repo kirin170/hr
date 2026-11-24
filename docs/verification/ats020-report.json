@@ -1,12 +1,11 @@
 {
-  "version": 2,
+  "version": 1,
   "work_item": "ATS-020",
   "date": "2026-11-24",
   "verified_at": 1795496942723,
   "source_sha": "df8847a3a9ca66d6e384fac63f060b1690ac5ce8",
   "working_tree_dirty": true,
-  "dirty_scope_note": "工作区仅 backend/src/main.ts 为他人未提交改动，不在本任务 scope；本任务相关文件均已提交（a9fa844、2c2d1b2、9352cf2）。",
-  "summary": "ATS-020 在 df8847a 上验收：听记读取已由「部署侧 HTTP 网关 + 按操作者钉钉身份读取」改为「部署机服务账号 + 进程内调用 dws CLI」。链接解析、逐字稿与摘要读取、按轮次追加、内容哈希去重、来源可追溯、ATS 数据范围越权 404 与 dws 侧 403 拒绝、未配置时人工录入降级、INTERVIEW_EVAL 契约交付均通过隔离库验证；并用真实听记（浙江日发控股集团，20 分 47 秒）经 dws 1.0.69 读取成功：摘要 1693 字、逐字稿 168 段 4928 字、complete=true、时间轴为相对偏移且末段与录音时长偏差 0.8 秒。类型检查、lint（0 错误）、前后端构建通过，后端 268 项单元测试通过；临时 MySQL 重放全部迁移，ATS-020 隔离套件 7 项、ATS-014 回归 4 项通过，临时库已删除。生产侧服务账号授权链路尚未验证，见 limitations。",
+  "summary": "（本报告取代 5c80a8a 的 HTTP 网关版报告；工作区仅 backend/src/main.ts 为他人未提交改动，不在本任务 scope，本任务文件均已提交。）ATS-020 在 df8847a 上验收：听记读取已由「部署侧 HTTP 网关 + 按操作者钉钉身份读取」改为「部署机服务账号 + 进程内调用 dws CLI」。链接解析、逐字稿与摘要读取、按轮次追加、内容哈希去重、来源可追溯、ATS 数据范围越权 404 与 dws 侧 403 拒绝、未配置时人工录入降级、INTERVIEW_EVAL 契约交付均通过隔离库验证；并用真实听记（浙江日发控股集团，20 分 47 秒）经 dws 1.0.69 读取成功：摘要 1693 字、逐字稿 168 段 4928 字、complete=true、时间轴为相对偏移且末段与录音时长偏差 0.8 秒。类型检查、lint（0 错误）、前后端构建通过，后端 268 项单元测试通过；临时 MySQL 重放全部迁移，ATS-020 隔离套件 7 项、ATS-014 回归 4 项通过，临时库已删除。生产侧服务账号授权链路尚未验证，见 limitations。",
   "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npx vitest run --prefix backend; npm run build --prefix backend; npm run build; node scripts/ats020-isolated-check.mjs; node scripts/ats014-isolated-check.mjs; node scripts/ats020-minutes-probe.mjs <真实听记 id>",
   "scope": [
     "backend/prisma/migrations/20261123190000_ats020_interview_minutes/migration.sql",
