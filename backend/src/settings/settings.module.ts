@@ -4,6 +4,7 @@ import { FieldConfigService } from './field-config.service.js';
 import { NotificationPreferenceService } from './notification-preference.service.js';
 import { OperationsService } from './operations.service.js';
 import { ReasonSettingsService } from './reason-settings.service.js';
+import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
 import { SettingsController } from './settings.controller.js';
 
 /**
@@ -18,6 +19,7 @@ import { SettingsController } from './settings.controller.js';
     DictSettingsService,
     FieldConfigService,
     NotificationPreferenceService,
+    NotificationOutboxService,
     OperationsService,
   ],
   exports: [ReasonSettingsService, DictSettingsService, FieldConfigService],

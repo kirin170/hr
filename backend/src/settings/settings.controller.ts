@@ -17,6 +17,7 @@ import { FieldConfigService } from './field-config.service.js';
 import { NotificationPreferenceService } from './notification-preference.service.js';
 import { OperationsService } from './operations.service.js';
 import { ReasonSettingsService } from './reason-settings.service.js';
+import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
 import { FIXED_RULES, NOTIFICATION_EVENTS, type AuditContext } from './settings-shared.js';
 
 function objectBody(body: unknown): Record<string, unknown> {
@@ -41,6 +42,7 @@ export class SettingsController {
     private readonly fields: FieldConfigService,
     private readonly preferences: NotificationPreferenceService,
     private readonly operations: OperationsService,
+    private readonly deliveries: NotificationOutboxService,
   ) {}
 
   private ctx(request: AuthenticatedRequest): AuditContext {
@@ -196,6 +198,16 @@ export class SettingsController {
       events: NOTIFICATION_EVENTS,
     };
   }
+
+  @Get('notifications/deliveries')
+  @RequirePermission('setting:read')
+  @AuditAction('setting.notification.deliveries.read', 'NotificationDelivery')
+  notificationDeliveries() { return this.deliveries.recent(); }
+
+  @Post('notifications/deliveries/:id/retry')
+  @RequirePermission('setting:manage')
+  @AuditAction('setting.notification.deliveries.retry', 'NotificationDelivery')
+  retryNotification(@Param('id') id: string) { return this.deliveries.retryFailed(id); }
 
   @Get('operations')
   @RequirePermission('setting:read')

@@ -1227,3 +1227,27 @@ model OnboardingReminder {
   @@index([recipientId, createdAt])
   @@map("onboarding_reminders")
 }
+
+/// 固定事件的工作通知出站记录；UNKNOWN 表示发送结果不明，禁止自动重复发送。
+model NotificationDelivery {
+  id          String    @id @default(cuid())
+  eventKey    String
+  sourceKey   String
+  recipientId String
+  status      String    @default("PENDING")
+  attempts    Int       @default(0)
+  dueAt       DateTime
+  nextRetryAt DateTime?
+  startedAt   DateTime?
+  sentAt      DateTime?
+  taskId      String?
+  platformRecipient String?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([eventKey, sourceKey, recipientId], map: "notification_delivery_dedupe")
+  @@index([status, dueAt, nextRetryAt])
+  @@index([recipientId, createdAt])
+  @@map("notification_deliveries")
+}

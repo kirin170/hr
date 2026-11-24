@@ -1,0 +1,21 @@
+CREATE TABLE `notification_deliveries` (
+  `id` VARCHAR(191) NOT NULL,
+  `eventKey` VARCHAR(191) NOT NULL,
+  `sourceKey` VARCHAR(191) NOT NULL,
+  `recipientId` VARCHAR(191) NOT NULL,
+  `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+  `attempts` INTEGER NOT NULL DEFAULT 0,
+  `dueAt` DATETIME(3) NOT NULL,
+  `nextRetryAt` DATETIME(3) NULL,
+  `startedAt` DATETIME(3) NULL,
+  `sentAt` DATETIME(3) NULL,
+  `taskId` VARCHAR(191) NULL,
+  `platformRecipient` VARCHAR(191) NULL,
+  `lastError` VARCHAR(191) NULL,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL,
+  UNIQUE INDEX `notification_delivery_dedupe` (`eventKey`, `sourceKey`, `recipientId`),
+  INDEX `notification_deliveries_status_dueAt_nextRetryAt_idx` (`status`, `dueAt`, `nextRetryAt`),
+  INDEX `notification_deliveries_recipientId_createdAt_idx` (`recipientId`, `createdAt`),
+  PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
