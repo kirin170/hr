@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DataScope, InterviewMode, InterviewStatus, Prisma } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
@@ -25,6 +25,7 @@ const ids = (raw: string | null) => (raw ?? '').split('|').filter(Boolean);
 
 @Injectable()
 export class InterviewsService {
+  private readonly logger = new Logger(InterviewsService.name);
   constructor(private readonly db: PrismaService, private readonly auth: AuthorizationService,
     @Inject(INTERVIEW_NOTIFICATIONS) private readonly notifications: InterviewNotifications, @Inject(INTERVIEW_CALENDAR) private readonly calendar: InterviewCalendar) {}
 
@@ -62,6 +63,14 @@ export class InterviewsService {
   }
   private async notify(action: string, interviewerIds: string[], id: string) {
     try { await this.notifications.notify(action, interviewerIds, id); } catch { /* 通知失败不影响主流程 */ }
+  }
+  private async checkConflicts(interviewerIds: string[], start: Date, end: Date, exceptId?: string) {
+    try {
+      return { conflicts: await this.calendar.conflicts(interviewerIds, start, end, exceptId), availabilityStatus: 'AVAILABLE' as const };
+    } catch {
+      this.logger.warn('面试忙闲查询失败，排期仍可继续');
+      return { conflicts: [] as string[], availabilityStatus: 'UNAVAILABLE' as const };
+    }
   }
   private dto<T extends { interviewerIds: string | null }>(row: T) { return { ...row, interviewerIds: ids(row.interviewerIds) }; }
 
@@ -113,19 +122,19 @@ export class InterviewsService {
     if (!interviewerIds.length || interviewerIds.some(id => id.includes('|'))) throw new BadRequestException('面试官无效');
     const count = await this.db.user.count({ where: { id: { in: interviewerIds }, status: 'ACTIVE' } });
     if (count !== interviewerIds.length) throw new BadRequestException('面试官不存在或已停用');
-    const { start, end } = await this.times(input); const conflicts = await this.calendar.conflicts(interviewerIds, start, end);
+    const { start, end } = await this.times(input); const availability = await this.checkConflicts(interviewerIds, start, end);
     const responses = Object.fromEntries(interviewerIds.map(id => [id, 'PENDING']));
     const row = await this.db.interview.create({ data: { candidateId, jobId, round, mode, time: start, endTime: end, location: typeof input.location === 'string' ? input.location.trim() : null, interviewerIds: `|${interviewerIds.join('|')}|`, responses, status: 'TO_SCHEDULE' } });
-    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), conflicts, calendar: 'MOCK' };
+    await this.notify('CREATE', [...interviewerIds, `candidate:${candidateId}`], row.id); return { interview: this.dto(row), ...availability, calendar: 'MOCK' };
   }
   async change(id: string, value: unknown, actor: AuthenticatedUser) {
     const input = record(value); const row = await this.target(id, actor); await this.manageable(row.candidateId, row.jobId, actor);
     if (row.status === 'CANCELLED') throw new BadRequestException('面试已取消');
     const action = required(input.action, '操作'); const reason = required(input.reason, '原因');
     if (!['RESCHEDULE', 'CANCEL'].includes(action)) throw new BadRequestException('操作无效');
-    let update: Prisma.InterviewUpdateInput; let conflicts: string[] = [];
+    let update: Prisma.InterviewUpdateInput; let availability: { conflicts: string[]; availabilityStatus: 'AVAILABLE' | 'UNAVAILABLE' | 'NOT_CHECKED' } = { conflicts: [], availabilityStatus: 'NOT_CHECKED' };
     if (action === 'RESCHEDULE') {
-      const { start, end } = await this.times(input); conflicts = await this.calendar.conflicts(ids(row.interviewerIds), start, end, id);
+      const { start, end } = await this.times(input); availability = await this.checkConflicts(ids(row.interviewerIds), start, end, id);
       update = { time: start, endTime: end, responses: Object.fromEntries(ids(row.interviewerIds).map(x => [x, 'PENDING'])) };
     } else update = { status: 'CANCELLED', cancelReason: reason };
     const result = await this.db.$transaction(async tx => {
@@ -133,7 +142,7 @@ export class InterviewsService {
       await tx.interviewChange.create({ data: { interviewId: id, action, actorId: actor.id, reason, before: { startAt: row.time.toISOString(), endAt: row.endTime?.toISOString() ?? null, status: row.status }, after: { startAt: changed.time.toISOString(), endAt: changed.endTime?.toISOString() ?? null, status: changed.status } } });
       return changed;
     });
-    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), conflicts, calendar: 'MOCK' };
+    await this.notify(action, [...ids(row.interviewerIds), `candidate:${row.candidateId}`], id); return { interview: this.dto(result), ...availability, calendar: 'MOCK' };
   }
   async respond(id: string, value: unknown, actor: AuthenticatedUser) {
     const row = await this.target(id, actor); if (!ids(row.interviewerIds).includes(actor.id)) throw new ForbiddenException('仅受邀面试官可响应');
