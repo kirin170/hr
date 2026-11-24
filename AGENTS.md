@@ -7,10 +7,40 @@
 
 ## Development and publishing
 
-- Before starting work, run `git switch dev` and `git pull --ff-only origin dev`.
+- Before starting work, run `git switch dev` and pull `origin/dev` with the proxy form below.
 - Make and commit development changes on `dev`.
-- Push completed local work to `origin/dev` with `git push origin dev`. For the first push from a new checkout, use `git push -u origin dev`.
 - Do not force-push or rewrite shared `dev` history.
+
+### Remote access goes through the local proxy
+
+Direct connections to `github.com` from this machine are intermittently reset: TCP and TLS
+succeed and response headers arrive, but the response body is dropped, so `git push` fails
+with `Recv failure: Connection was reset` or a connect timeout. `api.github.com` and
+`codeload.github.com` are unaffected, which makes the failure look random.
+
+Every remote operation in this project therefore goes through the local proxy at
+`127.0.0.1:7890`. Use this exact form for pushes:
+
+```bash
+git -C 'D:\hr' -c remote.origin.proxy=http://127.0.0.1:7890 push origin dev
+```
+
+For the first push from a new checkout, add `-u`:
+
+```bash
+git -C 'D:\hr' -c remote.origin.proxy=http://127.0.0.1:7890 push -u origin dev
+```
+
+Apply the same `-c remote.origin.proxy=http://127.0.0.1:7890` to `fetch` and `pull`, which
+reach the same host and fail the same way:
+
+```bash
+git -C 'D:\hr' -c remote.origin.proxy=http://127.0.0.1:7890 pull --ff-only origin dev
+```
+
+Do not replace this with a plain `git push`, and do not "fix" failures by retrying in a loop
+or by changing the remote URL, hosts file, or global git config. If the proxy itself is down,
+say so and stop rather than falling back to a direct connection.
 
 ## Promoting to master
 

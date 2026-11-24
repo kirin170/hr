@@ -104,7 +104,14 @@ ATS-012 的代码与静态检查已落地（提交 `9a4f363`，报告 v1/v2/v3 �
 
 ## 5. 三方并行协作规则
 
-1. **分支**：一律 `dev`。开工前 `git switch dev && git pull --ff-only origin dev`；小步提交，禁止 force-push 与改写共享历史；`master` 只由用户经 PR + 两项状态检查合并。
+1. **分支与远端**：一律 `dev`。小步提交，禁止 force-push 与改写共享历史；`master` 只由用户经 PR + 两项状态检查合并。**所有远端操作走本机代理 `127.0.0.1:7890`**，不要用裸 `git push` / `git pull`：
+
+   ```bash
+   git -C 'D:\hr' -c remote.origin.proxy=http://127.0.0.1:7890 pull --ff-only origin dev
+   git -C 'D:\hr' -c remote.origin.proxy=http://127.0.0.1:7890 push origin dev
+   ```
+
+   原因：本机直连 `github.com` 会被间歇性丢弃响应体——TCP 与 TLS 都成功、响应头也到，正文 0 字节，表现为 `Recv failure: Connection was reset`；而 `api.github.com`、`codeload.github.com` 正常，所以看起来像"随机失败"。2026-11-24 实测走代理后 `github.com` 返回 200。**推送失败不要靠循环重试硬熬，也不要去改 remote URL、hosts 或全局 git 配置**；代理本身不通就如实报告并停下。详见 AGENTS.md「Remote access goes through the local proxy」。
 2. **文件边界**：按第 3 节车道写代码。跨车道改动先在台账 `next_action` 或提交信息里说明。
 3. **迁移串行**：`backend/prisma/schema.prisma` 与新迁移是冲突热点——**同一时间只允许一个智能体新增迁移**，其余先 `pull --ff-only` 再开工。历史教训：ATS-009 的后端 typecheck/build 曾被并发的 ATS-012 改动阻断。
 4. **数据库**：验证一律用临时库 `talentflow_<task>`，校验后删除；**不得改动本地 `talentflow` 库**。
