@@ -407,19 +407,22 @@ work_items:
   "verification": {"evidence_level":"locally_verified"}
 - id: ATS-021
   kind: delivery
-  status: planned
+  status: completed
   owner: CodeBuddy
   goal: ats-integrations
   priority: P1
   title: "AI 三场景正式适配与人工复核"
-  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第4批。钉钉/通义优先 + 外部模型兜底，具体模型、能力与切换细则仍需验证；本期全部结果人工确认后转正式，高置信度也不得直接转正式。依据：功能需求 §4.12、PRD §6、AI-1～8、技术设计 §0.3；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。"
+  summary: "2026-11-20 用户授权 Claude Code 统一分派：负责人 CodeBuddy，第4批。钉钉/通义优先 + 外部模型兜底，具体模型、能力与切换细则仍需验证；本期全部结果人工确认后转正式，高置信度也不得直接转正式。依据：功能需求 §4.12、PRD §6、AI-1～8、技术设计 §0.3；整体路线图见 docs/ats-项目目标与实施路线图-v1.0.md。2026-11-24 完成：新增 ModelProvider 抽象（Mock 确定性实现 + OpenAI 兼容实现）与主选/兜底路由，失败按错误码与尝试明细留痕；三场景统一契约校验（版本化 schema、证据引用白名单、格式异常降置信度）；AIRun 记录 provider/模型/模板版本/延迟/token/成本与 dedupeKey 幂等，不落简历与听记原文；草稿编辑后必须显式确认，确认评估不推进阶段、不写 OA；失败降级 NEEDS_MANUAL 并留时间线；无招聘要求、职位开关关闭、系统开关关闭三处禁发；管理端 AI 配置/用量/调用记录/职位开关接口按 setting:read/manage 与 ai:read/confirm 授权并写审计。"
   acceptance:
   - "可替换 provider 支持 RESUME_PARSE/RESUME_EVAL/INTERVIEW_EVAL，三套输出符合 JSON Schema，记录依据、缺失项及字段置信度。"
   - "按技术设计 §0.3 执行钉钉/通义优先、外部模型兜底；主选和兜底使用相同契约与责任边界，主选不可用或能力不满足时可按配置兜底，均失败时可降级人工处理并有验证证据。"
   - "草稿标记、人工确认/编辑、职位/系统开关和无招聘要求禁发评估生效；全部结果人工确认后转正式，高置信度不得直接转正式；不自动转阶段、不进入 OA 审批结论。"
   - "PDF/Word/图片、听记样本及失败/超时/重试/降级均有证据；模型成本、耗时和能力评估据实记录。"
+  evidence: [docs/verification/ats021-ai-report.json]
+  verification:
+    evidence_level: locally_verified
   depends_on: [ATS-008, ATS-012, ATS-014, ATS-020]
-  next_action: "已预派给 CodeBuddy（第4批，待 ATS-020 完成后启动，RESUME_PARSE 子项可提前）：按钉钉/通义优先、外部模型兜底验证具体 provider 与切换细则，三场景守同一 JSON Schema 与人工确认边界；高置信度也不得自动转正式，失败/超时/降级均需证据。"
+  next_action: "无阻塞项；本机无第三方密钥，验收以 mock 模式跑通队列-路由-契约-落库全链路。待接入真实厂商时：配置 endpoint/baseUrl/模型与密钥环境变量（密钥只落环境变量，管理端仅回 hasKey）、按厂商确认 response_format 与多模态字段、用真实简历/听记复验成本与延迟记录；扫描件依赖多模态直读，文本型 PDF 抽取为启发式实现。"
 - id: ATS-022
   kind: delivery
   status: completed

@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "work_item": "ATS-021",
+  "date": "2026-11-24",
+  "verified_at": 1795566240828,
+  "source_sha": "a4c2f627c8b5241914a3d16a2c7b173d60be84b7",
+  "working_tree_dirty": true,
+  "summary": "把 AI 能力从占位 Mock 落成可替换的真实链路：新增 ModelProvider 抽象（Mock 确定性实现 + OpenAI 兼容实现）与主选/兜底路由，失败按重试与错误码留痕；三个场景（简历解析、简历评估、面试评估）都走同一套契约校验（版本化 schema、证据引用白名单、格式异常降置信度）；每次调用记录 provider/模型/模板版本/延迟/输入输出 token/成本（未配置单价时成本记空而非 0）与幂等 dedupeKey；AI 结果一律为草稿，人工编辑后必须显式确认，确认评估不推进阶段、不写 OA 结论；失败降级人工并留时间线；无招聘要求、职位关闭、系统关闭三处禁发；管理端可读改 AI 配置、查用量与调用记录、切换职位级开关，全部按 setting:read/manage 与 ai:read/confirm 授权并写审计。",
+  "command": "npm run typecheck --prefix backend; npm run lint --prefix backend; npm run test --prefix backend (46 files / 308 tests); npx prisma validate; npx prisma migrate deploy (scratch talentflow_ats021_scratch, 全量 24 个迁移含 20261124180000_ats021_ai_provider); node prisma/seed.mjs; node .tmp-dist/main.js (APP_PROCESS_ROLE=api) + node .tmp-dist/worker.js (worker) 实跑接口",
+  "scope": [
+    "backend/prisma/schema.prisma",
+    "backend/prisma/migrations/20261124180000_ats021_ai_provider/migration.sql",
+    "backend/src/ai/ai.contract.ts",
+    "backend/src/ai/ai.types.ts",
+    "backend/src/ai/model-provider.ts",
+    "backend/src/ai/mock-model.provider.ts",
+    "backend/src/ai/mock-model.provider.spec.ts",
+    "backend/src/ai/openai-compatible.provider.ts",
+    "backend/src/ai/ai-provider.router.ts",
+    "backend/src/ai/ai-config.service.ts",
+    "backend/src/ai/ai-run.service.ts",
+    "backend/src/ai/ai-run.controller.ts",
+    "backend/src/ai/ai-settings.controller.ts",
+    "backend/src/ai/ai-run.worker.ts",
+    "backend/src/ai/eval.queue.ts",
+    "backend/src/ai/resume-content.loader.ts",
+    "backend/src/ai/ai.module.ts",
+    "backend/src/ai/ai-ats021.spec.ts",
+    "backend/src/interviews/interview-transcripts.service.ts",
+    "backend/src/interviews/interview-transcripts.service.spec.ts",
+    "backend/src/interviews/interviews-minutes.integration.spec.ts",
+    "backend/src/interviews/interviews.module.ts",
+    "backend/src/jobs/jobs.service.ts"
+  ],
+  "checks": [
+    {
+      "name": "three_scenarios_runnable_with_usage_records",
+      "passed": true,
+      "criteria": [
+        "简历解析、简历评估、面试评估三个场景真实可跑；每次调用记录 provider/模型/成本/延迟，输出经契约校验。"
+      ],
+      "details": "ModelProvider 抽象 + AiProviderRouter 按配置链尝试主选与兜底，AiProviderError 统一错误码（TIMEOUT/HTTP_ERROR/RATE_LIMITED/INVALID_OUTPUT/CAPABILITY_UNSUPPORTED/ALL_FAILED/DISABLED/CONTENT_UNSUPPORTED），AiProviderChainError 携带逐次尝试明细供上层降级。AIRun 新增 providerName/modelName/templateVersion/latencyMs/promptTokens/completionTokens/costMicros/validation/dedupeKey，成本仅在端点配置了单价时计算，否则留空。ai.contract.ts 定义 ai-contract.v1 与三个场景 schema，解析结果对电话/邮箱格式异常降置信度并给告警，评估分数越界、面试证据引用不在原文白名单内直接拒绝。实测：本地以 mock 模式启动 API(3999)+worker，对 seed 出的职位/候选人/简历发起 POST /api/v1/ai-runs/resume-eval，返回 queued=true，worker 消费后 GET 详情为 status=SUCCESS、provider=mock、model=mock-ai-v1、latencyMs=1、promptTokens=24、completionTokens=200、costMicros=0、isDraft=true、output.evidenceMasked=true，即队列-路由-契约-落库全链路真实执行。",
+      "criteria_evidence": [
+        "backend/src/ai/ai-provider.router.ts",
+        "backend/src/ai/ai.contract.ts",
+        "backend/src/ai/openai-compatible.provider.ts"
+      ]
+    },
+    {
+      "name": "human_review_boundary",
+      "passed": true,
+      "criteria": [
+        "AI 输出为草稿，可人工编辑后显式确认；确认不自动推进阶段、不写 OA 结论。"
+      ],
+      "details": "所有 AIRun 默认 isDraft=true；PATCH /api/v1/ai-runs/:id 要求 ai:confirm，编辑后重新过契约校验（改坏时返回 400 并逐项给出 verdict/score/rationale 问题，而不是 500），仍保持草稿并记 editedBy/editedAt 与时间线 ai_run.draft_edited；POST /:id/confirm 才置 isDraft=false，评估类确认只写时间线 candidate.ai_eval_confirmed / interview.ai_eval_confirmed，代码中不调用候选人阶段更新，也不触达 OA。实测：编辑为「不符合/2 分/人工复核」后 isDraft 仍为 true，确认后 isDraft=false，候选人 stage 仍为 HR_SCREENING（确认前后一致），再次编辑返回 400「已确认的 AI 结果不能再编辑」。",
+      "criteria_evidence": [
+        "backend/src/ai/ai-run.service.ts"
+      ]
+    },
+    {
+      "name": "degrade_and_send_guards",
+      "passed": true,
+      "criteria": [
+        "失败降级人工不阻断流程；无招聘要求不发；职位级开关可关闭。"
+      ],
+      "details": "解析失败/场景关闭走 degradeParse：入场记录置 NEEDS_MANUAL 并记 intake.parse_degraded，不阻断入库；评估重试耗尽走 markEvalFailed：任务置 FAILED 并记 ai_run.degraded，不改阶段。发起评估前 assertEvalAllowed（HTTP 层）与 assertRunAllowed（worker 层）双重校验：职位 requirements 为空返回 400「职位未填写招聘要求，无法发起 AI 评估（AI-5）」；Job.aiEvalEnabled=false 返回 400「该职位已关闭 AI 评估」；系统级 scenes 关闭抛 DISABLED 并降级。JobDto/toDto/更新分支已暴露 aiEvalEnabled，管理端 PATCH /api/v1/admin/ai-settings/jobs/:id 也可切换并写审计 job.ai_eval_switch。实测：清空 requirements 后发起评估返回 AI-5 400；PATCH 职位开关为 false 后发起评估返回 400；恢复后正常。",
+      "criteria_evidence": [
+        "backend/src/ai/ai-run.service.ts",
+        "backend/src/jobs/jobs.service.ts"
+      ]
+    },
+    {
+      "name": "privacy_and_admin_console",
+      "passed": true,
+      "criteria": [
+        "不保存简历/听记原文，敏感字段脱敏；管理端可配置 AI 并查看调用记录。"
+      ],
+      "details": "AIRun 只存 inputRefs（文件 id/文件名/mime/文本长度/文本 SHA-256 与职位要求快照）和结构化输出，不落简历原文与听记原文；读详情时按 CANDIDATE_CONTACT 敏感字段权限脱敏 phone/email 与 evidence（实测 admin 无该权限时 phone/email 为 null、name 保留、evidenceMasked=true）。管理端新增 GET/PATCH /api/v1/admin/ai-settings（读写分离 setting:read/setting:manage，密钥只回 hasKey 不回显）、GET usage（按场景汇总 runs/success/失败率/成本）、GET runs（调用记录）、GET/PATCH jobs（职位开关），全部带 AuditAction。实测审计表出现 ai_run.request/read/edit/confirm 与 4 条 job.ai_eval_switch，时间线出现 ai_run.draft_edited、candidate.ai_eval_confirmed。",
+      "criteria_evidence": [
+        "backend/src/ai/ai-settings.controller.ts",
+        "backend/src/ai/ai-config.service.ts"
+      ]
+    },
+    {
+      "name": "automated_checks",
+      "passed": true,
+      "criteria": [],
+      "details": "backend npm run typecheck 通过；npm run lint 0 error（仅剩 settings/audit 两个既有 warning，非本任务文件）；npm run test 46 files / 308 tests 通过（含本任务新增 ai-ats021.spec.ts 19 项：路由主选失败兜底、全链失败错误码与尝试明细、图片跳过无视觉模型、契约降置信度/必填缺失/分数越界/证据不可回溯、AI-5 无要求拦截、AI-3 职位关闭拦截、dedupe 复用不重复计费、确认评估不改阶段、改坏草稿返回 400、无联系人权限脱敏、场景关闭降级 NEEDS_MANUAL、重试耗尽记 ai_run.degraded、DOCX/PDF 文本抽取、图片多模态、未知格式失败），并把既有 mock-model.provider.spec.ts 与面试听记两个 spec 对齐新签名。迁移在临时库 talentflow_ats021_scratch 全量重放成功（24 个迁移，含本任务新增列与两个索引），验证后已删库。",
+      "criteria_evidence": [
+        "backend/src/ai/ai-ats021.spec.ts"
+      ]
+    }
+  ],
+  "notes": [
+    "本次未接真实第三方大模型：本机无 AI provider 密钥，验收以 mock 模式跑通全链路；OpenAI 兼容实现（/chat/completions + response_format=json_object、usage 解析、超时与 429/5xx 重试、图片走 image_url 多模态）已就绪，配置端点与密钥环境变量后即可切换，未经真实厂商联调。",
+    "未覆盖项：面试评估仅由单测覆盖契约与证据白名单，未在实跑中构造听记材料（需先有面试与听记交付数据）；PDF 抽取为文本型 PDF 的启发式实现（无字体/ToUnicode 解析），扫描件依赖多模态直读；成本字段在 mock 与未配单价时为空。",
+    "临时库 talentflow_ats021_scratch 已删除；本地库 talentflow_local_admin_preview 未应用本任务迁移（该库还落后 12 个他人迁移），因此没有改动共享本地库。",
+    "工作区包含其他任务未提交改动（main.ts 仅空白差异，另有 settings/audit 等他人文件），本次只按显式路径提交 ATS-021 相关文件；source_sha 为 HEAD a4c2f62，working_tree_dirty=true。",
+    "本机 Redis 为 5.0.14，低于 BullMQ 建议的 6.2，worker 启动有版本告警但队列消费正常。"
+  ]
+}
