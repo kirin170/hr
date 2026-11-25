@@ -3,7 +3,7 @@
 > **2026-11-25 起本文件转为历史记录。** 用户收紧项目，Codex / CodeBuddy / Trae 不再参与，剩余工作全部由 Claude Code 单人承接。
 > 下文第 3 节的三方车道、第 4 节的启动指令、第 5 节除「远端代理」「台账写法」外的并行协作规则，都只适用于当时的多智能体阶段，**不再是现行约定**。
 > 现行状态与收尾范围以台账 `.awr/intake/work-ledger.yaml` 的 owner 与 next_action 为准。
-> 仍然生效的通用约定：远端操作走本机代理（见 AGENTS.md）、台账禁用 YAML 块标量、证据 command/scope 逐字取自报告对象、关闭走 `evidence add → prepare-completion → work progress → work complete`。
+> 仍然生效的通用约定：远端操作走本机代理（见 AGENTS.md）、证据 command/scope 逐字取自报告对象、关闭走 `evidence add → prepare-completion → work progress → work complete`。
 
 分派人：Claude Code（用户于 2026-11-20 明确授权“你来做任务分派”）。
 执行方：本机编程智能体 **Codex**、**CodeBuddy**、**Trae**；Claude Code 负责统筹、交叉复核与最终验收汇总。
@@ -123,7 +123,8 @@ ATS-012 的代码与静态检查已落地（提交 `9a4f363`，报告 v1/v2/v3 �
 5. **AWR 会话**：执行前 `awr session start --work <KEY> --agent <Codex|CodeBuddy|Trae> --provider generic --model <model> --claim --ttl-ms 3600000 --expected-revision <rev>`；中断用 `session checkpoint` 记录真实进度（checkpoint 不等于完成）；换智能体接手用 `session resume`/`handoff`，不要复用他人会话 ID。
 6. **完成判定**：报告必须含真实 `source_sha`、`command`、`scope`、`checks[].criteria` 与验收条目绑定；`working_tree_dirty` 要如实记录。缺环境、缺凭据的部分写成显式未验证，不得用静态审查冒充接口验收。
 7. **范围红线**（全项目通用）：不存薪资明细；不自建审批流；AI 结果一律人工确认后转正式（高置信度也不例外）；邮箱附件不自动匹配职位；报表真实计数，只有人才库总量 ≥10000 才显示 1w+。
-8. **台账写法**：`.awr/intake/work-ledger.yaml` 里**不要使用 YAML 块标量**（`key: |-` / `|` / `>`）。AWR 0.7.0 的写入器遇到块标量会对**整个文件**报 `MutationUnsupported: quoted scalar marker mismatch`，导致 `work edit` / `work progress` / `work complete` 全部写不进去，完成流程退化成"提案创建→批准→又要求提案"的死循环，状态只能手工改。多行文本写成双引号标量、用 `\n` 转义换行（内容等价），或写成单行。2026-11-20 已把仅有的两处块标量（`ats-delivery.summary`、`INTAKE-002.summary`）按此归一化，写回恢复正常。
+8. **台账写法（已于 0.8.1 解除限制）**：AWR **0.7.0** 的写入器遇到 YAML 块标量（`key: |-` / `|` / `>`）会对**整个文件**报 `MutationUnsupported: quoted scalar marker mismatch`，导致 `work edit` / `work progress` / `work complete` 全部写不进去，完成流程退化成「提案创建→批准→又要求提案」的死循环。2026-11-20 已把仅有的两处块标量归一化为双引号标量（`
+` 转义，内容等价）。**2026-11-25 升级到 0.8.1 后实测该缺陷已修复**：带块标量的台账可正常生成写入预览。因此块标量不再是硬禁止，但台账现有写法保持单行双引号标量不变，避免无谓改写；若运行环境可能回退到 0.7.0，仍应避免块标量。
 
 ## 6. 需要用户提供的前置条件（阻塞真实验收，不阻塞开工）
 
