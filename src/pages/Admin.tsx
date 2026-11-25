@@ -388,7 +388,12 @@ function RulesTab({ overview }: { overview: AdminOverview }) {
       </div>
       <ul className="admin-rules">
         {overview.rules.map((rule) => (
-          <li key={rule.key}><strong>{rule.label}</strong><span>{rule.description}</span></li>
+          <li key={rule.key}>
+            <strong>{rule.title}</strong>
+            <span>{rule.value.join(' · ')}</span>
+            <span>{rule.note}</span>
+            <code>{rule.code}</code>
+          </li>
         ))}
       </ul>
     </section>

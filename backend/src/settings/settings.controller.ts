@@ -150,8 +150,9 @@ export class SettingsController {
 
   @Get('fields')
   @RequirePermission('setting:read')
-  listFields() {
-    return { groups: this.fields.listFields() };
+  async listFields() {
+    // listFields 是异步的：不 await 会把 Promise 序列化成 {}，接口静默返回空配置。
+    return { groups: await this.fields.listFields() };
   }
 
   @Patch('fields/:id')

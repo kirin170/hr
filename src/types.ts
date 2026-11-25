@@ -654,7 +654,7 @@ export type DictItemView = {
   updatedAt: string
 }
 
-export type FixedRule = { key: string; label: string; description: string }
+export type FixedRule = { key: string; title: string; value: string[]; note: string; code: string }
 
 export type AdminOverview = {
   reasons: { items: ReasonOptionView[]; stats: Record<string, { used: number; unfilled: number }>; unfilledNote: string }
