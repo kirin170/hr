@@ -29,6 +29,8 @@ export function describeError(payload, httpStatus) {
   const unknown = candidates.find((value) => typeof value === 'string' && /^[A-Z][A-Z0-9_]{2,60}$/.test(value));
   if (unknown) return { code: unknown, text: `导入失败（${unknown}），请稍后重试或联系人事。`, action: 'retry' };
   if (httpStatus === 401 || httpStatus === 403) return { code: null, text: '登录态或权限不足，请重新授权。', action: 'reauth' };
+  // 传输层超限由 Multer 直接返回 413，不带契约错误码，这里补上映射。
+  if (httpStatus === 413) return { code: 'ATTACHMENT_INVALID', ...ERROR_MESSAGES.ATTACHMENT_INVALID };
   if (httpStatus >= 500) return { code: null, text: '服务暂时不可用，请稍后重试。', action: 'retry' };
   return { code: null, text: '导入失败，请稍后重试。', action: 'retry' };
 }

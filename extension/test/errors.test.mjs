@@ -46,3 +46,9 @@ test('普通中文文案不会被误当成错误码', () => {
   const result = describeError({ message: '目标职位不存在或无权访问' }, 404);
   assert.equal(result.code, null);
 });
+
+test('传输层 413 超限映射为附件不合规，而不是通用重试', () => {
+  const result = describeError({ message: 'File too large', error: 'Payload Too Large', statusCode: 413 }, 413);
+  assert.equal(result.code, 'ATTACHMENT_INVALID');
+  assert.equal(result.action, 'none');
+});

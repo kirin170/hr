@@ -1,0 +1,2747 @@
+{
+ "generated_from": {
+  "prd": "docs/ats-PRD-v1.0.md",
+  "ledger": ".awr/intake/work-ledger.yaml"
+ },
+ "requirement_total": 146,
+ "summary": {
+  "COVERED": 99,
+  "NO_TASK": 23,
+  "TASK_OPEN": 10,
+  "PARTIAL": 5,
+  "DOC_ONLY": 9
+ },
+ "reports": {
+  "docs/verification/ats002-report.json": {
+   "work_item": "ATS-002",
+   "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+   "working_tree_dirty": null,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 0,
+   "sha256": "1dda5c85286b3b49"
+  },
+  "docs/verification/ats003-report.json": {
+   "work_item": "ATS-003",
+   "source_sha": "8c318105dc34ac8688ac2cd8fcfabb321a733b69",
+   "working_tree_dirty": null,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 0,
+   "sha256": "2b3b58fbdc5454ef"
+  },
+  "docs/verification/ats004-auth-authorization-report.json": {
+   "work_item": "ATS-004",
+   "source_sha": "41bbeff25dcef9d0afb3d8264e25b8fb8aa83442",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 3,
+   "sha256": "c13510e441a4daa7"
+  },
+  "docs/verification/ats005-attachment-storage-report.json": {
+   "work_item": "ATS-005",
+   "source_sha": "f202f741edd79ebdced8dd676978e1041314cba1",
+   "working_tree_dirty": true,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 5,
+   "limitations": 5,
+   "sha256": "2399b41caa0d9d1a"
+  },
+  "docs/verification/ats006-engineering-ci-report.json": {
+   "work_item": "ATS-006",
+   "source_sha": "37e50246f60dd774be464f20b9bb075ccbc48fa1",
+   "working_tree_dirty": true,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 2,
+   "limitations": 4,
+   "sha256": "ebf60223cf668752"
+  },
+  "docs/verification/ats007-requisition-cycle-report.json": {
+   "work_item": "ATS-007",
+   "source_sha": "8bee985ef495eaab50ed42b44b332d7463f72114",
+   "working_tree_dirty": true,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 5,
+   "sha256": "5fc27f5aeb4c30f1"
+  },
+  "docs/verification/ats008-intake-ui-monitor-report.json": {
+   "work_item": "ATS-008",
+   "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 4,
+   "limitations": 0,
+   "sha256": "e0645e8165579a48"
+  },
+  "docs/verification/ats009-source-campus-report.json": {
+   "work_item": "ATS-009",
+   "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 4,
+   "sha256": "e5f3fea723acdde4"
+  },
+  "docs/verification/ats010-report.json": {
+   "work_item": "ATS-010",
+   "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+   "working_tree_dirty": null,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 5,
+   "limitations": 0,
+   "sha256": "95e769da571da1c2"
+  },
+  "docs/verification/ats010-reverify-report.json": {
+   "work_item": "ATS-010",
+   "source_sha": "5746e7a15cafa81b1cdd5dcc1c6cb9a016cdba76",
+   "working_tree_dirty": false,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 3,
+   "sha256": "ca8abd2705699c38"
+  },
+  "docs/verification/ats011-skeleton-report.json": {
+   "work_item": "ATS-011",
+   "source_sha": "16b5226f195d23c4b3c9702186a4292f6c2d5591",
+   "working_tree_dirty": true,
+   "checks_total": 6,
+   "checks_failed": [
+    "auth_minimal_permissions_click_only",
+    "platform_adapters_and_gray",
+    "platform_constraints_and_adapter_controls"
+   ],
+   "criteria_bound": 3,
+   "limitations": 6,
+   "sha256": "119be5ef51950ad1"
+  },
+  "docs/verification/ats012-acceptance-report.json": {
+   "work_item": "ATS-012",
+   "source_sha": "2f148a8095963f78093378cd644a52674ff5615d",
+   "working_tree_dirty": false,
+   "checks_total": 6,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 6,
+   "sha256": "77b95871c1b331c2"
+  },
+  "docs/verification/ats012-candidate-flow-report-v2.json": {
+   "work_item": "ATS-012",
+   "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 4,
+   "limitations": 4,
+   "sha256": "2e09e9a5cad98284"
+  },
+  "docs/verification/ats012-candidate-flow-report-v3.json": {
+   "work_item": "ATS-012",
+   "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 4,
+   "limitations": 4,
+   "sha256": "40f895c3f5c5440d"
+  },
+  "docs/verification/ats012-candidate-flow-report-v4.json": {
+   "work_item": "ATS-012",
+   "source_sha": "cd6f3dd7ed6a0f0712552358c64661b940883db9",
+   "working_tree_dirty": true,
+   "checks_total": 9,
+   "checks_failed": [
+    "candidate_ui_acceptance"
+   ],
+   "criteria_bound": 3,
+   "limitations": 4,
+   "sha256": "b483cac93d6a9304"
+  },
+  "docs/verification/ats012-candidate-flow-report.json": {
+   "work_item": "ATS-012",
+   "source_sha": "dc8524e07e0da21bf5eaad6b9db3240f370f1351",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 4,
+   "sha256": "d1d496150cf4a299"
+  },
+  "docs/verification/ats012-pipeline-sync-fix-report.json": {
+   "work_item": "ATS-012",
+   "source_sha": "4d8212b69b4d59d68fa6474ce183f3402d25edd1",
+   "working_tree_dirty": true,
+   "checks_total": 7,
+   "checks_failed": [],
+   "criteria_bound": 0,
+   "limitations": 6,
+   "sha256": "e3b8d2a94dfba5dd"
+  },
+  "docs/verification/ats012-ui-drawer-fix-report.json": {
+   "work_item": "ATS-012",
+   "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+   "working_tree_dirty": true,
+   "checks_total": 8,
+   "checks_failed": [
+    "pipeline_board_still_stale",
+    "timeline_not_refreshed_after_lock"
+   ],
+   "criteria_bound": 1,
+   "limitations": 5,
+   "sha256": "5b9be5ed515a0074"
+  },
+  "docs/verification/ats012-ui-walkthrough-report.json": {
+   "work_item": "ATS-012",
+   "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+   "working_tree_dirty": true,
+   "checks_total": 13,
+   "checks_failed": [
+    "candidate_ui_acceptance",
+    "drawer_stage_freshness",
+    "department_label_display",
+    "timeline_actor_display"
+   ],
+   "criteria_bound": 3,
+   "limitations": 6,
+   "sha256": "ed05ab904d4fe5ed"
+  },
+  "docs/verification/ats013-report.json": {
+   "work_item": "ATS-013",
+   "source_sha": "08fe1e9727f6e53deb292db0a3627c835bc73b80",
+   "working_tree_dirty": true,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 10,
+   "limitations": 5,
+   "sha256": "81a3f93df3432ee5"
+  },
+  "docs/verification/ats014-acceptance-report.json": {
+   "work_item": "ATS-014",
+   "source_sha": "9cb6048a5ab70a5f23ec84d662d8ab9ac0c71a03",
+   "working_tree_dirty": false,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 6,
+   "limitations": 3,
+   "sha256": "6c8b663bbc3ff2a8"
+  },
+  "docs/verification/ats015-acceptance-report.json": {
+   "work_item": "ATS-015",
+   "source_sha": "b866f7cce43071f3911770d34eae3370a99f0994",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 6,
+   "limitations": 3,
+   "sha256": "e417eb17f68198aa"
+  },
+  "docs/verification/ats016-acceptance-report.json": {
+   "work_item": "ATS-016",
+   "source_sha": "016ff926ab2c5583532ad8de5189263e468cadec",
+   "working_tree_dirty": true,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 5,
+   "sha256": "0d38ba59649ea725"
+  },
+  "docs/verification/ats017-dingtalk-integration-report.json": {
+   "work_item": "ATS-017",
+   "source_sha": "dc15bf3de6a7302833a876a87883bd301bc768f2",
+   "working_tree_dirty": null,
+   "checks_total": 2,
+   "checks_failed": [
+    "authorized_tenant_incremental_and_exception_acceptance"
+   ],
+   "criteria_bound": 2,
+   "limitations": 0,
+   "sha256": "1e0186b3b8bd9b2d"
+  },
+  "docs/verification/ats019-report.json": {
+   "work_item": "ATS-019",
+   "source_sha": "3917d1af7f4a8213cf8afefa894d1a7a94dcd2bd",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 4,
+   "sha256": "7810689d05b39a5c"
+  },
+  "docs/verification/ats020-report.json": {
+   "work_item": "ATS-020",
+   "source_sha": "df8847a3a9ca66d6e384fac63f060b1690ac5ce8",
+   "working_tree_dirty": true,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 2,
+   "limitations": 6,
+   "sha256": "a8ea6990e4be1849"
+  },
+  "docs/verification/ats021-ai-report.json": {
+   "work_item": "ATS-021",
+   "source_sha": "a4c2f627c8b5241914a3d16a2c7b173d60be84b7",
+   "working_tree_dirty": true,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 4,
+   "limitations": 0,
+   "sha256": "d6cbe9c8d9b483f7"
+  },
+  "docs/verification/ats022-mail-fixture-report.json": {
+   "work_item": "ATS-022",
+   "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+   "working_tree_dirty": true,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 2,
+   "limitations": 0,
+   "sha256": "78392581dfbc9162"
+  },
+  "docs/verification/ats022-mail-polling-report.json": {
+   "work_item": "ATS-022",
+   "source_sha": "e9b3138599aa4987bce436c39ce0480fbccf50b6",
+   "working_tree_dirty": true,
+   "checks_total": 3,
+   "checks_failed": [],
+   "criteria_bound": 2,
+   "limitations": 0,
+   "sha256": "35f5830aa6c350bc"
+  },
+  "docs/verification/ats023-report.json": {
+   "work_item": "ATS-023",
+   "source_sha": "2c2d1b2f6ee15a9aa28f33bdeb0a8878c42c2b8e",
+   "working_tree_dirty": true,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 19,
+   "limitations": 4,
+   "sha256": "b6509a9e6f3f211f"
+  },
+  "docs/verification/ats024-acceptance-report.json": {
+   "work_item": "ATS-024",
+   "source_sha": "b92263d43273157e1af79ea5977b14044b307451",
+   "working_tree_dirty": false,
+   "checks_total": 9,
+   "checks_failed": [],
+   "criteria_bound": 7,
+   "limitations": 8,
+   "sha256": "06067ae7eaf9d8e4"
+  },
+  "docs/verification/ats025-traceability.json": {
+   "work_item": null,
+   "source_sha": null,
+   "working_tree_dirty": null,
+   "checks_total": 0,
+   "checks_failed": [],
+   "criteria_bound": 0,
+   "limitations": 0,
+   "sha256": "a4ee55eafd405766"
+  },
+  "docs/verification/ats026-readme-runbook-report.json": {
+   "work_item": "ATS-026",
+   "source_sha": "dae54b98f090fcd53f2d3cf7730a19a3d7d9dc24",
+   "working_tree_dirty": true,
+   "checks_total": 4,
+   "checks_failed": [],
+   "criteria_bound": 3,
+   "limitations": 2,
+   "sha256": "f21952fce9224446"
+  },
+  "docs/verification/intake002-project-plan-report.json": {
+   "work_item": "INTAKE-002",
+   "source_sha": "112eb3fff8ab61ca21647d4b166467bfe0f687fd269d44d3cb8e5c707f9273d4",
+   "working_tree_dirty": null,
+   "checks_total": 5,
+   "checks_failed": [],
+   "criteria_bound": 5,
+   "limitations": 3,
+   "sha256": "1d1186f51a675d4d"
+  }
+ },
+ "rows": [
+  {
+   "requirement": "AI-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "AI-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "DT-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-017",
+    "ATS-018",
+    "ATS-019",
+    "ATS-020",
+    "ATS-021",
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats017-dingtalk-integration-report.json",
+    "docs/verification/ats019-report.json",
+    "docs/verification/ats020-report.json",
+    "docs/verification/ats021-ai-report.json",
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-10",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ADM-9",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-024"
+   ],
+   "completed_tasks": [
+    "ATS-024"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-CAND-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ENT-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-022"
+   ],
+   "completed_tasks": [
+    "ATS-022"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ENT-10",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-009"
+   ],
+   "completed_tasks": [
+    "ATS-009"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ENT-3",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-4",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-5",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-6",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-7",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-8",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-ENT-9",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-1",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-10",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-11",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-2",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-3",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-4",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-5",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-6",
+   "state": "PARTIAL",
+   "tasks": [
+    "ATS-010",
+    "ATS-011"
+   ],
+   "completed_tasks": [
+    "ATS-010"
+   ],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-EXT-7",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-8",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-EXT-9",
+   "state": "TASK_OPEN",
+   "tasks": [
+    "ATS-011"
+   ],
+   "completed_tasks": [],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-INT-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-10",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-11",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014",
+    "ATS-020"
+   ],
+   "completed_tasks": [
+    "ATS-014",
+    "ATS-020"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json",
+    "docs/verification/ats020-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-INT-9",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-JOB-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-1",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-2",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-3",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-4",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-5",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-6",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-7",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-8",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-NTF-9",
+   "state": "DOC_ONLY",
+   "tasks": [
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015",
+    "ATS-019"
+   ],
+   "completed_tasks": [
+    "ATS-015",
+    "ATS-019"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json",
+    "docs/verification/ats019-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-OFR-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015"
+   ],
+   "completed_tasks": [
+    "ATS-015"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016",
+    "ATS-018"
+   ],
+   "completed_tasks": [
+    "ATS-016",
+    "ATS-018"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/ats-018-integration.md",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-ONB-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-POOL-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REF-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-009"
+   ],
+   "completed_tasks": [
+    "ATS-009"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REF-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-009"
+   ],
+   "completed_tasks": [
+    "ATS-009"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REF-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-009"
+   ],
+   "completed_tasks": [
+    "ATS-009"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REF-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-009"
+   ],
+   "completed_tasks": [
+    "ATS-009"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REQ-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-019"
+   ],
+   "completed_tasks": [
+    "ATS-019"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats019-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REQ-2",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-007"
+   ],
+   "completed_tasks": [
+    "ATS-007"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-REQ-4",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-5",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-6",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-7",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-8",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-REQ-9",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "FR-RPT-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-8",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "FR-RPT-9",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-023"
+   ],
+   "completed_tasks": [
+    "ATS-023"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-1",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-10",
+   "state": "PARTIAL",
+   "tasks": [
+    "ATS-010",
+    "ATS-011"
+   ],
+   "completed_tasks": [
+    "ATS-010"
+   ],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-11",
+   "state": "PARTIAL",
+   "tasks": [
+    "ATS-010",
+    "ATS-011"
+   ],
+   "completed_tasks": [
+    "ATS-010"
+   ],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-12",
+   "state": "PARTIAL",
+   "tasks": [
+    "ATS-010",
+    "ATS-011"
+   ],
+   "completed_tasks": [
+    "ATS-010"
+   ],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-13",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-019"
+   ],
+   "completed_tasks": [
+    "ATS-019"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats019-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-14",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-2",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-3",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-4",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-5",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-6",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-7",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-013"
+   ],
+   "completed_tasks": [
+    "ATS-013"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  {
+   "requirement": "NFR-8",
+   "state": "NO_TASK",
+   "tasks": [],
+   "completed_tasks": [],
+   "open_tasks": [],
+   "evidence": []
+  },
+  {
+   "requirement": "NFR-9",
+   "state": "PARTIAL",
+   "tasks": [
+    "ATS-010",
+    "ATS-011"
+   ],
+   "completed_tasks": [
+    "ATS-010"
+   ],
+   "open_tasks": [
+    "ATS-011"
+   ],
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  {
+   "requirement": "SEC-F1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "SEC-F2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "SEC-F3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "SEC-F4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-015",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-0",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-1",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012"
+   ],
+   "completed_tasks": [
+    "ATS-012"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-2",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012",
+    "ATS-014"
+   ],
+   "completed_tasks": [
+    "ATS-012",
+    "ATS-014"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json",
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-3",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-4",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-5",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  {
+   "requirement": "ST-6",
+   "state": "COVERED",
+   "tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "completed_tasks": [
+    "ATS-012",
+    "ATS-016"
+   ],
+   "open_tasks": [],
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json",
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  }
+ ],
+ "tasks": {
+  "INTAKE-001": {
+   "status": "completed",
+   "title": "Verify project goals, current state, and the next deliverable",
+   "evidence": []
+  },
+  "ATS-001": {
+   "status": "completed",
+   "title": "搭建 NestJS 后端骨架与 MySQL/Prisma 数据模型",
+   "evidence": []
+  },
+  "ATS-002": {
+   "status": "completed",
+   "title": "打通前端到后端的候选人/职位最小 API 链路",
+   "evidence": [
+    "docs/verification/ats002-report.json"
+   ]
+  },
+  "ATS-003": {
+   "status": "completed",
+   "title": "实现简历入场与异步解析 Mock 链路",
+   "evidence": []
+  },
+  "INTAKE-002": {
+   "status": "completed",
+   "title": "AWR 项目接管与全项目目标规划",
+   "evidence": [
+    "docs/verification/intake002-project-plan-report.json"
+   ]
+  },
+  "ATS-004": {
+   "status": "completed",
+   "title": "身份鉴权与三维权限基础",
+   "evidence": [
+    "docs/verification/ats004-auth-authorization-report.json"
+   ]
+  },
+  "ATS-005": {
+   "status": "completed",
+   "title": "附件私有存储、上传防护与生命周期",
+   "evidence": [
+    "docs/verification/ats005-attachment-storage-report.json"
+   ]
+  },
+  "ATS-006": {
+   "status": "completed",
+   "title": "工程运行约定、数据库迁移与 CI 门禁",
+   "evidence": []
+  },
+  "ATS-007": {
+   "status": "completed",
+   "title": "职位、HC、招聘需求与周期闭环",
+   "evidence": [
+    "docs/verification/ats007-requisition-cycle-report.json"
+   ]
+  },
+  "ATS-008": {
+   "status": "completed",
+   "title": "补齐简历入场 UI、批量导入与监控",
+   "evidence": [
+    "docs/verification/ats008-intake-ui-monitor-report.json"
+   ]
+  },
+  "ATS-009": {
+   "status": "completed",
+   "title": "简历来源记录与校园招聘投递门户",
+   "evidence": [
+    "docs/verification/ats009-source-campus-report.json"
+   ]
+  },
+  "ATS-010": {
+   "status": "completed",
+   "title": "通用浏览器导入 API 与任务审计",
+   "evidence": [
+    "docs/verification/ats010-report.json",
+    "docs/verification/ats010-reverify-report.json"
+   ]
+  },
+  "ATS-011": {
+   "status": "planned",
+   "title": "Chrome/Edge MV3 扩展与双平台适配",
+   "evidence": []
+  },
+  "ATS-012": {
+   "status": "completed",
+   "title": "九阶段候选人主链与筛选状态机",
+   "evidence": [
+    "docs/verification/ats012-acceptance-report.json"
+   ]
+  },
+  "ATS-013": {
+   "status": "completed",
+   "title": "人才库归档、激活与万级查询",
+   "evidence": [
+    "docs/verification/ats013-report.json"
+   ]
+  },
+  "ATS-014": {
+   "status": "completed",
+   "title": "面试排期、登记表与评价协同",
+   "evidence": [
+    "docs/verification/ats014-acceptance-report.json"
+   ]
+  },
+  "ATS-015": {
+   "status": "completed",
+   "title": "Offer 状态、OA 材料和背调流程",
+   "evidence": [
+    "docs/verification/ats015-acceptance-report.json"
+   ]
+  },
+  "ATS-016": {
+   "status": "completed",
+   "title": "待入职、确认入职与试用期闭环",
+   "evidence": [
+    "docs/verification/ats016-acceptance-report.json"
+   ]
+  },
+  "ATS-017": {
+   "status": "completed",
+   "title": "钉钉集成设计与组织身份正式接入",
+   "evidence": [
+    "docs/verification/ats017-dingtalk-integration-report.json"
+   ]
+  },
+  "ATS-018": {
+   "status": "completed",
+   "title": "钉钉日历与固定事件通知正式接入",
+   "evidence": [
+    "docs/ats-018-integration.md"
+   ]
+  },
+  "ATS-019": {
+   "status": "completed",
+   "title": "钉钉 OA 需求同步与录用审批对接",
+   "evidence": [
+    "docs/verification/ats019-report.json"
+   ]
+  },
+  "ATS-020": {
+   "status": "completed",
+   "title": "钉钉听记素材按权限读取",
+   "evidence": [
+    "docs/verification/ats020-report.json"
+   ]
+  },
+  "ATS-021": {
+   "status": "completed",
+   "title": "AI 三场景正式适配与人工复核",
+   "evidence": [
+    "docs/verification/ats021-ai-report.json"
+   ]
+  },
+  "ATS-022": {
+   "status": "completed",
+   "title": "真实邮箱轮询、附件获取与异常恢复",
+   "evidence": [
+    "docs/verification/ats022-mail-fixture-report.json",
+    "docs/verification/ats022-mail-polling-report.json"
+   ]
+  },
+  "ATS-023": {
+   "status": "completed",
+   "title": "工作台与可下钻招聘报表",
+   "evidence": [
+    "docs/verification/ats023-report.json"
+   ]
+  },
+  "ATS-024": {
+   "status": "completed",
+   "title": "业务设置与配置审计",
+   "evidence": [
+    "docs/verification/ats024-acceptance-report.json"
+   ]
+  },
+  "ATS-025": {
+   "status": "planned",
+   "title": "端到端验收、性能和发布运维准备",
+   "evidence": []
+  },
+  "ATS-026": {
+   "status": "completed",
+   "title": "README、运行手册与原型范围校正",
+   "evidence": [
+    "docs/verification/ats026-readme-runbook-report.json"
+   ]
+  }
+ }
+}

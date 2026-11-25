@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "work_item": "ATS-025",
+  "date": "2026-11-25",
+  "verified_at": 1795583907831,
+  "source_sha": "f9abf079e60917d4bb1d03928dbafeea28d1f8c8",
+  "working_tree_dirty": true,
+  "summary": "ATS-025 本期收尾产出记录，不是关闭报告。已完成：需求→任务→证据追溯矩阵（146 条）、全量本地质量门、12000 候选人规模下的查询与大附件实测、适配器退化实测、上线清单与 12 项发布前阻断项。五条验收标准全部未达成：密钥扫描本机未执行且并发竞态未测；性能阈值未确认；测试环境演练未做；业务验收人未指定；018/019 真实租户联调未做。任务保持 planned，不标记完成。",
+  "command": "python ats025-trace.py（生成追溯矩阵）; CREATE DATABASE talentflow_ats025_20261125; npm run db:validate; npm run db:migrate:deploy; npm run db:migrate:status; npm run db:seed; npm run typecheck/lint/test/test:e2e --prefix backend; npm run build; npm run build:api; npm run test:extension; Prisma createMany 写入 12000 候选人与 1200 人才库记录; APP_PORT=3100 node backend/dist/main.js; node ats025-perf.mjs（12 场景 × 20 次）; 8MB/19MB/21MB 附件上传实测; DINGTALK_CALENDAR_MODE=live-readonly 且清空凭据下的排期退化实测",
+  "scope": [
+    "docs/ats-025-追溯矩阵.md",
+    "docs/ats-025-上线清单.md",
+    "docs/verification/ats025-traceability.json",
+    "extension/src/errors.js（413 → ATTACHMENT_INVALID 映射）",
+    "extension/test/errors.test.mjs",
+    "talentflow_ats025_20261125（临时数据库，实测后删除）"
+  ],
+  "checks": [
+    {
+      "name": "quality_gates",
+      "passed": false,
+      "criteria": [
+        "类型/Lint/单元/API/Worker/契约/E2E、各端构建、迁移和密钥检查通过；状态机/权限覆盖分支，有失败降级与并发幂等用例。"
+      ],
+      "details": "已通过：db:validate 有效；24 个迁移全部应用且 status up to date；typecheck 与 lint 退出码 0（2 条既有 warning）；后端单测 47 文件通过 6 跳过、321 项通过 36 跳过；e2e 1 文件 1 项通过；web 与 api 构建通过且 dist/main.js 与 dist/worker.js 均存在；扩展 36 项通过。状态机与权限拒绝分支、失败降级、幂等重放均有实测。判定未通过的原因：一、密钥检查（gitleaks）本机未安装、本轮未执行，只能由 CI 的 secret-scan 承担，发布前须确认最近一次 CI 通过；二、并发幂等只验证了版本不匹配被拒与同 requestId 重放，未制造同时提交的竞态窗口，缺并发用例。"
+    },
+    {
+      "name": "performance_measurement",
+      "passed": false,
+      "criteria": [
+        "万级候选人/人才库查询、大附件、队列及适配器退化有测量；性能阈值在测试前确认，无实测不得宣称达标。"
+      ],
+      "details": "已测量三类：12000 候选人 / 1200 人才库 / 8 职位下 12 个查询场景各预热 2 次后测 20 次，列表首页 p50 29.2ms、深分页 p50 40.9ms、关键词检索 p50 46.9ms、人才库列表 p50 13.9ms；报表为热点，漏斗 p95 287.9ms、原因 p95 239.2ms、渠道 p95 226.0ms。大附件 8MB 201/p50 43.3ms、19MB 201/p50 71.4ms、21MB 413 拒绝。适配器退化：live-readonly 且无凭据时创建面试仍 201，显式返回 availabilityStatus=UNAVAILABLE，p50 17.0ms，8 条降级日志，主流程不阻断。判定未通过的原因：一、性能阈值未由用户确认，本报告只列实测值，不宣称达标；二、队列吞吐与积压未测量；三、测量在单机单并发本机 MySQL 上进行，不代表生产或并发表现。"
+    },
+    {
+      "name": "test_environment_and_release_drill",
+      "passed": false,
+      "criteria": [
+        "测试环境验证 HTTPS/域名白名单、脱敏日志、告警、备份恢复与生命周期；发布、回滚、部署文档及演练证据完整。"
+      ],
+      "details": "文档已产出：docs/ats-025-上线清单.md 含发布步骤、回滚步骤（并说明本仓库迁移只有前向脚本、涉及删列改约束必须先从备份恢复）、测试环境必验项与已知卫生项。判定未通过的原因：没有可用测试环境，HTTPS/域名白名单、告警、备份恢复与 retention:purge 生命周期演练均未执行，演练证据缺失。保留期限具体值仍待业务确认。"
+    },
+    {
+      "name": "business_acceptance_and_traceability",
+      "passed": false,
+      "criteria": [
+        "业务验收人和样本已确认，全部必需 FR/NFR 有验收证据，阻断缺陷关闭；排期、环境和生产发布须由用户另行安排。"
+      ],
+      "details": "追溯矩阵已建立：PRD 需求全集 146 条，COVERED 99、NO_TASK 23、TASK_OPEN 10、DOC_ONLY 9、PARTIAL 5。判定未通过的原因：一、业务验收人与样本未确认；二、23 条需求无任务或目标引用、9 条（FR-NTF-1～9）承接任务 ATS-018 只登记了设计文档 docs/ats-018-integration.md 而非验收报告；三、12 项发布前阻断项未关闭。矩阵中的 COVERED 只表示有已完成任务与登记证据，不等于真实环境已验收。"
+    },
+    {
+      "name": "inherited_dingtalk_integration",
+      "passed": false,
+      "criteria": [
+        "承接 ATS-018 未完成的响应回读、拒绝提醒、同步失败管理和补偿、每日新建限额及授权测试企业真实联调，以及 ATS-019 两类 OA 审批模板的真实联调（招聘需求审批回调验签与重试、录用审批发起、实例状态回读，含登录态浏览器走查与多 HR 并发同步实测）；相关缺陷关闭并取得证据后才可通过发布验收。真实邀请和通知仍须遵循用户禁发要求与后续授权。"
+      ],
+      "details": "ATS-018 的四项功能缺口已于本轮补齐并提交 16b5226：responseStatus 回读（tentative/needsAction 不算占用、不降级本地应答）、拒绝提醒（按 面试:拒绝人 去重、只触达内部人事）、失败管理入口（operations 列出 calendarSyncFailures，仅 FAILED 可重试、UNKNOWN 拒绝）、每日新建限额（eventCreatedAt 列 + Asia/Shanghai 自然日窗口，默认 100 可配，超限保留本地安排）。13 项新单测与隔离库端到端通过。判定未通过的原因：全部用 Mock 客户端验证，未对真实租户发起任何调用；ATS-019 两类 OA 模板真实联调、登录态走查与多 HR 并发同步实测均未做。遵守用户禁发真实邀请与通知的要求。"
+    },
+    {
+      "name": "traceability_matrix_built",
+      "passed": true,
+      "criteria": [],
+      "details": "从 PRD 提取需求全集并展开 FR-XXX-1～8 形式的范围引用，同时映射目标级前缀引用（如 FR-JOB、FR-REQ）到其下属任务，避免把引用写法差异误判成未覆盖。区分 COVERED / DOC_ONLY / NO_EVIDENCE / TASK_OPEN / PARTIAL / NO_TASK 六态，输出 JSON 与 Markdown 两份可核对产物。"
+    },
+    {
+      "name": "defects_and_gaps_recorded",
+      "passed": true,
+      "criteria": [],
+      "details": "本轮新记录：ATS-018 以设计文档而非验收报告作为证据；重复 identitySubject 创建用户返回 500 而非 409（ATS-004 面）；本机 3000 端口开发服务占用 query engine DLL 导致 db:generate EPERM、client 与 schema 存在 eventCreatedAt 字段漂移；传输层 413 不带契约错误码（已在扩展侧补映射并加测试）；24 条历史待应用提案不可直接应用。全部写入上线清单阻断项。"
+    }
+  ],
+  "limitations": [
+    "性能数据为单机、单并发、本机 MySQL、合成数据（Prisma createMany 批量写入）下的实测，不代表生产环境或并发场景；报表三项为热点，定阈值时应优先讨论。",
+    "队列吞吐与积压、并发竞态窗口、备份恢复与生命周期演练、HTTPS 与告警验证均未执行。",
+    "密钥扫描本机未安装 gitleaks，未执行；依赖 CI 的 secret-scan 作业。",
+    "追溯矩阵的 COVERED 判定只依据台账引用与登记证据路径，不验证报告内容是否真的覆盖该条需求；DOC_ONLY 与 NO_TASK 是引用与证据登记层面的缺口，需要人工补齐。",
+    "本任务依赖 ATS-011，而 ATS-011 本期不关闭，因此 ATS-025 同样保持 planned，不得据本报告标记完成。",
+    "实测结束后临时库已删除，独立 API 进程已停止；默认 3000/4173 上他人遗留的开发服务全程未触碰。"
+  ]
+}
