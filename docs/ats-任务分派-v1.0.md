@@ -1,5 +1,10 @@
 # ATS 任务分派 v1.0（2026-11-20）
 
+> **2026-11-25 起本文件转为历史记录。** 用户收紧项目，Codex / CodeBuddy / Trae 不再参与，剩余工作全部由 Claude Code 单人承接。
+> 下文第 3 节的三方车道、第 4 节的启动指令、第 5 节除「远端代理」「台账写法」外的并行协作规则，都只适用于当时的多智能体阶段，**不再是现行约定**。
+> 现行状态与收尾范围以台账 `.awr/intake/work-ledger.yaml` 的 owner 与 next_action 为准。
+> 仍然生效的通用约定：远端操作走本机代理（见 AGENTS.md）、台账禁用 YAML 块标量、证据 command/scope 逐字取自报告对象、关闭走 `evidence add → prepare-completion → work progress → work complete`。
+
 分派人：Claude Code（用户于 2026-11-20 明确授权“你来做任务分派”）。
 执行方：本机编程智能体 **Codex**、**CodeBuddy**、**Trae**；Claude Code 负责统筹、交叉复核与最终验收汇总。
 权威台账：`.awr/intake/work-ledger.yaml`（AWR source r43）。本文件是分派说明，任务状态、依赖与验收条件以台账为准。

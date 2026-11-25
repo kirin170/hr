@@ -254,7 +254,7 @@ work_items:
 - id: ATS-011
   kind: delivery
   status: planned
-  owner: Trae
+  owner: Claude Code
   goal: ats-intake
   priority: P1
   title: "Chrome/Edge MV3 扩展与双平台适配"
@@ -264,7 +264,7 @@ work_items:
   - "先对单平台做灰度验证，再支持 BOSS/猎聘各自适配器；SPA/DOM 变化、附件失败、重复和登录失效有反馈。"
   - "平台访问方式与使用约束先验证；适配器独立开关、版本、灰度和回滚，不影响邮箱与手工入口。"
   depends_on: [ATS-010]
-  next_action: "已预派给 Trae（第3批，待 ATS-010 完成且平台样本与企业分发方案验证通过后启动）：先验证脱敏页面样本、附件访问与分发方式，再做单平台灰度适配，然后扩展另一平台；未通过验证的平台保持显式未交付，不得默认双平台已支持。"
+  next_action: "2026-11-25 用户收紧项目并确认范围：本任务改由 Claude Code 承接，只做平台无关部分——MV3 骨架、最小域名权限、短期令牌授权/刷新/撤销、用户主动点击才导入、对接 ATS-010 已交付的 202 任务与 requestId 幂等、标准错误码映射、适配器接口与独立开关/版本/灰度/回滚机制，用本地 fixture 页面实测。BOSS/猎聘适配器不实现：缺脱敏页面样本与企业分发方案，禁止凭猜测写选择器。两个平台显式记未交付，本任务保持未关闭。"
 - id: ATS-012
   kind: delivery
   status: completed
@@ -459,7 +459,7 @@ work_items:
 - id: ATS-024
   kind: delivery
   status: planned
-  owner: CodeBuddy
+  owner: Claude Code
   goal: ats-operations
   priority: P1
   title: "业务设置与配置审计"
@@ -473,7 +473,7 @@ work_items:
   - "配置按管理基础、业务配置、集成管理分层交付；复用 ATS-004/017、ATS-005、ATS-010/011、ATS-018/019/020/021/022 的能力，运维验证由 ATS-025 汇总；保留期限具体值沿用上线确认要求，开发默认值不冒充最终结论。"
   - "承接并修复 ATS-012 遗留的三处显示缺陷（2026-11-23 用户决定并入本任务）：一、职位树、候选人列表、筛选面板与分配职位对话框显示真实部门名称而非原始部门 ID，服务端返回 departmentName 且前端不再退回 ID；二、候选人时间线显示操作人姓名而非用户 ID；三、候选人抽屉内锁定/解锁后时间线即时刷新，无需关闭重开。三项均需接口证据与浏览器实测，不得以静态审查替代。"
   depends_on: [ATS-004, ATS-007, ATS-012]
-  next_action: "2026-11-24 CodeBuddy 进展：管理后台前端六个分区（业务设置/通知/组织权限/接入配置/运行监控/审计）、用户菜单与个人通知偏好、有效配置驱动的表单必填与渠道/标签字典、部门名称回退链已落地；ATS-012 三处遗留已在代码修复（toCandidateDto 经 resolveDepartmentNames 返回真实部门名、时间线经 resolveUserNames 显示操作人姓名、CandidateDrawer 的 toggleLock 后重新拉取时间线）。新增 backend/src/settings/settings.service.spec.ts（9 用例，覆盖固定必填不可取消、版本冲突、字典校验、原因集合唯一性），前端 tsc+vite build、后端 prisma generate+tsc、vitest 174 用例通过。剩余：邮箱/钉钉/插件/AI/通知等集成模块随 ATS-018～022 接入补齐，ATS-012 三项需接口证据加浏览器实测，最后登记 AWR 证据并按验收逐条关闭。"
+  next_action: "2026-11-25 用户收紧项目，其他智能体不再参与，本任务改由 Claude Code 接管收口。实现已落地不要重写：Admin.tsx 八分区、backend/src/settings/ 13 个文件、ATS-012 三处显示缺陷已在代码修复。剩余为取证与关闭：七条验收逐条实测（含只读角色越权 403、脱敏审计与受控导出、配置不可绕过流程规则、字典停用不破坏历史、集成状态与 011 未接入显式标注），第 7 条三处缺陷需接口证据加浏览器实测。出一份覆盖全部七条的报告后按 evidence add → prepare-completion → work progress → work complete 关闭。"
 - id: ATS-025
   kind: delivery
   status: planned
