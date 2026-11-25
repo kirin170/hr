@@ -5,6 +5,7 @@ import { NotificationPreferenceService } from './notification-preference.service
 import { OperationsService } from './operations.service.js';
 import { ReasonSettingsService } from './reason-settings.service.js';
 import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
+import { InterviewCalendarSyncService } from '../dingtalk/interview-calendar-sync.service.js';
 import { SettingsController } from './settings.controller.js';
 
 /**
@@ -20,6 +21,7 @@ import { SettingsController } from './settings.controller.js';
     FieldConfigService,
     NotificationPreferenceService,
     NotificationOutboxService,
+    InterviewCalendarSyncService,
     OperationsService,
   ],
   exports: [ReasonSettingsService, DictSettingsService, FieldConfigService, NotificationPreferenceService],

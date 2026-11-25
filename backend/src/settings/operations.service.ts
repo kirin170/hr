@@ -5,6 +5,7 @@ import { redisConnection } from '../ai/parse.queue.js';
 import { maskText } from '../audit/audit.mask.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { NOTIFICATION_EVENTS } from './settings-shared.js';
+import { InterviewCalendarSyncService } from '../dingtalk/interview-calendar-sync.service.js';
 
 export type ServiceStatus = 'UP' | 'DOWN' | 'NOT_CONFIGURED';
 
@@ -26,7 +27,7 @@ const iso = (value: Date | null | undefined) => value?.toISOString() ?? null;
 export class OperationsService {
   private readonly logger = new Logger(OperationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly calendarSync: InterviewCalendarSyncService) {}
 
   async snapshot() {
     const now = new Date();
@@ -45,6 +46,7 @@ export class OperationsService {
       aiCounts,
       retentionRuns,
       notificationSent,
+      calendarFailures,
     ] = await Promise.all([
       this.databaseStatus(),
       this.redisStatus(),
@@ -97,6 +99,7 @@ export class OperationsService {
         where: { createdAt: { gte: dayAgo } },
         _count: { _all: true },
       }),
+      this.calendarSync.failures(),
     ]);
 
     const dingtalkConfigured = ['DINGTALK_CLIENT_ID', 'DINGTALK_CLIENT_SECRET', 'DINGTALK_REDIRECT_URI']
@@ -204,6 +207,15 @@ export class OperationsService {
           errorMessage: safeError(task.errorMessage),
           createdAt: iso(task.createdAt),
           completedAt: iso(task.completedAt),
+        })),
+        calendarSyncFailures: calendarFailures.map((row) => ({
+          interviewId: row.interviewId,
+          status: row.status,
+          attempts: row.attempts,
+          errorCode: row.lastError,
+          updatedAt: iso(row.updatedAt),
+          // 只有明确失败可人工重试；UNKNOWN 表示远端可能已写入，不得自动重发
+          retryable: row.status === 'FAILED',
         })),
         aiFailures: aiFailures.map((run) => ({
           id: run.id,

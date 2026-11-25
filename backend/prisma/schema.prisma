@@ -1278,6 +1278,8 @@ model InterviewCalendarSync {
   organizerUnionId  String?
   createToken       String
   eventId           String?
+  /// 首次成功创建远端日程的时间；用于按组织者统计每日新建量，改期与取消不计入
+  eventCreatedAt    DateTime?
   desiredVersion    Int       @default(1)
   claimedVersion    Int?
   appliedVersion    Int       @default(0)

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   HttpCode,
@@ -18,6 +19,7 @@ import { NotificationPreferenceService } from './notification-preference.service
 import { OperationsService } from './operations.service.js';
 import { ReasonSettingsService } from './reason-settings.service.js';
 import { NotificationOutboxService } from '../dingtalk/notification-outbox.service.js';
+import { InterviewCalendarSyncService } from '../dingtalk/interview-calendar-sync.service.js';
 import { FIXED_RULES, NOTIFICATION_EVENTS, type AuditContext } from './settings-shared.js';
 
 function objectBody(body: unknown): Record<string, unknown> {
@@ -43,6 +45,7 @@ export class SettingsController {
     private readonly preferences: NotificationPreferenceService,
     private readonly operations: OperationsService,
     private readonly deliveries: NotificationOutboxService,
+    private readonly calendarSync: InterviewCalendarSyncService,
   ) {}
 
   private ctx(request: AuthenticatedRequest): AuditContext {
@@ -209,6 +212,16 @@ export class SettingsController {
   @RequirePermission('setting:manage')
   @AuditAction('setting.notification.deliveries.retry', 'NotificationDelivery')
   retryNotification(@Param('id') id: string) { return this.deliveries.retryFailed(id); }
+
+  /** 日历同步失败的人工补偿入口；结果未知（UNKNOWN）的同步不允许重发，避免重复建日程。 */
+  @Post('calendar-sync/:interviewId/retry')
+  @RequirePermission('setting:manage')
+  @AuditAction('setting.calendar.sync.retry', 'InterviewCalendarSync')
+  async retryCalendarSync(@Param('interviewId') interviewId: string) {
+    const ok = await this.calendarSync.retryFailed(interviewId);
+    if (!ok) throw new ConflictException('仅明确失败的日历同步可以重试；结果未知的同步不能自动重发');
+    return { ok: true };
+  }
 
   @Get('operations')
   @RequirePermission('setting:read')
