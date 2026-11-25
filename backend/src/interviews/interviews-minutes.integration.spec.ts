@@ -3,6 +3,7 @@ import { DataScope } from '@prisma/client';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AuditModule } from '../audit/audit.module.js';
+import type { AiRunService } from '../ai/ai-run.service.js';
 import { AccessTokenService } from '../auth/access-token.service.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { AuthorizationModule } from '../auth/authorization.module.js';
@@ -70,7 +71,13 @@ describe.skipIf(!isolated)('ATS-020 isolated MySQL integration', () => {
   const outsider = actor('ats020_out', DataScope.SELF, ['candidate:read']);
   const noIdentity = actor('ats020_noid', DataScope.ALL, ['candidate:read']);
   const minutes = new FakeMinutesSource(deniedInterviewer.id);
-  const service = new InterviewTranscriptsService(db, auth, new TimelineService(db), minutes);
+  const service = new InterviewTranscriptsService(
+    db,
+    auth,
+    new TimelineService(db),
+    minutes,
+    {} as unknown as AiRunService,
+  );
   const interviews = new InterviewsService(db, auth, new MockInterviewNotifications(db), new MockInterviewCalendar(db));
 
   let interviewId = '';

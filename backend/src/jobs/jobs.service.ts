@@ -54,6 +54,8 @@ export type JobDto = {
   interviewPlanId: string | null;
   channel: string | null;
   isVirtual: boolean;
+  /** 职位级 AI 评估开关（ATS-021 / AI-3） */
+  aiEvalEnabled: boolean;
   requisitionId: string | null;
   requisition: { id: string; oaApprovalId: string; title: string; status: string } | null;
   headcountFull: boolean;
@@ -272,6 +274,16 @@ export class JobsService {
         current.isVirtual,
       );
     }
+    if ('aiEvalEnabled' in input) {
+      assign(
+        'aiEvalEnabled',
+        this.booleanFlag(
+          typeof input.aiEvalEnabled === 'boolean' ? String(input.aiEvalEnabled) : input.aiEvalEnabled,
+          current.aiEvalEnabled,
+        ),
+        current.aiEvalEnabled,
+      );
+    }
     if ('status' in input) {
       if (input.status !== JobStatus.ACTIVE && input.status !== JobStatus.CLOSED) {
         throw new BadRequestException('状态必须为 ACTIVE 或 CLOSED');
@@ -377,6 +389,7 @@ export class JobsService {
     interviewPlanId: string | null;
     sources: string | null;
     isVirtual: boolean;
+    aiEvalEnabled: boolean;
     requisitionId: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -398,6 +411,7 @@ export class JobsService {
       interviewPlanId: job.interviewPlanId,
       channel: job.sources,
       isVirtual: job.isVirtual,
+      aiEvalEnabled: job.aiEvalEnabled,
       requisitionId: job.requisitionId,
       requisition: job.requisition ?? null,
       headcountFull,

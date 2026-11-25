@@ -21,6 +21,8 @@ model Job {
   interviewPlanId String?
   sources        String?
   isVirtual      Boolean  @default(false)
+  /// AI 评估职位级开关（AI-3 可关闭）；关闭后不再发起简历/面试评估
+  aiEvalEnabled  Boolean  @default(true)
   requisitionId  String?  @unique
   requisition    JobRequisition? @relation(fields: [requisitionId], references: [id])
   candidates     Candidate[]
@@ -590,10 +592,27 @@ model AIRun {
   errorMessage String?
   /// INTERVIEW_EVAL 关联的面试轮次（ATS-020 素材交付）；简历类任务为空
   interviewId String?
+  /// 实际执行的 provider 与模型（ATS-021：模型/成本/延迟/能力据实记录）
+  providerName     String?
+  modelName        String?
+  templateVersion  String?
+  latencyMs        Int?
+  promptTokens     Int?
+  completionTokens Int?
+  costMicros       Int?
+  /// 输出契约校验告警（只记录字段名与原因，不保存原文）
+  validation  Json?
+  /// 人工编辑留痕（AI-1：草稿可编辑后显式确认）
+  editedBy    String?
+  editedAt    DateTime?
+  /// 同一评估目标的幂等键：避免重复点击产生重复调用与重复计费
+  dedupeKey   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([interviewId, createdAt])
+  @@index([type, createdAt])
+  @@index([dedupeKey, status])
   @@map("ai_runs")
 }
 

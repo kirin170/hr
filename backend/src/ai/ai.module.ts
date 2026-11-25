@@ -1,22 +1,29 @@
 import { Module } from '@nestjs/common';
+import { AuthorizationModule } from '../auth/authorization.module.js';
+import { AiConfigService } from './ai-config.service.js';
+import { AiProviderRouter } from './ai-provider.router.js';
 import { AiRunController } from './ai-run.controller.js';
 import { AiRunService } from './ai-run.service.js';
-import { MockModelProvider } from './mock-model.provider.js';
-import { MODEL_PROVIDER } from './model-provider.js';
+import { AiEvalWorkerService } from './ai-run.worker.js';
+import { AiSettingsController } from './ai-settings.controller.js';
+import { AiEvalQueueService } from './eval.queue.js';
 import { ParseQueueService } from './parse.queue.js';
 import { ParseWorkerService } from './parse.worker.js';
-import { AuthorizationModule } from '../auth/authorization.module.js';
+import { ResumeContentLoader } from './resume-content.loader.js';
 
 @Module({
   imports: [AuthorizationModule],
-  controllers: [AiRunController],
+  controllers: [AiRunController, AiSettingsController],
   providers: [
-    MockModelProvider,
-    { provide: MODEL_PROVIDER, useExisting: MockModelProvider },
+    AiConfigService,
+    AiProviderRouter,
+    ResumeContentLoader,
     AiRunService,
+    AiEvalQueueService,
+    AiEvalWorkerService,
     ParseQueueService,
     ParseWorkerService,
   ],
-  exports: [AiRunService, ParseQueueService],
+  exports: [AiRunService, AiConfigService, ParseQueueService],
 })
 export class AiModule {}

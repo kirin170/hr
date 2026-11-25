@@ -8,6 +8,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { AiRunStatus, AiRunType, Prisma, TranscriptMaterialSource } from '@prisma/client';
+import { AiRunService } from '../ai/ai-run.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { AuthorizationService } from '../auth/authorization.service.js';
 import {
@@ -48,6 +49,7 @@ export class InterviewTranscriptsService {
     private readonly auth: AuthorizationService,
     private readonly timeline: TimelineService,
     @Inject(MINUTES_SOURCE) private readonly minutes: MinutesSource,
+    private readonly aiRuns: AiRunService,
   ) {}
 
   /** 租户能力探测：只报告状态与错误码，不返回任何素材内容 */
@@ -209,10 +211,38 @@ export class InterviewTranscriptsService {
     if (!material) throw new BadRequestException('请先读取或录入听记素材');
     if (!material.originalText && !material.summary) throw new BadRequestException('听记素材为空，无法发起评估');
 
+    await this.aiRuns.assertEvalAllowed(interview.jobId, 'INTERVIEW_EVAL');
     const job = await this.db.job.findUnique({ where: { id: interview.jobId }, select: { requirements: true } });
     if (!job?.requirements?.trim()) {
       throw new BadRequestException('职位未填写招聘要求，无法发起面试评估（AI-5）');
     }
+
+    // 同一面试轮次 + 同一素材重复点击时复用任务，避免重复调用与重复计费
+    const dedupeKey = `INTERVIEW_EVAL:${interview.id}:${material.id}`;
+    const existing = await this.db.aIRun.findFirst({
+      where: {
+        dedupeKey,
+        status: { in: [AiRunStatus.PENDING, AiRunStatus.RUNNING, AiRunStatus.SUCCESS] },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (existing) {
+      const queued =
+        existing.status === AiRunStatus.PENDING ? await this.aiRuns.enqueueEvalRun(existing.id) : false;
+      return {
+        airRun: {
+          id: existing.id,
+          type: existing.type,
+          status: existing.status,
+          isDraft: existing.isDraft,
+          createdAt: existing.createdAt,
+        },
+        input: existing.inputRefs ? JSON.parse(existing.inputRefs) : null,
+        deduplicated: true,
+        queued,
+      };
+    }
+
     const feedback = await this.db.interviewFeedback.findMany({
       where: { interviewId: interview.id },
       orderBy: { createdAt: 'asc' },
@@ -253,6 +283,7 @@ export class InterviewTranscriptsService {
         status: AiRunStatus.PENDING,
         isDraft: true,
         interviewId: interview.id,
+        dedupeKey,
         inputRefs: JSON.stringify(payload),
       },
     });
@@ -262,9 +293,12 @@ export class InterviewTranscriptsService {
       linkId: link.id,
       scenario: 'INTERVIEW_EVAL',
     });
+    const queued = await this.aiRuns.enqueueEvalRun(run.id);
     return {
       airRun: { id: run.id, type: run.type, status: run.status, isDraft: run.isDraft, createdAt: run.createdAt },
       input: payload,
+      deduplicated: false,
+      queued,
     };
   }
 

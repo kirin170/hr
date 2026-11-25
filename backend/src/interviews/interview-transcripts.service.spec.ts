@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DataScope } from '@prisma/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AiRunService } from '../ai/ai-run.service.js';
 import type { AuthorizationService } from '../auth/authorization.service.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import type { MinutesSource } from '../dingtalk/dingtalk-minutes.client.js';
@@ -74,13 +75,21 @@ const makeService = (overrides: Partial<MinutesSource> = {}) => {
 
     job: { findUnique: vi.fn().mockResolvedValue({ requirements: '五年以上 Java 经验' }) },
     interviewFeedback: { findMany: vi.fn().mockResolvedValue([{ interviewerId: 'i-1', conclusion: 'PASS', content: '基础扎实' }]) },
-    aIRun: { create: vi.fn().mockResolvedValue({ id: 'run-1', type: 'INTERVIEW_EVAL', status: 'PENDING', isDraft: true, createdAt: new Date() }), findMany: vi.fn().mockResolvedValue([]) },
+    aIRun: {
+      create: vi.fn().mockResolvedValue({ id: 'run-1', type: 'INTERVIEW_EVAL', status: 'PENDING', isDraft: true, createdAt: new Date() }),
+      findMany: vi.fn().mockResolvedValue([]),
+      findFirst: vi.fn().mockResolvedValue(null),
+    },
   };
   const auth = {
     scopesFor: vi.fn().mockReturnValue([DataScope.ALL]),
     canAccessCandidate: vi.fn().mockResolvedValue(true),
   };
   const timeline = { record: vi.fn().mockResolvedValue(undefined) };
+  const aiRuns = {
+    assertEvalAllowed: vi.fn().mockResolvedValue(undefined),
+    enqueueEvalRun: vi.fn().mockResolvedValue(true),
+  };
   const fetchMock = vi.fn().mockResolvedValue({
     minutesId: 'a1b2c3d4e5f60718',
     title: '一面听记',
@@ -100,8 +109,9 @@ const makeService = (overrides: Partial<MinutesSource> = {}) => {
       auth as unknown as AuthorizationService,
       timeline as unknown as TimelineService,
       minutes,
+      aiRuns as unknown as AiRunService,
     ),
-    mocks: { prisma, auth, timeline, minutes, fetchMock, capabilityMock },
+    mocks: { prisma, auth, timeline, minutes, aiRuns, fetchMock, capabilityMock },
   };
 };
 

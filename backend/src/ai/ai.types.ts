@@ -27,6 +27,7 @@ export interface ParsedResume {
 }
 
 export interface ParseResumeInput {
+  schema?: string;
   intakeId: string;
   resumeFileId: string | null;
   fileName: string;
@@ -36,7 +37,32 @@ export interface ParseResumeInput {
   mockOutcome?: MockOutcome;
 }
 
+/**
+ * 简历内容：文本（PDF/Word/纯文本抽取）或多模态图片。
+ * 图片走 provider 的 vision 能力；无 OCR 时不落文本，避免伪造解析结果。
+ */
+export interface ResumeContent {
+  text: string | null;
+  imageDataUrl: string | null;
+  mimeType: string;
+  sourceRef: string;
+  truncated: boolean;
+  textHash: string;
+}
+
+/** 一次调用的成本/延迟/能力记录（ATS-021 据实记录） */
+export interface AiUsage {
+  provider: string;
+  model: string;
+  latencyMs: number;
+  promptTokens: number | null;
+  completionTokens: number | null;
+  costMicros: number | null;
+}
+
 export interface ResumeParseResult {
   output: ParsedResume;
   confidence: Record<string, number>;
+  warnings?: { path: string; code: string; message: string }[];
+  usage?: AiUsage;
 }
