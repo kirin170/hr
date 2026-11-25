@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { IdentityProvider } from '@prisma/client';
-import { AuditAction, PublicRoute } from './auth.decorators.js';
+import { AuditAction, PublicRoute, RateLimit } from './auth.decorators.js';
 import type { AuthenticatedRequest } from './auth.types.js';
 import { AuthService } from './auth.service.js';
 
@@ -22,6 +22,7 @@ export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
   @Post('bootstrap')
+  @RateLimit(10, 60_000)
   @Header('Cache-Control', 'no-store')
   @AuditAction('auth.initial_admin.bootstrap', 'User')
   async bootstrap(@Body() body: Record<string, unknown> = {}) {
@@ -57,6 +58,7 @@ export class AuthController {
   }
 
   @Post('local')
+  @RateLimit(20, 60_000)
   @Header('Cache-Control', 'no-store')
   @AuditAction('auth.local_login', 'User')
   async loginLocal(
@@ -82,6 +84,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @RateLimit(60, 60_000)
   @Header('Cache-Control', 'no-store')
   @AuditAction('auth.refresh', 'RefreshSession')
   async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {

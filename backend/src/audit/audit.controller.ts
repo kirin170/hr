@@ -85,7 +85,7 @@ export class AuditController {
     actionPrefix?: string;
   }) {
     for (const [name, value] of Object.entries(input)) {
-      if (value !== undefined && !/^[\w.:\-]{1,191}$/.test(value)) {
+      if (value !== undefined && !/^[\w.:-]{1,191}$/.test(value)) {
         throw new BadRequestException(`${name} 筛选值无效`);
       }
     }

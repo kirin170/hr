@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
+  AllowSystemToken,
   AuditAction,
   CurrentUser,
   RequirePermission,
@@ -62,6 +63,7 @@ export class BrowserImportController {
 
   /** 创建导入任务：返回任务资源（同步完成落库与投递解析），同 requestId 幂等 */
   @Post('tasks')
+  @AllowSystemToken('BROWSER_IMPORT')
   @RequirePermission('intake:manage')
   @AuditAction('import.task_create', 'BrowserImportTask')
   @UseInterceptors(FileInterceptor('resume', { limits: { fileSize: MAX_RESUME_BYTES } }))
@@ -76,6 +78,7 @@ export class BrowserImportController {
 
   /** 任务查询：只允许任务所有者读取 */
   @Get('tasks/:taskId')
+  @AllowSystemToken('BROWSER_IMPORT')
   @RequirePermission('intake:manage')
   @AuditAction('import.task_read', 'BrowserImportTask')
   async getTask(@Param('taskId') taskId: string, @CurrentUser() actor: AuthenticatedUser) {
@@ -84,6 +87,7 @@ export class BrowserImportController {
 
   /** 操作者任务列表（审计视图） */
   @Get('tasks')
+  @AllowSystemToken('BROWSER_IMPORT')
   @RequirePermission('intake:manage')
   @AuditAction('import.task_list', 'BrowserImportTask')
   async listTasks(

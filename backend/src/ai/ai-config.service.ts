@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { AiRunStatus, AiRunType } from '@prisma/client';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { assertSafeOutboundUrl, isLocalOrTestEnv } from '../common/outbound-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuditContext } from '../settings/settings-shared.js';
 import { writeAudit } from '../settings/settings-shared.js';
@@ -455,6 +456,17 @@ function mergeEndpoint(
   if ('baseUrl' in patch) {
     const url = textValue(patch.baseUrl, `routing.${slot}.baseUrl`);
     if (url) assertUrl(url, `routing.${slot}.baseUrl`);
+    if (
+      url !== base.baseUrl &&
+      Boolean(process.env[base.apiKeyEnv]) &&
+      !isLocalOrTestEnv() &&
+      process.env.AI_ALLOW_RUNTIME_BASE_URL_CHANGE !== 'true' &&
+      !process.env.AI_ALLOWED_BASE_URL_HOSTS?.trim()
+    ) {
+      throw new BadRequestException(
+        `routing.${slot}.baseUrl 在已注入环境密钥时不允许运行时任意变更；请通过部署环境变量或配置 AI_ALLOWED_BASE_URL_HOSTS 白名单修改`,
+      );
+    }
     next.baseUrl = url;
   }
   if ('model' in patch) next.model = textValue(patch.model, `routing.${slot}.model`);
@@ -493,15 +505,7 @@ function mergeEndpoint(
 }
 
 function assertUrl(value: string, path: string): void {
-  let url: URL;
-  try {
-    url = new URL(value);
-  } catch {
-    throw new BadRequestException(`${path} 必须是合法 URL`);
-  }
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new BadRequestException(`${path} 仅支持 http/https`);
-  }
+  assertSafeOutboundUrl(value, path, { allowedHostsEnv: 'AI_ALLOWED_BASE_URL_HOSTS' });
 }
 
 function booleanValue(value: unknown, path: string): boolean {

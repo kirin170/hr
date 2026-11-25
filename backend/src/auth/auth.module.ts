@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuthorizationModule } from './authorization.module.js';
 import { DingTalkIdentityMapper, LocalIdentityAdapter } from './identity.adapters.js';
+import { RateLimitGuard } from './rate-limit.guard.js';
 import { SystemTokenService } from './system-token.service.js';
 
 @Global()
@@ -20,7 +21,9 @@ import { SystemTokenService } from './system-token.service.js';
     SystemTokenService,
     LocalIdentityAdapter,
     DingTalkIdentityMapper,
+    RateLimitGuard,
     AccessControlGuard,
+    { provide: APP_GUARD, useClass: RateLimitGuard },
     { provide: APP_GUARD, useClass: AccessControlGuard },
   ],
   exports: [AccessTokenService, AuthService, SystemTokenService],

@@ -39,13 +39,16 @@ export class SystemTokenService {
   }
 
   /** 校验令牌并返回其代表的操作者上下文；失败统一 401，不泄露具体原因 */
-  async authenticate(rawToken: string): Promise<AuthenticatedUser> {
+  async authenticate(rawToken: string, expectedPurpose?: string): Promise<AuthenticatedUser> {
     const token = rawToken?.trim();
     if (!token) throw new UnauthorizedException(BROWSER_IMPORT_ERROR.TOKEN_INVALID);
     const record = await this.prisma.systemToken.findUnique({
       where: { tokenHash: this.hash(token) },
     });
     if (!record) throw new UnauthorizedException(BROWSER_IMPORT_ERROR.TOKEN_INVALID);
+    if (expectedPurpose && record.purpose !== expectedPurpose) {
+      throw new UnauthorizedException(BROWSER_IMPORT_ERROR.TOKEN_INVALID);
+    }
     if (record.revokedAt || record.expiresAt.getTime() <= Date.now()) {
       throw new UnauthorizedException(BROWSER_IMPORT_ERROR.TOKEN_EXPIRED);
     }

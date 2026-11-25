@@ -10,7 +10,11 @@ import { AuditOutcome } from '@prisma/client';
 import type { AuthenticatedRequest } from './auth.types.js';
 import { AccessTokenService } from './access-token.service.js';
 import { AuthorizationService } from './authorization.service.js';
-import { IS_PUBLIC_ROUTE, REQUIRED_PERMISSION } from './auth.decorators.js';
+import {
+  ALLOW_SYSTEM_TOKEN,
+  IS_PUBLIC_ROUTE,
+  REQUIRED_PERMISSION,
+} from './auth.decorators.js';
 import { AuditService } from '../audit/audit.service.js';
 import { SystemTokenService } from './system-token.service.js';
 
@@ -42,6 +46,10 @@ export class AccessControlGuard implements CanActivate {
       ]),
       resourceType: request.route?.path?.toString() ?? 'API',
     };
+    const allowedSystemTokenPurpose = this.reflector.getAllAndOverride<string>(
+      ALLOW_SYSTEM_TOKEN,
+      [context.getHandler(), context.getClass()],
+    );
     const authHeader = request.headers.authorization;
     const bearer = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
       ? authHeader.slice(7).trim()
@@ -52,13 +60,19 @@ export class AccessControlGuard implements CanActivate {
         : '';
     try {
       if (!bearer && systemToken) {
-        // 短期系统令牌路径（ATS-010）：扩展端以 X-System-Token 代表签发操作者调用
-        request.user = await this.systemTokens.authenticate(systemToken);
-        return true;
+        if (!allowedSystemTokenPurpose) {
+          throw new UnauthorizedException('该接口不支持系统令牌，请使用登录会话');
+        }
+        // 短期系统令牌路径（ATS-010）：仅在显式声明 @AllowSystemToken 的路由生效，且仍须经过下方 RBAC 权限校验
+        request.user = await this.systemTokens.authenticate(
+          systemToken,
+          allowedSystemTokenPurpose,
+        );
+      } else {
+        if (!bearer) throw new UnauthorizedException('需要登录后继续');
+        const claims = this.tokens.verify(bearer);
+        request.user = await this.authorization.loadUserContext(claims.sub);
       }
-      if (!bearer) throw new UnauthorizedException('需要登录后继续');
-      const claims = this.tokens.verify(bearer);
-      request.user = await this.authorization.loadUserContext(claims.sub);
       if (metadata.action) {
         request.grantedScopes = this.authorization.scopesFor(request.user, metadata.action);
       }

@@ -10,7 +10,6 @@ import {
   idList,
   isOtherLabel,
   requiredVersion,
-  sortOrderValue,
   writeAudit,
   type AuditContext,
 } from './settings-shared.js';

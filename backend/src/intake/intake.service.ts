@@ -122,10 +122,7 @@ export interface CampusApplicationQuery {
 
 export interface CampusApplyResult {
   applicationId: string;
-  intakeId: string;
-  candidateId: string | null;
   status: string;
-  duplicate: boolean;
   jobIsVirtual: boolean;
   message: string;
 }
@@ -766,35 +763,50 @@ export class IntakeService {
     }
 
     const mergedAt = new Date();
-    const updated = await this.prisma.resumeIntake.update({
-      where: { id: intake.id },
-      data: {
-        candidateId: targetCandidateId,
-        mergedAt,
-        mergedById: actor.id,
-      },
-    });
+    const { updated, sourceRecord } = await this.prisma.$transaction(async (tx) => {
+      const claim = await tx.resumeIntake.updateMany({
+        where: { id: intake.id, status: IntakeStatus.DUPLICATE, mergedAt: null },
+        data: {
+          candidateId: targetCandidateId,
+          mergedAt,
+          mergedById: actor.id,
+        },
+      });
+      if (claim.count !== 1) {
+        throw new BadRequestException('该查重记录已合并');
+      }
 
-    // 查重合并保留全部来源：把重复记录的来源写入原候选人的来源台账（FR-REF-3）
-    const sourceRecord = await this.prisma.candidateSourceRecord.upsert({
-      where: { intakeId: intake.id },
-      create: {
-        candidateId: targetCandidateId,
-        intakeId: intake.id,
-        source: intake.source,
-        entryMode: intake.entryMode,
-        jobId: intake.jobId,
-        referrerName: intake.referrerName,
-        referrerContact: intake.referrerContact,
-        referralCode: intake.referralCode,
-        sourceNote: intake.sourceNote,
-        mergedFromCandidateId:
-          intake.candidateId && intake.candidateId !== targetCandidateId
-            ? intake.candidateId
-            : null,
-        createdById: actor.id,
-      },
-      update: { candidateId: targetCandidateId },
+      // 查重合并保留全部来源：把重复记录的来源写入原候选人的来源台账（FR-REF-3）
+      const createdSource = await tx.candidateSourceRecord.upsert({
+        where: { intakeId: intake.id },
+        create: {
+          candidateId: targetCandidateId,
+          intakeId: intake.id,
+          source: intake.source,
+          entryMode: intake.entryMode,
+          jobId: intake.jobId,
+          referrerName: intake.referrerName,
+          referrerContact: intake.referrerContact,
+          referralCode: intake.referralCode,
+          note: intake.sourceNote,
+          mergedFromCandidateId:
+            intake.candidateId && intake.candidateId !== targetCandidateId
+              ? intake.candidateId
+              : null,
+          createdById: actor.id,
+        },
+        update: { candidateId: targetCandidateId },
+      });
+
+      return {
+        updated: {
+          id: intake.id,
+          source: intake.source,
+          entryMode: intake.entryMode,
+          resumeFileId: intake.resumeFileId,
+        },
+        sourceRecord: createdSource,
+      };
     });
 
     await this.timeline.record({
@@ -1929,14 +1941,12 @@ export class IntakeService {
         action: 'campus.application_duplicate',
         payload: { intakeId: intake.id, applicationId: application.id, jobId },
       });
+      // 公开入口返回统一回执，不泄露候选人是否已在全库存在（防 PII 存在性探测）
       return {
         applicationId: application.id,
-        intakeId: intake.id,
-        candidateId: null,
-        status: application.status,
-        duplicate: true,
+        status: 'SUBMITTED',
         jobIsVirtual: job.isVirtual,
-        message: '已收到投递，重复信息将由人事合并处理',
+        message: '投递已收到，人事将尽快审核并与您联系',
       };
     }
 
@@ -2056,16 +2066,12 @@ export class IntakeService {
       },
     });
 
+    // 公开入口返回统一回执，与查重分支结构与文案保持一致（防 PII 存在性探测）
     return {
       applicationId: created.application.id,
-      intakeId: created.intake.id,
-      candidateId: created.candidate.id,
-      status: created.application.status,
-      duplicate: false,
+      status: 'SUBMITTED',
       jobIsVirtual: job.isVirtual,
-      message: job.isVirtual
-        ? '投递成功，人事将根据简历与个人意愿分配正式职位'
-        : '投递成功，简历已进入该职位人才推荐',
+      message: '投递已收到，人事将尽快审核并与您联系',
     };
   }
 

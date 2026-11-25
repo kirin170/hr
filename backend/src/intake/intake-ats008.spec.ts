@@ -314,6 +314,14 @@ describe('IntakeService 分配与查重合并（ATS-008）', () => {
 
   it('查重合并保留来源与附件并写时间线', async () => {
     const timeline = { record: vi.fn().mockResolvedValue(undefined) };
+    const tx = {
+      resumeIntake: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      candidateSourceRecord: {
+        upsert: vi.fn().mockResolvedValue({ id: 'source-1' }),
+      },
+    };
     const prisma = {
       resumeIntake: {
         findUnique: vi.fn().mockResolvedValue({
@@ -326,21 +334,11 @@ describe('IntakeService 分配与查重合并（ATS-008）', () => {
           source: 'EMAIL',
           entryMode: 'EMAIL_AUTO',
           resumeFileId: 'file-1',
+          sourceNote: null,
           mergedAt: null,
         }),
-        update: vi.fn().mockImplementation((args: { data: Record<string, unknown> }) =>
-          Promise.resolve({
-            id: 'intake-dup',
-            source: 'EMAIL',
-            entryMode: 'EMAIL_AUTO',
-            resumeFileId: 'file-1',
-            ...args.data,
-          }),
-        ),
       },
-      candidateSourceRecord: {
-        upsert: vi.fn().mockResolvedValue({ id: 'source-1' }),
-      },
+      $transaction: vi.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
     };
     const authorization = {
       loadUserContext: vi.fn().mockResolvedValue(actor),
@@ -351,8 +349,8 @@ describe('IntakeService 分配与查重合并（ATS-008）', () => {
 
     const result = await service.mergeDuplicate('intake-dup', actor.id);
 
-    expect(prisma.resumeIntake.update).toHaveBeenCalledWith({
-      where: { id: 'intake-dup' },
+    expect(tx.resumeIntake.updateMany).toHaveBeenCalledWith({
+      where: { id: 'intake-dup', status: 'DUPLICATE', mergedAt: null },
       data: expect.objectContaining({
         candidateId: 'cand-1',
         mergedById: 'user-1',

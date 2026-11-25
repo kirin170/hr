@@ -41,12 +41,18 @@ export async function withImapClient<T>(
   handler: (client: ImapFlow) => Promise<T>,
 ): Promise<T> {
   const client = createImapClient(connection);
+  // 捕获异步 socket 错误事件，避免未监听 'error' 导致 Node 进程崩溃
+  client.on('error', () => {});
   try {
     await client.connect();
     return await handler(client);
   } finally {
     if (client.usable) {
-      await client.logout().catch(() => {});
+      await client.logout().catch(() => {
+        client.close();
+      });
+    } else {
+      client.close();
     }
   }
 }

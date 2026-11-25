@@ -1,5 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { AuditAction, CurrentUser, RequirePermission } from '../auth/auth.decorators.js';
+import {
+  AllowSystemToken,
+  AuditAction,
+  CurrentUser,
+  RequirePermission,
+} from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { JobsService, type JobListQuery } from './jobs.service.js';
 
@@ -8,6 +13,7 @@ export class JobsController {
   constructor(private readonly jobs: JobsService) {}
 
   @Get()
+  @AllowSystemToken('BROWSER_IMPORT')
   @RequirePermission('job:read')
   @AuditAction('job.list', 'Job')
   list(@CurrentUser() actor: AuthenticatedUser, @Query() query: JobListQuery) {

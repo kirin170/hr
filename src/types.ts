@@ -558,10 +558,7 @@ export type CampusApplicationList = {
 
 export type CampusApplyResult = {
   applicationId: string
-  intakeId: string
-  candidateId: string | null
   status: string
-  duplicate: boolean
   jobIsVirtual: boolean
   message: string
 }

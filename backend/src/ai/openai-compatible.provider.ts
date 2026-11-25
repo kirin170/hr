@@ -1,4 +1,8 @@
 import {
+  assertResolvedHostIsPublic,
+  assertSafeOutboundUrl,
+} from '../common/outbound-url.js';
+import {
   AiProviderError,
   AI_ERROR_CODES,
   type InterviewEvalRequest,
@@ -16,6 +20,8 @@ import {
   validateResumeEval,
   validateResumeParse,
 } from './ai.contract.js';
+
+const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
 type ChatMessage = {
   role: 'system' | 'user';
@@ -173,12 +179,31 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       );
     }
 
+    const targetUrl = `${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`;
+    if (this.fetchImpl === fetch) {
+      let parsed: URL;
+      try {
+        parsed = assertSafeOutboundUrl(targetUrl, `${this.name}.baseUrl`, {
+          allowedHostsEnv: 'AI_ALLOWED_BASE_URL_HOSTS',
+        });
+        await assertResolvedHostIsPublic(parsed.hostname, `${this.name}.baseUrl`);
+      } catch (error) {
+        throw new AiProviderError(
+          AI_ERROR_CODES.NOT_CONFIGURED,
+          `${this.name} 地址校验未通过：${(error as Error).message}`,
+          { retryable: false, provider: this.name },
+        );
+      }
+    }
+
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     let response: Response;
+    let text: string;
     try {
-      response = await this.fetchImpl(`${this.config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
+      response = await this.fetchImpl(targetUrl, {
         method: 'POST',
+        redirect: 'error',
         headers: {
           'content-type': 'application/json',
           authorization: `Bearer ${this.apiKey}`,
@@ -192,7 +217,9 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         }),
         signal: controller.signal,
       });
+      text = await this.readBoundedText(response, MAX_RESPONSE_BYTES);
     } catch (error) {
+      if (error instanceof AiProviderError) throw error;
       if ((error as Error).name === 'AbortError') {
         throw new AiProviderError(
           AI_ERROR_CODES.TIMEOUT,
@@ -209,11 +236,11 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       clearTimeout(timer);
     }
 
-    const text = await response.text();
     if (!response.ok) {
+      const safeCode = this.extractUpstreamErrorCode(text);
       throw new AiProviderError(
         AI_ERROR_CODES.HTTP_ERROR,
-        `${this.name} 返回 HTTP ${response.status}（${scene}）：${text.slice(0, 200)}`,
+        `${this.name} 返回 HTTP ${response.status}（${scene}${safeCode ? `，错误码：${safeCode}` : ''}）`,
         {
           retryable: response.status === 429 || response.status >= 500,
           status: response.status,
@@ -239,6 +266,54 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       });
     }
     return { content, usage: body.usage };
+  }
+
+  private async readBoundedText(response: Response, maxBytes: number): Promise<string> {
+    if (!response.body) {
+      const text = await response.text();
+      if (Buffer.byteLength(text, 'utf8') > maxBytes) {
+        throw new AiProviderError(AI_ERROR_CODES.BAD_RESPONSE, `${this.name} 响应体超出大小限制`, {
+          retryable: false,
+          provider: this.name,
+        });
+      }
+      return text;
+    }
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (!value) continue;
+        total += value.byteLength;
+        if (total > maxBytes) {
+          await reader.cancel().catch(() => {});
+          throw new AiProviderError(AI_ERROR_CODES.BAD_RESPONSE, `${this.name} 响应体超出大小限制`, {
+            retryable: false,
+            provider: this.name,
+          });
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    return Buffer.concat(chunks, total).toString('utf8');
+  }
+
+  private extractUpstreamErrorCode(text: string): string | null {
+    try {
+      const parsed = JSON.parse(text) as { error?: { code?: unknown; type?: unknown }; code?: unknown };
+      const raw = parsed?.error?.code ?? parsed?.error?.type ?? parsed?.code;
+      if (typeof raw === 'string' && /^[A-Za-z0-9_.:-]{1,64}$/.test(raw)) {
+        return raw;
+      }
+    } catch {
+      // 忽略非 JSON 错误体，避免将内网或上游原始内容回显到错误日志
+    }
+    return null;
   }
 
   private parseJson(content: string, scene: string): unknown {

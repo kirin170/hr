@@ -10,7 +10,8 @@ for (const envFile of ['.env.local', '.env']) {
   }
 }
 
-process.env.APP_PROCESS_ROLE = 'worker';
+// 独立清理进程不应启动定时扫描与 BullMQ Worker，避免与常驻 worker 并发抢占或关库中断在途任务
+process.env.APP_PROCESS_ROLE = 'cli';
 
 /**
  * 到期清理独立入口，供 cron / 计划任务调用（技术设计 §13.2）：

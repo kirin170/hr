@@ -89,6 +89,14 @@ describe('IntakeService 来源记录（ATS-009）', () => {
   });
 
   it('查重合并把重复记录的来源写入原候选人来源台账', async () => {
+    const tx = {
+      resumeIntake: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+      candidateSourceRecord: {
+        upsert: vi.fn().mockResolvedValue({ id: 'source-2' }),
+      },
+    };
     const prisma = {
       resumeIntake: {
         findUnique: vi.fn().mockResolvedValue({
@@ -107,16 +115,8 @@ describe('IntakeService 来源记录（ATS-009）', () => {
           sourceNote: '内部推荐',
           mergedAt: null,
         }),
-        update: vi.fn().mockResolvedValue({
-          id: 'intake-dup',
-          source: 'REFERRAL',
-          entryMode: 'MANUAL',
-          resumeFileId: null,
-        }),
       },
-      candidateSourceRecord: {
-        upsert: vi.fn().mockResolvedValue({ id: 'source-2' }),
-      },
+      $transaction: vi.fn().mockImplementation((fn: (client: unknown) => unknown) => fn(tx)),
     };
     const authorization = {
       loadUserContext: vi.fn().mockResolvedValue(actor),
@@ -127,7 +127,12 @@ describe('IntakeService 来源记录（ATS-009）', () => {
 
     const result = await service.mergeDuplicate('intake-dup', actor.id);
 
-    expect(prisma.candidateSourceRecord.upsert).toHaveBeenCalledWith(
+    expect(tx.resumeIntake.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'intake-dup', status: 'DUPLICATE', mergedAt: null },
+      }),
+    );
+    expect(tx.candidateSourceRecord.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         create: expect.objectContaining({
           candidateId: 'cand-1',
@@ -135,9 +140,12 @@ describe('IntakeService 来源记录（ATS-009）', () => {
           source: 'REFERRAL',
           referrerName: '王推荐',
           referralCode: 'REF-9',
+          note: '内部推荐',
         }),
       }),
     );
+    const createPayload = tx.candidateSourceRecord.upsert.mock.calls[0][0].create as Record<string, unknown>;
+    expect(createPayload).not.toHaveProperty('sourceNote');
     expect(result).toMatchObject({ candidateId: 'cand-1', sourceRecordId: 'source-2' });
   });
 
@@ -304,7 +312,9 @@ describe('IntakeService 校园招聘投递（ATS-009）', () => {
         }),
       }),
     );
-    expect(result).toMatchObject({ duplicate: false, jobIsVirtual: true, status: 'SUBMITTED' });
+    expect(result).toMatchObject({ jobIsVirtual: true, status: 'SUBMITTED' });
+    expect(result).not.toHaveProperty('duplicate');
+    expect(result).not.toHaveProperty('candidateId');
   });
 
   it('带正式职位投递直入 RECOMMENDED 并记录分配结果', async () => {
@@ -338,10 +348,12 @@ describe('IntakeService 校园招聘投递（ATS-009）', () => {
         }),
       }),
     );
-    expect(result).toMatchObject({ duplicate: false, jobIsVirtual: false, status: 'ASSIGNED' });
+    expect(result).toMatchObject({ jobIsVirtual: false, status: 'SUBMITTED' });
+    expect(result).not.toHaveProperty('duplicate');
+    expect(result).not.toHaveProperty('candidateId');
   });
 
-  it('重复手机号投递按查重处理，不覆盖已有候选人', async () => {
+  it('重复手机号投递按查重处理，不覆盖已有候选人且公开响应不暴露查重结果', async () => {
     const { prisma, tx } = campusPrisma(
       { id: 'job-virtual', code: 'V001', title: '2027 校招', isVirtual: true, status: 'ACTIVE' },
       { id: 'cand-existing' },
@@ -368,10 +380,12 @@ describe('IntakeService 校园招聘投递（ATS-009）', () => {
       }),
     );
     expect(result).toMatchObject({
-      duplicate: true,
-      candidateId: null,
       applicationId: 'app-dup',
+      status: 'SUBMITTED',
+      jobIsVirtual: true,
     });
+    expect(result).not.toHaveProperty('duplicate');
+    expect(result).not.toHaveProperty('candidateId');
   });
 
   it('校招批量人工分配正式职位，只记录分配结果不覆盖原始意愿', async () => {

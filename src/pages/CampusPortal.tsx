@@ -118,7 +118,7 @@ export function CampusPortal() {
         {result ? (
           <section className="panel campus-portal-result">
             <span className="campus-portal-result-icon"><CheckCircle2 size={26} /></span>
-            <h2>{result.duplicate ? '投递已收到' : '投递成功'}</h2>
+            <h2>投递已收到</h2>
             <p>{result.message}</p>
             <small className="cell-sub">投递编号：{result.applicationId.slice(-8)}</small>
             <button className="button button-primary" onClick={reset}>再投一份</button>

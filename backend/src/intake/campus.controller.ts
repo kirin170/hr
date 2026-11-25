@@ -12,6 +12,7 @@ import {
   AuditAction,
   CurrentUser,
   PublicRoute,
+  RateLimit,
   RequirePermission,
 } from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
@@ -39,6 +40,7 @@ export class CampusController {
 
   @Post('applications')
   @PublicRoute()
+  @RateLimit(10, 60_000)
   @AuditAction('campus.apply', 'CampusApplication')
   @UseInterceptors(FileInterceptor('resume', { limits: { fileSize: MAX_RESUME_BYTES } }))
   async apply(

@@ -46,6 +46,7 @@ import type {
 const apiBase = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
 const authApiBase = (import.meta.env.VITE_AUTH_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const tokenKey = 'talentflow.accessToken'
+const refreshLockName = 'talentflow-token-refresh'
 let refreshInFlight: Promise<string | null> | null = null
 
 export function getAccessToken(): string | null {
@@ -70,24 +71,49 @@ export function setAccessToken(token: string | null): void {
   }
 }
 
-export function refreshAccessToken(): Promise<string | null> {
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      try {
-        const response = await fetch(`${authApiBase}/auth/refresh`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-        })
-        if (!response.ok) return null
-        const session = await response.json() as { accessToken?: unknown }
-        if (typeof session.accessToken !== 'string' || !session.accessToken) return null
-        setAccessToken(session.accessToken)
-        return session.accessToken
-      } catch {
-        return null
+async function runWithRefreshLock<T>(task: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined
+  if (locks && typeof locks.request === 'function') {
+    return locks.request(refreshLockName, task)
+  }
+  return task()
+}
+
+async function performRefreshRequest(failedToken?: string | null): Promise<string | null> {
+  return runWithRefreshLock(async () => {
+    // 跨标签页去重：若其他标签页或并发请求已完成轮换，直接复用最新令牌，避免重复提交已消费 Cookie 触发整族吊销
+    if (failedToken !== undefined) {
+      const current = getAccessToken()
+      if (current && current !== failedToken) {
+        return current
       }
-    })().finally(() => {
+    }
+    try {
+      const response = await fetch(`${authApiBase}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (!response.ok) return null
+      const session = await response.json() as { accessToken?: unknown }
+      if (typeof session.accessToken !== 'string' || !session.accessToken) return null
+      setAccessToken(session.accessToken)
+      return session.accessToken
+    } catch {
+      return null
+    }
+  })
+}
+
+export function refreshAccessToken(failedToken?: string | null): Promise<string | null> {
+  if (failedToken !== undefined) {
+    const current = getAccessToken()
+    if (current && current !== failedToken) {
+      return Promise.resolve(current)
+    }
+  }
+  if (!refreshInFlight) {
+    refreshInFlight = performRefreshRequest(failedToken).finally(() => {
       refreshInFlight = null
     })
   }
@@ -141,11 +167,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     })
     response = await send(token)
     if (response.status === 401) {
-      const renewed = await refreshAccessToken()
+      const renewed = await refreshAccessToken(token)
       if (renewed) {
         token = renewed
         response = await send(token)
-      } else {
+      }
+      if (!renewed || response.status === 401) {
         setAccessToken(null)
         window.dispatchEvent(new Event('talentflow-auth-required'))
       }
@@ -365,7 +392,7 @@ export function syncRequisition(payload: {
   /** OA 表单缺少开始招聘时间时由人事补录；OA 已带出时忽略 */
   recruitmentStartDate?: string
 }): Promise<{ created: boolean; requisition: ApiRequisition }> {
-  return request('/requisitions/sync-from-oa', { method: 'POST', body: JSON.stringify(payload) })
+  return request('/v1/requisitions/sync-from-oa', { method: 'POST', body: JSON.stringify(payload) })
 }
 
 export type OaCapability = {
@@ -378,7 +405,7 @@ export type OaCapability = {
 
 /** 管理端展示真实 OA 模板配置状态；未配置时只保留人工通道。 */
 export function getOaCapability(): Promise<OaCapability> {
-  return request<OaCapability>('/requisitions/oa-sync/capability')
+  return request<OaCapability>('/v1/requisitions/oa-sync/capability')
 }
 
 export type OaSyncEvent = {
@@ -393,21 +420,21 @@ export type OaSyncEvent = {
 }
 
 export function listOaSyncEvents(): Promise<OaSyncEvent[]> {
-  return request<OaSyncEvent[]>('/requisitions/oa-sync/events')
+  return request<OaSyncEvent[]>('/v1/requisitions/oa-sync/events')
 }
 
 export function retryOaSyncEvent(id: string): Promise<{ id: string; status: string }> {
-  return request(`/requisitions/oa-sync/events/${encodeURIComponent(id)}/retry`, { method: 'POST' })
+  return request(`/v1/requisitions/oa-sync/events/${encodeURIComponent(id)}/retry`, { method: 'POST' })
 }
 
 /** 由系统发起录用审批（材料固定为简历信息、面试登记表、录用职级）。 */
 export function submitOfferOa(candidateId: string): Promise<{ offer: Record<string, unknown> }> {
-  return request(`/candidates/${encodeURIComponent(candidateId)}/offer/oa`, { method: 'POST' })
+  return request(`/v1/candidates/${encodeURIComponent(candidateId)}/offer/oa`, { method: 'POST' })
 }
 
 /** 刷新系统发起的 OA 实例状态；只更新展示字段，不改变 Offer 阶段结果。 */
 export function refreshOfferOa(candidateId: string): Promise<{ offer: Record<string, unknown> }> {
-  return request(`/candidates/${encodeURIComponent(candidateId)}/offer/oa/refresh`, { method: 'POST' })
+  return request(`/v1/candidates/${encodeURIComponent(candidateId)}/offer/oa/refresh`, { method: 'POST' })
 }
 
 export function updateRequisition(id: string, payload: Record<string, unknown>): Promise<ApiRequisition> {
@@ -442,11 +469,11 @@ export function listRequisitionTimeline(id: string): Promise<CandidateTimelineEv
 // ---------- 组织基础数据 ----------
 
 export function listDepartments(): Promise<ApiDepartment[]> {
-  return request<ApiDepartment[]>('/api/v1/authz/departments')
+  return request<ApiDepartment[]>('/v1/authz/departments')
 }
 
 export function listUsers(): Promise<ApiUser[]> {
-  return request<ApiUser[]>('/api/v1/authz/users')
+  return request<ApiUser[]>('/v1/authz/users')
 }
 
 // ---------- 简历入场（FR-ENT-1/3～10） ----------
@@ -466,11 +493,12 @@ async function authFetch(path: string, init: RequestInit = {}): Promise<Response
   try {
     response = await send(token)
     if (response.status === 401) {
-      const renewed = await refreshAccessToken()
+      const renewed = await refreshAccessToken(token)
       if (renewed) {
         token = renewed
         response = await send(token)
-      } else {
+      }
+      if (!renewed || response.status === 401) {
         setAccessToken(null)
         window.dispatchEvent(new Event('talentflow-auth-required'))
       }

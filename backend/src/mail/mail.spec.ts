@@ -164,4 +164,63 @@ describe('邮箱配置校验（FR-ENT-1 / FR-ADM-6）', () => {
     expect(data.secretCipher).not.toBe('授权码');
     expect(data.pollIntervalSeconds).toBe(30);
   });
+
+  it('修改 IMAP 主机/端口/用户名/加密方式未重传授权码时拒绝，防止凭据外泄', async () => {
+    const current = {
+      id: 'cfg-1',
+      address: 'hr@example.com',
+      provider: 'IMAP',
+      active: true,
+      host: 'imap.example.com',
+      port: 993,
+      secure: true,
+      username: 'hr@example.com',
+      secretCipher: new MailCredentialService().encrypt('old-secret'),
+      folder: 'INBOX',
+      pollIntervalSeconds: 300,
+    };
+    const update = vi.fn();
+    const prisma = {
+      mailInboxConfig: {
+        findUnique: vi.fn().mockResolvedValue(current),
+        update,
+      },
+    } as unknown as PrismaService;
+    const service = new MailConfigService(prisma, new MailCredentialService());
+
+    await expect(
+      service.update('cfg-1', { host: 'imap.attacker.example' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('非本地环境拒绝私网 IMAP 主机与明文连接', async () => {
+    const previousEnv = process.env.APP_ENV;
+    process.env.APP_ENV = 'production';
+    process.env.MAIL_CREDENTIAL_KEY = Buffer.alloc(32, 7).toString('base64');
+    try {
+      const { service } = buildService();
+      await expect(
+        service.create({
+          address: 'hr@example.com',
+          host: '169.254.169.254',
+          username: 'hr@example.com',
+          password: 'secret',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.create({
+          address: 'hr@example.com',
+          host: 'imap.example.com',
+          port: 143,
+          secure: false,
+          username: 'hr@example.com',
+          password: 'secret',
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    } finally {
+      process.env.APP_ENV = previousEnv;
+      delete process.env.MAIL_CREDENTIAL_KEY;
+    }
+  });
 });

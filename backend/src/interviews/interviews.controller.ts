@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
-import { AuditAction, CurrentUser, PublicRoute, RequirePermission } from '../auth/auth.decorators.js';
+import { AuditAction, CurrentUser, PublicRoute, RateLimit, RequirePermission } from '../auth/auth.decorators.js';
 import type { AuthenticatedUser } from '../auth/auth.types.js';
 import { InterviewTranscriptsService } from './interview-transcripts.service.js';
 import { InterviewsService } from './interviews.service.js';
@@ -61,8 +61,8 @@ export class InterviewsController {
 @Controller('interview-registration')
 export class InterviewRegistrationController {
   constructor(private readonly service: InterviewsService) {}
-  @Post('open') @PublicRoute()
+  @Post('open') @PublicRoute() @RateLimit(20, 60_000)
   publicRegistration(@Body() body: { token?: string }) { return this.service.publicRegistration(body?.token ?? ''); }
-  @Post('submit') @PublicRoute()
+  @Post('submit') @PublicRoute() @RateLimit(15, 60_000)
   publicSubmit(@Body() body: { token?: string; values?: unknown }) { return this.service.publicSubmitRegistration(body?.token ?? '', body); }
 }

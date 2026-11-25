@@ -5,6 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { MailInboxConfig } from '@prisma/client';
+import {
+  assertResolvedHostIsPublic,
+  assertSafeOutboundHost,
+  isLocalOrTestEnv,
+} from '../common/outbound-url.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { withImapClient, type MailboxConnection } from './imap.client.js';
 import { MailCredentialService } from './mail-credential.service.js';
@@ -110,20 +115,37 @@ export class MailConfigService {
           : this.normalizeInterval(input.pollIntervalSeconds),
     };
     if (input.active !== undefined) data.active = Boolean(input.active);
-    if (input.host !== undefined) data.host = this.optionalText(input.host);
+    if (input.host !== undefined) {
+      const rawHost = this.optionalText(input.host);
+      data.host = rawHost ? this.normalizeHost(rawHost) : null;
+    }
     if (input.username !== undefined) data.username = this.optionalText(input.username);
     if (input.port !== undefined) data.port = this.normalizePort(input.port);
-    if (input.secure !== undefined) data.secure = Boolean(input.secure);
+    if (input.secure !== undefined) data.secure = this.normalizeSecure(Boolean(input.secure));
     if (input.address !== undefined) {
       const address = this.normalizeAddress(input.address);
       if (address !== current.address) data.address = address;
     }
-    if (input.password) {
-      data.secretCipher = this.credentials.encrypt(input.password);
+    const nextPassword = input.password?.trim() || null;
+    if (nextPassword) {
+      data.secretCipher = this.credentials.encrypt(nextPassword);
     }
     if (provider === MAIL_PROVIDER.IMAP) {
-      const host = (data.host as string | null | undefined) ?? current.host;
-      const username = (data.username as string | null | undefined) ?? current.username;
+      const host = (data.host !== undefined ? data.host : current.host) as string | null;
+      const port = (data.port !== undefined ? data.port : current.port) as number | null;
+      const username = (data.username !== undefined ? data.username : current.username) as string | null;
+      const secure = (data.secure !== undefined ? data.secure : current.secure) as boolean;
+      const targetChanged =
+        (data.host !== undefined && host !== current.host) ||
+        (data.port !== undefined && port !== current.port) ||
+        (data.username !== undefined && username !== current.username) ||
+        (data.secure !== undefined && secure !== current.secure);
+      if (targetChanged && !nextPassword) {
+        throw new BadRequestException('修改 IMAP 主机、端口、用户名或加密方式时必须重新提供授权码');
+      }
+      if (host) this.normalizeHost(host);
+      this.normalizeSecure(secure);
+      if (port !== null) this.normalizePort(port);
       const secret = (data.secretCipher as string | null | undefined) ?? current.secretCipher;
       if (!host || !username || !secret) {
         throw new BadRequestException('IMAP 邮箱必须提供 host、username 与授权码');
@@ -153,6 +175,7 @@ export class MailConfigService {
     const startedAt = Date.now();
     try {
       const connection = this.toConnection(config);
+      await assertResolvedHostIsPublic(connection.host, 'IMAP 主机');
       const result = await withImapClient(connection, async (client) => {
         const lock = await client.getMailboxLock(config.folder);
         try {
@@ -314,21 +337,37 @@ export class MailConfigService {
     if (provider !== MAIL_PROVIDER.IMAP) {
       return { fields: {}, password: null };
     }
-    const host = this.optionalText(input.host);
+    const rawHost = this.optionalText(input.host);
     const username = this.optionalText(input.username);
     const password = input.password?.trim() || null;
-    if (!host || !username || !password) {
+    if (!rawHost || !username || !password) {
       throw new BadRequestException('IMAP 邮箱必须提供 host、username 与授权码');
     }
+    const host = this.normalizeHost(rawHost);
+    const secure = this.normalizeSecure(input.secure === undefined ? true : Boolean(input.secure));
     return {
       fields: {
         host,
         port: this.normalizePort(input.port),
-        secure: input.secure === undefined ? true : Boolean(input.secure),
+        secure,
         username,
       },
       password,
     };
+  }
+
+  private normalizeHost(value: string): string {
+    return assertSafeOutboundHost(value, 'IMAP 主机', {
+      allowPrivateInLocal: true,
+      allowedHostsEnv: 'MAIL_ALLOWED_IMAP_HOSTS',
+    });
+  }
+
+  private normalizeSecure(secure: boolean): boolean {
+    if (!secure && !isLocalOrTestEnv()) {
+      throw new BadRequestException('非本地环境必须启用 IMAP TLS 加密（secure=true）');
+    }
+    return secure;
   }
 
   private normalizeAddress(value?: string): string {
@@ -351,6 +390,9 @@ export class MailConfigService {
     const port = Number(value ?? 993);
     if (!Number.isInteger(port) || port < 1 || port > 65_535) {
       throw new BadRequestException('端口必须是 1-65535 的整数');
+    }
+    if (!isLocalOrTestEnv() && process.env.MAIL_ALLOW_CUSTOM_PORTS !== 'true' && port !== 993 && port !== 143) {
+      throw new BadRequestException('非本地环境仅允许标准 IMAP 端口（993 或 143）');
     }
     return port;
   }
