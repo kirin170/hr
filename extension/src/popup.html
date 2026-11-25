@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>导入到 TalentFlow</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <strong>TalentFlow 导入</strong>
+      <span id="adapter" class="tag">检测中…</span>
+    </header>
+
+    <section id="auth">
+      <p class="hint">在 TalentFlow「管理后台 → 接入配置 → 导入令牌」签发短期令牌后填入。扩展不读取招聘网站账号信息。</p>
+      <label>导入令牌<input id="token" type="password" autocomplete="off" placeholder="粘贴短期令牌" /></label>
+      <label>有效期<input id="expires" type="datetime-local" /></label>
+      <div class="row">
+        <button id="authorize" class="primary">授权</button>
+        <button id="revoke">撤销</button>
+      </div>
+    </section>
+
+    <section id="import" hidden>
+      <label>目标职位<select id="job"></select></label>
+      <div class="row">
+        <button id="run" class="primary">导入当前候选人</button>
+        <button id="retry" hidden>重试</button>
+      </div>
+      <p class="hint">只有点击上面的按钮才会创建导入任务；打开页面不会自动导入。</p>
+    </section>
+
+    <p id="message" class="message" role="status"></p>
+
+    <details>
+      <summary>适配器开关与版本</summary>
+      <div id="adapters"></div>
+      <p class="hint">BOSS 直聘与猎聘适配器尚未交付，需要脱敏页面样本与企业分发方案后另行实现。</p>
+    </details>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+</html>

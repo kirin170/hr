@@ -18,7 +18,8 @@
     "db:migrate:deploy": "npm --prefix backend run db:migrate:deploy",
     "db:migrate:status": "npm --prefix backend run db:migrate:status",
     "db:setup": "npm run db:generate && npm run db:migrate:deploy && npm run db:seed",
-    "retention:purge": "npm --prefix backend run retention:purge"
+    "retention:purge": "npm --prefix backend run retention:purge",
+    "test:extension": "node --test \"extension/test/*.test.mjs\""
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -36,4 +37,3 @@
     "vite": "^5.4.11"
   }
 }
-

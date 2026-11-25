@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "TalentFlow 简历导入",
+  "version": "0.1.0",
+  "description": "把当前页面的候选人资料与简历附件导入 TalentFlow。仅在用户主动点击时创建导入任务。",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://127.0.0.1:3100/*", "http://localhost:3100/*"],
+  "background": { "service_worker": "src/background.js", "type": "module" },
+  "action": { "default_popup": "src/popup.html", "default_title": "导入到 TalentFlow" },
+  "content_scripts": [
+    {
+      "matches": ["http://127.0.0.1:4174/*", "http://localhost:4174/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/adapters/registry.js"],
+      "matches": ["http://127.0.0.1:4174/*", "http://localhost:4174/*"]
+    }
+  ]
+}
