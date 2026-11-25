@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "work_item": "ATS-024",
+  "date": "2026-11-25",
+  "verified_at": 1795573447560,
+  "source_sha": "b92263d43273157e1af79ea5977b14044b307451",
+  "working_tree_dirty": false,
+  "summary": "ATS-024 完整验收：隔离临时库 talentflow_ats024_20261125 重放全部迁移，独立 API 实例（:3100）与前端（代理指向该实例，不占用默认 3000 上的开发服务），27 项接口断言全过，另加通知重试幂等专项；浏览器逐分区走查管理后台。七条验收标准全部覆盖并通过，含并入的 ATS-012 三处显示缺陷（接口证据 + 浏览器实测双取证）。验收中发现并修复两个新缺陷：GET /admin/settings/fields 因未 await 异步调用返回空配置；固定规则页因前端字段名与后端不匹配渲染 8 个空行。后端 typecheck/lint 通过、308 项单测通过，前端构建通过。",
+  "command": "CREATE DATABASE talentflow_ats024_20261125; npm run db:migrate:deploy; npm run db:seed; SQL 写入 5 个部门与 1 条 FAILED 通知投递夹具; npm run build --prefix backend; APP_PORT=3100 node backend/dist/main.js; VITE_PROXY_TARGET=http://127.0.0.1:3100 npx vite; node ats024-acceptance.mjs（27 项 HTTP 断言）; 通知重试幂等专项; Claude Browser 分区走查; npm run typecheck/lint/test --prefix backend; npm run build",
+  "scope": [
+    "backend/src/settings/settings.controller.ts",
+    "src/pages/Admin.tsx",
+    "src/types.ts",
+    "vite.config.ts",
+    "backend/src/candidates/candidates.service.ts（ATS-012 三处修复，本次复验）",
+    "src/components/CandidateDrawer.tsx（同上）",
+    "talentflow_ats024_20261125（临时数据库，验收后删除）"
+  ],
+  "checks": [
+    {
+      "name": "admin_navigation_and_layering",
+      "passed": true,
+      "criteria": [
+        "统一管理入口按 FR-ADM-1～10 提供分类导航与列表/详情；常用与高级配置分层，个人资料与个人通知偏好位于用户菜单；已交付项真实可用，未接入项明确显示状态。"
+      ],
+      "details": "浏览器实测管理后台七个分区均可打开并渲染真实数据：招聘基础配置（字段三组 + 字典 + 面试方案）、原因选项（集 A/B/C 三张表，含新增/停用/启用与顺序列）、通知与提醒（事件清单 + 通道 MOCK）、组织与权限、接入配置、运行监控、操作审计、固定规则。用户菜单弹出「个人资料 / 通知偏好」两个页签，个人资料显示姓名/部门/角色。未接入项显式标注：钉钉 OA 审批 NOT_INTEGRATED、钉钉通知与日程 NOT_INTEGRATED、浏览器插件 NOT_INTEGRATED（ATS-011 未接入；导入 API 与系统令牌已交付）、AI 为「模拟」通道。修复前固定规则页为 8 个空行、字段配置接口返回空，均已修复并复验。"
+    },
+    {
+      "name": "configuration_persists_and_takes_effect",
+      "passed": true,
+      "criteria": [
+        "职位/需求/候选人字段、表单与面试模板、字典、标签和渠道配置持久化并实际生效；集 A/B/C 独立新增、排序、启停，各含其他说明校验；停用或更新不破坏历史显示与统计。"
+      ],
+      "details": "接口断言：三套原因集 ARCHIVE/OFFER_REJECT/ONBOARD_ABANDON 齐备；新增原因持久化；同集合重复名称 409；再建「其他」409（每集合唯一）；reorder 200；带正确 version 的停用 200，version 过期时 409（乐观并发）。字典停用 200。字段配置三组返回，修改必填后 GET /effective 内容随之变化，错误 version 400。浏览器侧原因选项表显示新增项为「停用」状态，与接口一致；集 A/B/C 各自独立列出并标注「每个集合保留唯一的『其他』，选中后必须填写说明」。历史不破坏：既有候选人列表仍正常显示其原有渠道与部门，停用配置不回写历史记录。"
+    },
+    {
+      "name": "authorization_and_redacted_audit",
+      "passed": true,
+      "criteria": [
+        "后台配置权限与候选人数据范围、联系方式及敏感附件授权独立校验；直调 API 越权被拒；权限与配置修改有脱敏审计、可查询及受控导出，不返回或记录明文凭据。"
+      ],
+      "details": "新建 LOCAL 只读账号并赋 INTERVIEWER 角色：直调 GET /admin/settings/overview 返回 403，POST /admin/settings/reasons 返回 403，GET /audit-logs/export.csv 返回 403。管理员配置修改后审计表出现 6 条 setting.* 记录；扫描 17 行审计内容未出现任何明文口令、密钥或 Bearer 令牌。浏览器操作审计分区提供按对象/动作/时间检索与「导出 CSV」，表头为 时间/操作者/动作/对象/结果/来源 IP，操作者显示姓名，越权尝试留下 auth.denied DENIED 记录。接入配置页明示「本页不展示任何密钥」，邮箱地址以 1***@163.com 形式脱敏。"
+    },
+    {
+      "name": "fixed_rules_not_bypassable",
+      "passed": true,
+      "criteria": [
+        "九阶段、Offer 六阶段、必填条件、需求周期与 AI 人工确认规则不可被配置绕过；正式组织以钉钉为来源；邮箱先进待分配池并由 HR 手工选职位，不启用虚拟职位自动分配，不扩建流程或审批引擎。"
+      ],
+      "details": "GET /rules 返回 8 条固定约束：candidate.stages、offer.stages、required、requisition.cycle、ai.confirm、organization.source、intake.mail、interview.conclusion，每条附强制该约束的代码位置；管理后台不提供关闭入口。修改字段与字典配置后重跑业务断言：候选人非法跳阶段仍 409，部门筛选 PASS 缺原因仍 400，说明配置改动不能绕过服务端规则。固定规则页修复后 8 条全部渲染标题、取值、说明与代码路径。"
+    },
+    {
+      "name": "integration_status_and_recovery",
+      "passed": true,
+      "criteria": [
+        "邮箱、钉钉、插件、AI、通知及异步任务的状态、时间、脱敏失败原因与恢复入口按对应模块接入；重试幂等，不产生重复业务记录；正式集成继续独立验收。"
+      ],
+      "details": "GET /operations 返回集成清单与状态：mail、dingtalk.login、dingtalk.organization、dingtalk.oa、dingtalk.notification、ai、extension，未接入项为 NOT_INTEGRATED 并附原因说明。运行监控分区显示 MySQL/Redis 连接状态、AI 任务近 24h 计数、通知通道 MOCK、失败任务表（只展示标识/错误码/脱敏信息）与保留清理记录（只展示计数与时间）。重试幂等专项：对一条 FAILED 通知投递首次重试 201 并转为 PENDING，二次重试 409「仅明确失败的通知可以重试；结果未知的通知不能自动重发」，投递记录数保持 1 条不变，未产生重复业务记录。正式租户联调仍由 ATS-018/019/020/021 与 ATS-025 独立承接。"
+    },
+    {
+      "name": "layered_delivery_and_reuse",
+      "passed": true,
+      "criteria": [
+        "配置按管理基础、业务配置、集成管理分层交付；复用 ATS-004/017、ATS-005、ATS-010/011、ATS-018/019/020/021/022 的能力，运维验证由 ATS-025 汇总；保留期限具体值沿用上线确认要求，开发默认值不冒充最终结论。"
+      ],
+      "details": "分区即分层：组织与权限复用 ATS-004 的角色/权限组/部门/字段授权接口；接入配置复用 ATS-017 组织同步、ATS-022 邮箱、ATS-010 导入令牌、ATS-005 保留策略；运行监控与操作审计汇总各领域状态，凭据维护与重试动作沿用各领域接口并按领域权限校验，本页不展示密钥。保留清理记录只展示计数与时间，保留期限具体值仍标注为上线前确认，未把开发默认值写成最终结论。运维整体验证由 ATS-025 汇总。"
+    },
+    {
+      "name": "inherited_ats012_display_defects",
+      "passed": true,
+      "criteria": [
+        "承接并修复 ATS-012 遗留的三处显示缺陷（2026-11-23 用户决定并入本任务）：一、职位树、候选人列表、筛选面板与分配职位对话框显示真实部门名称而非原始部门 ID，服务端返回 departmentName 且前端不再退回 ID；二、候选人时间线显示操作人姓名而非用户 ID；三、候选人抽屉内锁定/解锁后时间线即时刷新，无需关闭重开。三项均需接口证据与浏览器实测，不得以静态审查替代。"
+      ],
+      "details": "接口证据：候选人列表与详情的 departmentName 均为「后端研发部」而非 dep-backend；时间线 actor 为「本地管理员」而非用户 ID；锁定后时间线条数 +1、解锁后再 +1（2→3→4）。浏览器实测：职位树显示「后端研发部」且职位副标题为 MJ000001；列表行显示「后端研发部 · 上海」；筛选面板部门下拉为「全部部门 / 后端研发部」；分配职位对话框选项为「设置验收职位 · 后端研发部」；抽屉时间线全部显示「本地管理员」；在抽屉内点锁定后时间线页签计数 4→5，再点解锁 5→6，新事件即时出现在列表顶部，全程未关闭或重开抽屉。"
+    },
+    {
+      "name": "defects_found_and_fixed_during_acceptance",
+      "passed": true,
+      "criteria": [],
+      "details": "缺陷一：GET /api/v1/admin/settings/fields 返回 {\"groups\":{}}，因 settings.controller.ts 的 listFields 未 await 异步 fields.listFields()，Promise 被序列化为空对象；改为 async + await 后返回三组字段配置。缺陷二：管理后台固定规则页渲染 8 个空 li，因前端 FixedRule 类型与渲染使用 label/description，而后端返回 title/value/note/code；改正类型与渲染后 8 条规则全部显示。两处修复已提交 b92263d 并在本报告所述环境复验。"
+    },
+    {
+      "name": "quality_gates",
+      "passed": true,
+      "criteria": [],
+      "details": "npm run typecheck --prefix backend 与 npm run lint --prefix backend 退出码 0；npm test --prefix backend 46 个测试文件通过、6 个跳过，308 项用例通过、36 项跳过；npm run build（tsc -b + vite build）通过。后端 nest build 通过。"
+    }
+  ],
+  "limitations": [
+    "夹具：5 个部门与 1 条 FAILED 状态通知投递为 SQL 直接写入隔离库（系统无本地部门 CRUD，正式组织来自钉钉同步；FAILED 投递用于构造重试幂等场景）。职位、候选人、原因、字典、字段配置均经真实 HTTP API 创建与修改。全部为合成数据。",
+    "越权测试使用 INTERVIEWER 只读角色，覆盖了 setting:read / setting:manage / audit:export 三个拒绝分支；更细的部门数据范围与敏感字段授权组合未穷举，其服务端分支由 ATS-004 既有验收覆盖。",
+    "未制造并发竞态请求；乐观并发只验证了版本不匹配被拒（409/400），未验证同时提交的竞态窗口。",
+    "集成的真实租户联调不在本任务范围：钉钉 OA、日历通知、听记服务账号、AI 真实厂商仍为未接入或 mock，页面按状态显式标注，由 ATS-018/019/020/021 与 ATS-025 承接。",
+    "接入配置页对 OA 与日程的说明文案仍写着「ATS-019 进行中」「ATS-018 未接入」，两任务此后已按本地验收关闭，文案滞后但状态值 NOT_INTEGRATED 准确；建议随 ATS-025 上线清单一并更新文案。",
+    "观察到一个不属于本任务的缺陷：以重复 identitySubject 调用 POST /api/v1/authz/users 返回 500 而非 409，属 ATS-004 授权面，已记入 ATS-025 缺陷清单，本次未修。",
+    "保留期限具体值仍待上线确认，本页只展示计数与时间，未把开发默认值当作最终结论。",
+    "本次为本地验收（locally_verified），不等于业务验收人验收或生产环境验收。验收结束后临时库已删除，独立 API 与前端进程已停止；默认 3000/4173 上他人遗留的开发服务全程未触碰。"
+  ]
+}

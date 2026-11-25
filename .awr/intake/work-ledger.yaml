@@ -458,7 +458,7 @@ work_items:
   next_action: "无阻断；工作台与五类报表（含下钻、需求类型维度、未填写档与可复算基线）已交付并通过后端 268 项单测、类型检查、Lint 与前后端构建。剩余待办：一、浏览器端到端点击复验（下钻、职位360、通知全部已读）留待 ATS-025 统一验收；二、存量需求的“需求类型”需业务补录，否则报表显示未填写；三、报表为权限内实时聚合，万级数据性能与物化方案由 ATS-025 实测后再定；四、不包含消息推送（用户明确不需要）。"
 - id: ATS-024
   kind: delivery
-  status: planned
+  status: completed
   owner: Claude Code
   goal: ats-operations
   priority: P1
@@ -473,7 +473,9 @@ work_items:
   - "配置按管理基础、业务配置、集成管理分层交付；复用 ATS-004/017、ATS-005、ATS-010/011、ATS-018/019/020/021/022 的能力，运维验证由 ATS-025 汇总；保留期限具体值沿用上线确认要求，开发默认值不冒充最终结论。"
   - "承接并修复 ATS-012 遗留的三处显示缺陷（2026-11-23 用户决定并入本任务）：一、职位树、候选人列表、筛选面板与分配职位对话框显示真实部门名称而非原始部门 ID，服务端返回 departmentName 且前端不再退回 ID；二、候选人时间线显示操作人姓名而非用户 ID；三、候选人抽屉内锁定/解锁后时间线即时刷新，无需关闭重开。三项均需接口证据与浏览器实测，不得以静态审查替代。"
   depends_on: [ATS-004, ATS-007, ATS-012]
-  next_action: "2026-11-25 用户收紧项目，其他智能体不再参与，本任务改由 Claude Code 接管收口。实现已落地不要重写：Admin.tsx 八分区、backend/src/settings/ 13 个文件、ATS-012 三处显示缺陷已在代码修复。剩余为取证与关闭：七条验收逐条实测（含只读角色越权 403、脱敏审计与受控导出、配置不可绕过流程规则、字典停用不破坏历史、集成状态与 011 未接入显式标注），第 7 条三处缺陷需接口证据加浏览器实测。出一份覆盖全部七条的报告后按 evidence add → prepare-completion → work progress → work complete 关闭。"
+  next_action: "七条验收由 ats024-acceptance-v1 全覆盖，正在执行 work complete。"
+  "evidence": ["docs/verification/ats024-acceptance-report.json"]
+  "verification": {"evidence_level":"locally_verified"}
 - id: ATS-025
   kind: delivery
   status: planned
