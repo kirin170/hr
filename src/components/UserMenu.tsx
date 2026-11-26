@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BellRing, ShieldCheck, UserRound } from 'lucide-react'
 import type { CurrentUser, MyNotificationPreferences } from '../types'
-import { getMyNotificationPreferences, listDepartments, updateMyNotificationPreferences } from '../api'
+import { getDirectory, getMyNotificationPreferences, updateMyNotificationPreferences } from '../api'
 import { cn } from '../utils'
 
 type UserMenuProps = {
@@ -24,10 +24,10 @@ export function UserMenu({ me, onClose, onOpenAdmin }: UserMenuProps) {
   useEffect(() => {
     let active = true
     if (me?.departmentId) {
-      void listDepartments()
-        .then((rows) => {
+      void getDirectory()
+        .then((dir) => {
           if (!active) return
-          const hit = rows.find((item) => item.id === me.departmentId)
+          const hit = dir.departments.find((item) => item.id === me.departmentId)
           setDepartmentName(hit?.name || '')
         })
         .catch(() => { if (active) setDepartmentName('') })

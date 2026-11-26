@@ -73,4 +73,21 @@ describe('notification delivery safety', () => {
     expect(outbox.cancel).toHaveBeenCalledWith('delivery', now);
     expect(notice.send).not.toHaveBeenCalled();
   });
+  it('delivers interview.DECLINED reschedule notification to organizer while decline stands', async () => {
+    vi.stubEnv('DINGTALK_NOTIFICATION_DELIVERY_ENABLED', 'true');
+    vi.stubEnv('DINGTALK_AGENT_ID', '42');
+    const { worker, outbox, notice, db } = setup();
+    db.interview.findUnique.mockResolvedValue({
+      status: 'TO_SCHEDULE',
+      interviewerIds: '|interviewer|',
+      responses: { interviewer: 'DECLINED' },
+    } as never);
+    await worker.process(
+      { id: 'delivery', eventKey: 'interview.DECLINED', sourceKey: 'interview:interviewer', recipientId: 'organizer' },
+      now,
+    );
+    expect(notice.send).toHaveBeenCalledWith('token', '42', 'ding-user', expect.stringContaining('拒绝面试日程'));
+    expect(outbox.submitted).toHaveBeenCalledWith('delivery', '123', 'ding-user', now);
+    expect(outbox.cancel).not.toHaveBeenCalled();
+  });
 });

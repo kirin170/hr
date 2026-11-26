@@ -109,4 +109,23 @@ describe('DingTalkApiClient', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(String(fetchMock.mock.calls[2]?.[1]?.body)).toContain('cursor=100');
   });
+
+  it('does not auto-retry non-idempotent POST requests on network failure or 5xx', async () => {
+    apiConfig();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(json({ accessToken: 'app-token', expireIn: 7_200 }))
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce(new Response('{}', { status: 502 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const client = new DingTalkApiClient();
+
+    await expect(
+      client.requestOpenApi('POST', '/v1.0/workflow/processInstances', { body: { a: 1 } }),
+    ).rejects.toMatchObject({ code: 'network_error' });
+    await expect(
+      client.requestOpenApi('POST', '/v1.0/workflow/processInstances', { body: { a: 1 } }),
+    ).rejects.toMatchObject({ code: 'http_502' });
+    // 1 token request + 1 failed network POST + 1 failed 502 POST (zero retries)
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
 });

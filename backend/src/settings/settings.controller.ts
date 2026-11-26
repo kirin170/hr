@@ -11,6 +11,7 @@ import {
   Put,
   Req,
 } from '@nestjs/common';
+import { AuditService } from '../audit/audit.service.js';
 import { AuditAction, CurrentUser, RequirePermission } from '../auth/auth.decorators.js';
 import type { AuthenticatedRequest, AuthenticatedUser } from '../auth/auth.types.js';
 import { DictSettingsService } from './dict-settings.service.js';
@@ -46,16 +47,11 @@ export class SettingsController {
     private readonly operations: OperationsService,
     private readonly deliveries: NotificationOutboxService,
     private readonly calendarSync: InterviewCalendarSyncService,
+    private readonly audit: AuditService,
   ) {}
 
   private ctx(request: AuthenticatedRequest): AuditContext {
-    const headerId = request.headers['x-request-id'];
-    const headerRequestId = Array.isArray(headerId) ? headerId[0] : headerId;
-    return {
-      requestId: request.requestId ?? headerRequestId ?? 'unknown',
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-    };
+    return this.audit.contextOf(request);
   }
 
   @Get('effective')

@@ -3,7 +3,14 @@ import { AuditOutcome, Prisma } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { maskAuditValue } from './audit.mask.js';
+import { maskAuditValue, sanitizeForAudit } from './audit.mask.js';
+
+const VARCHAR_191 = 191;
+
+function clipColumn(value: string | null | undefined, max = VARCHAR_191): string | null {
+  if (typeof value !== 'string') return null;
+  return value.length > max ? value.slice(0, max) : value;
+}
 
 export type AuditWrite = {
   actorId?: string | null;
@@ -25,15 +32,15 @@ export class AuditService {
   async write(input: AuditWrite): Promise<void> {
     await this.prisma.auditLog.create({
       data: {
-        actorId: input.actorId ?? null,
-        action: input.action,
-        resourceType: input.resourceType,
-        resourceId: input.resourceId ?? null,
-        requestId: input.requestId,
-        beforeSummary: input.beforeSummary,
-        afterSummary: input.afterSummary,
-        ip: input.ip ?? null,
-        userAgent: input.userAgent ?? null,
+        actorId: clipColumn(input.actorId),
+        action: clipColumn(input.action) ?? 'unknown',
+        resourceType: clipColumn(input.resourceType) ?? 'API',
+        resourceId: clipColumn(input.resourceId),
+        requestId: clipColumn(input.requestId) ?? randomUUID(),
+        beforeSummary: sanitizeForAudit(input.beforeSummary),
+        afterSummary: sanitizeForAudit(input.afterSummary),
+        ip: clipColumn(input.ip),
+        userAgent: clipColumn(input.userAgent),
         outcome: input.outcome ?? AuditOutcome.SUCCESS,
       },
     });

@@ -454,7 +454,14 @@ function AccessTab() {
   const [busy, setBusy] = useState('')
   const [groupDraft, setGroupDraft] = useState({ code: '', name: '' })
   const [departmentDraft, setDepartmentDraft] = useState({ code: '', name: '', parentId: '' })
-  const [grantDraft, setGrantDraft] = useState({ field: 'CANDIDATE_CONTACT', target: '', canRead: true, canWrite: false, expiresAt: '' })
+  const [grantDraft, setGrantDraft] = useState({
+    field: 'CANDIDATE_CONTACT',
+    targetType: 'USER' as 'USER' | 'GROUP',
+    targetId: '',
+    canRead: true,
+    canWrite: false,
+    expiresAt: '',
+  })
 
   const load = useCallback(async () => {
     const [roleRows, groupRows, userRows, departmentRows, grantRows] = await Promise.all([
@@ -600,7 +607,28 @@ function AccessTab() {
                   <td><strong>{user.displayName}</strong><small>{user.email || '—'}</small></td>
                   <td>{user.employeeNo || '—'}</td>
                   <td>{departmentName(user.departmentId)}</td>
-                  <td className="admin-note">{user.roleAssignments.map((item) => item.role.name).join('、') || '未分配'}</td>
+                  <td className="admin-note">
+                    {user.roleAssignments.length > 0
+                      ? user.roleAssignments.map((item) => (
+                          <button
+                            key={item.role.code}
+                            type="button"
+                            className="text-button"
+                            style={{ marginRight: 6 }}
+                            disabled={busy === user.id}
+                            title={`移除角色 ${item.role.name}`}
+                            onClick={() => {
+                              const next = current
+                                .filter((code) => code !== item.role.code)
+                                .map((code) => ({ roleCode: code }))
+                              void run(user.id, () => api.assignUserRoles(user.id, next), `${user.displayName} 角色已更新`)
+                            }}
+                          >
+                            {item.role.name} ×
+                          </button>
+                        ))
+                      : '未分配'}
+                  </td>
                   <td>
                     <select
                       className="admin-select"
@@ -636,17 +664,21 @@ function AccessTab() {
         <table className="admin-table">
           <thead><tr><th>字段</th><th>对象</th><th>权限</th><th>到期</th><th>操作</th></tr></thead>
           <tbody>
-            {grants.map((grant) => (
-              <tr key={grant.id}>
-                <td><strong>{grant.field}</strong></td>
-                <td><small>{grant.userId ? `用户 ${grant.userId}` : `权限组 ${grant.userGroupId}`}</small></td>
-                <td>{grant.canRead ? '读' : ''}{grant.canWrite ? '写' : ''}</td>
-                <td>{grant.expiresAt ? grant.expiresAt.slice(0, 10) : '长期'}</td>
-                <td>
-                  <button className="text-button" disabled={busy === grant.id} onClick={() => { void run(grant.id, () => api.revokeFieldGrant(grant.id), '字段授权已撤销') }}><Trash2 size={13} />撤销</button>
-                </td>
-              </tr>
-            ))}
+            {grants.map((grant) => {
+              const userName = grant.userId ? users.find((u) => u.id === grant.userId)?.displayName : null
+              const groupName = grant.userGroupId ? groups.find((g) => g.id === grant.userGroupId)?.name : null
+              return (
+                <tr key={grant.id}>
+                  <td><strong>{grant.field}</strong></td>
+                  <td><small>{grant.userId ? `用户：${userName || grant.userId}` : `权限组：${groupName || grant.userGroupId}`}</small></td>
+                  <td>{grant.canRead ? '读' : ''}{grant.canWrite ? '写' : ''}</td>
+                  <td>{grant.expiresAt ? grant.expiresAt.slice(0, 10) : '长期'}</td>
+                  <td>
+                    <button className="text-button" disabled={busy === grant.id} onClick={() => { void run(grant.id, () => api.revokeFieldGrant(grant.id), '字段授权已撤销') }}><Trash2 size={13} />撤销</button>
+                  </td>
+                </tr>
+              )
+            })}
             {grants.length === 0 && <tr><td colSpan={5} className="empty-inline">暂无字段授权</td></tr>}
           </tbody>
         </table>
@@ -656,25 +688,32 @@ function AccessTab() {
             <option value="BACKGROUND_MATERIALS">背调材料</option>
             <option value="BANK_STATEMENTS">银行流水</option>
           </select>
-          <input className="admin-input" placeholder="用户 ID 或权限组 ID（二选一）" value={grantDraft.target} onChange={(event) => setGrantDraft({ ...grantDraft, target: event.target.value })} />
+          <select className="admin-select" value={grantDraft.targetType} onChange={(event) => setGrantDraft({ ...grantDraft, targetType: event.target.value as 'USER' | 'GROUP', targetId: '' })}>
+            <option value="USER">按用户</option>
+            <option value="GROUP">按权限组</option>
+          </select>
+          <select className="admin-select" value={grantDraft.targetId} onChange={(event) => setGrantDraft({ ...grantDraft, targetId: event.target.value })}>
+            <option value="">{grantDraft.targetType === 'USER' ? '选择用户…' : '选择权限组…'}</option>
+            {grantDraft.targetType === 'USER'
+              ? users.map((u) => <option key={u.id} value={u.id}>{u.displayName}{u.employeeNo ? ` (${u.employeeNo})` : ''}</option>)
+              : groups.map((g) => <option key={g.id} value={g.id}>{g.name} ({g.code})</option>)}
+          </select>
           <label className="admin-check"><input type="checkbox" checked={grantDraft.canRead} onChange={(event) => setGrantDraft({ ...grantDraft, canRead: event.target.checked })} />读</label>
           <label className="admin-check"><input type="checkbox" checked={grantDraft.canWrite} onChange={(event) => setGrantDraft({ ...grantDraft, canWrite: event.target.checked })} />写</label>
           <input className="admin-input admin-input-sm" type="date" value={grantDraft.expiresAt} onChange={(event) => setGrantDraft({ ...grantDraft, expiresAt: event.target.value })} />
-          <button className="button button-primary button-sm" disabled={!grantDraft.target.trim() || busy === 'grant-create'} onClick={() => {
-            const target = grantDraft.target.trim()
-            const isGroup = target.startsWith('grp_') || grantDraft.field.startsWith('GROUP:')
+          <button className="button button-primary button-sm" disabled={!grantDraft.targetId || busy === 'grant-create'} onClick={() => {
             const payload = {
               field: grantDraft.field,
-              userId: isGroup ? undefined : target,
-              userGroupId: isGroup ? target : undefined,
+              userId: grantDraft.targetType === 'USER' ? grantDraft.targetId : undefined,
+              userGroupId: grantDraft.targetType === 'GROUP' ? grantDraft.targetId : undefined,
               canRead: grantDraft.canRead,
               canWrite: grantDraft.canWrite,
-              expiresAt: grantDraft.expiresAt ? new Date(grantDraft.expiresAt).toISOString() : undefined,
+              expiresAt: grantDraft.expiresAt ? new Date(`${grantDraft.expiresAt}T23:59:59+08:00`).toISOString() : undefined,
             }
             void run('grant-create', () => api.createFieldGrant(payload), '字段授权已创建')
           }}>授权</button>
         </div>
-        <p className="hint">以 grp_ 开头的标识按权限组授权，其余按用户授权。</p>
+        <p className="hint">可直接选择用户或权限组授予敏感字段权限；到期日期按北京时间当日 23:59:59 生效。</p>
       </section>
     </>
   )

@@ -13,10 +13,10 @@ import {
 import {
   batchAssignJobs,
   confirmAiRun,
+  getDirectory,
   listDuplicateIntakes,
   listIntakePool,
   listJobs,
-  listUsers,
   mergeDuplicateIntake,
   openAttachment,
 } from '../api'
@@ -45,7 +45,7 @@ export function IntakePool() {
         setJobs([...map.values()])
       })
       .catch(() => setJobs([]))
-    listUsers().then(setUsers).catch(() => setUsers([]))
+    getDirectory().then((dir) => setUsers(dir.users)).catch(() => setUsers([]))
   }, [])
 
   return (

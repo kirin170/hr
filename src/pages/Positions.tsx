@@ -6,12 +6,11 @@ import {
   closeJob,
   closeRequisition,
   createJob,
+  getDirectory,
   getOaCapability,
-  listDepartments,
   listJobs,
   listOaSyncEvents,
   listRequisitions,
-  listUsers,
   retryOaSyncEvent,
   revertRequisition,
   syncRequisition,
@@ -21,6 +20,7 @@ import {
 import type { OaCapability, OaSyncEvent } from '../api'
 import { useApp } from '../context'
 import type { ApiDepartment, ApiRequisition, ApiUser, JobListItem } from '../types'
+import { useEffectiveSettings } from '../useEffectiveSettings'
 import { cn } from '../utils'
 
 type Tab = 'jobs' | 'requisitions'
@@ -119,8 +119,15 @@ export function Positions() {
   }, [loadRequisitions])
 
   useEffect(() => {
-    listDepartments().then(setDepartments).catch(() => setDepartments([]))
-    listUsers().then(setUsers).catch(() => setUsers([]))
+    getDirectory()
+      .then((dir) => {
+        setDepartments(dir.departments)
+        setUsers(dir.users)
+      })
+      .catch(() => {
+        setDepartments([])
+        setUsers([])
+      })
   }, [])
 
   const refreshAll = () => {
@@ -281,10 +288,18 @@ function JobFormModal({ job, departments, users, onClose, onSaved }: {
 }) {
   const isNew = job === 'new'
   const current = isNew ? null : job
+  const effective = useEffectiveSettings()
+  const requiredKeys = new Set(
+    (effective?.fields.JOB ?? []).filter((field) => field.required).map((field) => field.key),
+  )
+  const interviewPlans = effective?.interviewPlans ?? []
+  const mark = (key: string) => (requiredKeys.has(key) ? <em>*</em> : null)
+
   const [title, setTitle] = useState(current?.title ?? '')
   const [departmentId, setDepartmentId] = useState(current?.departmentId ?? departments[0]?.id ?? '')
   const [headcount, setHeadcount] = useState(String(current?.headcount ?? 1))
   const [recruiterId, setRecruiterId] = useState(current?.recruiterId ?? '')
+  const [interviewPlanId, setInterviewPlanId] = useState(current?.interviewPlanId ?? '')
   const [channel, setChannel] = useState(current?.channel ?? '')
   const [location, setLocation] = useState(current?.location ?? '')
   const [requirements, setRequirements] = useState(current?.requirements ?? '')
@@ -305,8 +320,8 @@ function JobFormModal({ job, departments, users, onClose, onSaved }: {
         sources: channel,
         location,
       }
-      if (isNew) await createJob({ ...payload, isVirtual })
-      else await updateJob(current!.id, { ...payload, isVirtual })
+      if (isNew) await createJob({ ...payload, interviewPlanId: interviewPlanId || undefined, isVirtual })
+      else await updateJob(current!.id, { ...payload, interviewPlanId: interviewPlanId || null, isVirtual })
       onSaved()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : '保存失败')
@@ -328,18 +343,24 @@ function JobFormModal({ job, departments, users, onClose, onSaved }: {
         <option value="">请选择部门</option>
         {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
       </select>
-      {departments.length === 0 && <small>无法加载部门列表，请确认已登录且具备组织读取权限</small>}
+      {departments.length === 0 && <small>无法加载部门列表，请确认已登录</small>}
     </label>
-    <label className="form-field"><span>招聘人数</span><input inputMode="numeric" value={headcount} onChange={(event) => setHeadcount(event.target.value.replace(/\D/g, ''))} /></label>
-    <label className="form-field"><span>招聘负责人</span>
+    <label className="form-field"><span>招聘人数 {mark('headcount')}</span><input inputMode="numeric" value={headcount} onChange={(event) => setHeadcount(event.target.value.replace(/\D/g, ''))} /></label>
+    <label className="form-field"><span>招聘负责人 {mark('recruiterId')}</span>
       <select value={recruiterId} onChange={(event) => setRecruiterId(event.target.value)}>
         <option value="">未指定</option>
         {users.map((user) => <option key={user.id} value={user.id}>{user.displayName}</option>)}
       </select>
     </label>
+    <label className="form-field"><span>面试方案 {mark('interviewPlanId')}</span>
+      <select value={interviewPlanId} onChange={(event) => setInterviewPlanId(event.target.value)}>
+        <option value="">未指定</option>
+        {interviewPlans.map((plan) => <option key={plan.id} value={plan.id}>{plan.name}（{plan.rounds} 轮）</option>)}
+      </select>
+    </label>
     <label className="form-field"><span>招聘渠道</span><input value={channel} onChange={(event) => setChannel(event.target.value)} placeholder="例如：BOSS直聘、猎聘、内推" /></label>
-    <label className="form-field"><span>工作地点</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：上海" /></label>
-    <label className="form-field"><span>招聘要求</span><textarea rows={4} value={requirements} onChange={(event) => setRequirements(event.target.value)} placeholder="为空时 AI 评估入口禁用并提示补录" /></label>
+    <label className="form-field"><span>工作地点 {mark('location')}</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="例如：上海" /></label>
+    <label className="form-field"><span>招聘要求 {mark('requirements')}</span><textarea rows={4} value={requirements} onChange={(event) => setRequirements(event.target.value)} placeholder="为空时 AI 评估入口禁用并提示补录" /></label>
     <label className="form-field form-field-inline"><input type="checkbox" checked={isVirtual} onChange={(event) => setIsVirtual(event.target.checked)} /><span>虚拟职位（校招容器，不进入普通职位筛选默认集）</span></label>
   </Modal>
 }

@@ -29,10 +29,15 @@ function Root() {
 
 async function bootstrap() {
   const url = new URL(window.location.href)
+  const cleanPath = url.pathname.replace(/\/+$/, '')
+  const isPublicPage = cleanPath === '/registration' || cleanPath === '/campus'
   if (url.searchParams.get('dingtalk_login') === 'success') {
     url.searchParams.delete('dingtalk_login')
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`)
     setAccessToken(null)
+    await refreshAccessToken()
+  } else if (!isPublicPage && !getAccessToken()) {
+    // 兼容钉钉 SSO 默认跳转 '/' 或已有 HttpOnly 刷新 Cookie 的会话恢复
     await refreshAccessToken()
   }
 

@@ -144,6 +144,15 @@ export class AuthorizationService {
             clauses.push({ departmentId: { in: actor.departmentIds } });
           }
           clauses.push({ recruiterId: actor.id });
+          clauses.push({
+            candidates: {
+              some: {
+                interviews: {
+                  some: { interviewerIds: { contains: `|${actor.id}|` } },
+                },
+              },
+            },
+          });
           break;
         case DataScope.ALL:
           return {};
@@ -528,6 +537,20 @@ export class AuthorizationService {
       orderBy: [{ parentId: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       select: { id: true, code: true, name: true, parentId: true },
     });
+  }
+
+  /** 业务协作基础目录：供普通登录用户选择部门与招聘负责人，不包含账号凭据或角色信息 */
+  async directory() {
+    const [departments, users] = await Promise.all([
+      this.listDepartments(),
+      this.prisma.user.findMany({
+        where: { status: UserStatus.ACTIVE },
+        orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+        take: 500,
+        select: { id: true, displayName: true, departmentId: true },
+      }),
+    ]);
+    return { departments, users };
   }
 
   listFieldGrants() {

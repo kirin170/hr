@@ -199,7 +199,8 @@ export class ReportsService {
   ) {
     if (!REASON_TYPE_LABELS[type]) throw new BadRequestException('原因类型无效');
     const range = this.dateRange(filters, '原因发生时间');
-    const candidates = await this.scopedCandidates(actor, filters);
+    // 原因报表的时间窗仅按事件发生时间过滤，不叠加过滤候选人申请时间，避免漏统计跨周期候选人
+    const candidates = await this.scopedCandidates(actor, { ...filters, from: undefined, to: undefined });
     const candidateIds = candidates.map((candidate) => candidate.id);
     const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
 
@@ -255,24 +256,51 @@ export class ReportsService {
     }
 
     if (type === 'OFFER_REJECT') {
-      const offers = candidateIds.length
-        ? await this.prisma.offerRecord.findMany({
-            where: {
-              candidateId: { in: candidateIds },
-              OR: [{ oralResult: 'REJECTED' }, { writtenResult: 'REJECTED' }],
-              ...(range ? { updatedAt: this.prismaRange(range) } : {}),
-            },
-            select: {
-              candidateId: true,
-              rejectReasonId: true,
-              failureReasonLabel: true,
-              failureReasonText: true,
-              updatedAt: true,
-            },
-          })
-        : [];
+      const [offers, historyRows] = candidateIds.length
+        ? await Promise.all([
+            this.prisma.offerRecord.findMany({
+              where: {
+                candidateId: { in: candidateIds },
+                OR: [{ oralResult: 'REJECTED' }, { writtenResult: 'REJECTED' }],
+                ...(range ? { updatedAt: this.prismaRange(range) } : {}),
+              },
+              select: {
+                candidateId: true,
+                rejectReasonId: true,
+                failureReasonLabel: true,
+                failureReasonText: true,
+                updatedAt: true,
+              },
+            }),
+            this.prisma.offerRecordHistory.findMany({
+              where: {
+                candidateId: { in: candidateIds },
+                ...(range ? { createdAt: this.prismaRange(range) } : {}),
+              },
+              select: {
+                candidateId: true,
+                snapshot: true,
+                createdAt: true,
+              },
+            }),
+          ])
+        : [[], []];
+      const historicalRejects = historyRows
+        .map((row) => {
+          const snap = (row.snapshot && typeof row.snapshot === 'object' ? row.snapshot : {}) as Record<string, unknown>;
+          if (snap.oralResult !== 'REJECTED' && snap.writtenResult !== 'REJECTED') return null;
+          return {
+            candidateId: row.candidateId,
+            rejectReasonId: typeof snap.rejectReasonId === 'string' ? snap.rejectReasonId : null,
+            failureReasonLabel: typeof snap.failureReasonLabel === 'string' ? snap.failureReasonLabel : null,
+            failureReasonText: typeof snap.failureReasonText === 'string' ? snap.failureReasonText : null,
+            updatedAt: row.createdAt,
+          };
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null);
+      const allRejects = [...offers, ...historicalRejects];
       const reasonIds = [
-        ...new Set(offers.map((offer) => offer.rejectReasonId).filter((id): id is string => Boolean(id))),
+        ...new Set(allRejects.map((offer) => offer.rejectReasonId).filter((id): id is string => Boolean(id))),
       ];
       const options = reasonIds.length
         ? await this.prisma.reasonOption.findMany({
@@ -281,7 +309,7 @@ export class ReportsService {
           })
         : [];
       const labels = new Map(options.map((option) => [option.id, option.label]));
-      for (const offer of offers) {
+      for (const offer of allRejects) {
         const key = offer.rejectReasonId ?? offer.failureReasonLabel ?? offer.failureReasonText ?? UNFILLED;
         const label = offer.rejectReasonId
           ? labels.get(offer.rejectReasonId) ?? UNFILLED_LABEL
@@ -358,7 +386,8 @@ export class ReportsService {
   /** 转正率：分子为已转正，分母为已记录试用期结论的人数（含未通过）。 */
   async probation(actor: AuthenticatedUser, filters: ReportFilters, drillGroup?: string) {
     const range = this.dateRange(filters, '试用期结论时间');
-    const candidates = await this.scopedCandidates(actor, filters);
+    // 转正报表的时间窗仅按试用期结论时间过滤，不叠加过滤候选人申请时间
+    const candidates = await this.scopedCandidates(actor, { ...filters, from: undefined, to: undefined });
     const candidateIds = candidates.map((candidate) => candidate.id);
     const records = candidateIds.length
       ? await this.prisma.probationRecord.findMany({

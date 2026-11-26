@@ -91,6 +91,15 @@ export class NotificationDeliveryWorker implements OnModuleInit, OnModuleDestroy
         const [reminder, preferences] = await Promise.all([this.reminders.current(row.sourceKey, actor), this.prefs.get(row.recipientId)]);
         if (!reminder || preferences.muted.includes(row.eventKey) || reminderDueAt(reminder.onboardDate, now)?.getTime() !== reminder.dueAt.getTime()) { await this.outbox.cancel(row.id, now); return; }
         content = `您有待处理的待入职保温事项，请登录招聘系统查看。提醒编号：${row.sourceKey}`;
+      } else if (row.eventKey === 'interview.DECLINED') {
+        const separator = row.sourceKey.indexOf(':');
+        const id = row.sourceKey.slice(0, separator);
+        const declinedUserId = row.sourceKey.slice(separator + 1);
+        if (separator < 1 || !declinedUserId) { await this.outbox.cancel(row.id, now); return; }
+        const interview = await this.db.interview.findUnique({ where: { id }, select: { status: true, interviewerIds: true, responses: true } });
+        const responses = interview?.responses && typeof interview.responses === 'object' && !Array.isArray(interview.responses) ? (interview.responses as Record<string, unknown>) : {};
+        if (!interview || interview.status === 'CANCELLED' || !(interview.interviewerIds ?? '').split('|').includes(declinedUserId) || responses[declinedUserId] !== 'DECLINED') { await this.outbox.cancel(row.id, now); return; }
+        content = `面试官已拒绝面试日程，请登录招聘系统改期或重新协调。面试编号：${id}`;
       } else { await this.outbox.cancel(row.id, now); return; }
       const identity = await this.db.identityLink.findUnique({ where: { provider_userId: { provider: IdentityProvider.DINGTALK, userId: row.recipientId } }, select: { subject: true, user: { select: { status: true } } } });
       if (!identity || identity.user.status !== 'ACTIVE') { await this.outbox.cancel(row.id, now); return; }

@@ -50,6 +50,7 @@ export class DashboardService {
   /** 工作台：七类待办 + 今日指标，全部来自权限内真实数据。 */
   async summary(actor: AuthenticatedUser) {
     const scope = this.authorization.candidateWhere(actor, 'candidate:read');
+    const now = new Date();
     const { start, end } = this.todayRange();
     const offeringCandidates = await this.prisma.candidate.findMany({
       where: { AND: [scope, { stage: { in: ['OFFERING', 'PENDING_ONBOARD'] } }] },
@@ -60,36 +61,51 @@ export class DashboardService {
     const [
       unassigned,
       screening,
-      toSchedule,
-      feedback,
+      activeInterviews,
       pendingOnboard,
       bgConfirm,
       offerToSend,
       screeningToday,
+      interviewsTodayCount,
       interviewsToday,
     ] = await Promise.all([
       this.prisma.candidate.count({ where: { AND: [scope, { stage: 'UNASSIGNED' }] } }),
       this.prisma.candidate.count({ where: { AND: [scope, { stage: 'HR_SCREENING' }] } }),
-      this.prisma.interview.count({
-        where: { AND: [{ status: 'TO_SCHEDULE' }, { candidate: scope }] },
-      }),
-      this.prisma.interview.count({
-        where: { AND: [{ status: 'FEEDBACK_PENDING' }, { candidate: scope }] },
+      this.prisma.interview.findMany({
+        where: { AND: [{ status: { in: ['TO_SCHEDULE', 'FEEDBACK_PENDING'] } }, { candidate: scope }] },
+        select: { id: true, status: true, time: true, endTime: true },
       }),
       this.prisma.candidate.count({ where: { AND: [scope, { stage: 'PENDING_ONBOARD' }] } }),
       offeringIds.length
         ? this.prisma.offerRecord.count({
-            where: { candidateId: { in: offeringIds }, stage: 'BG_IN_PROGRESS' },
+            where: {
+              candidateId: { in: offeringIds },
+              OR: [
+                { workflowStage: 'BACKGROUND_APPROVAL', stageStatus: 'PENDING' },
+                { workflowStage: null, stage: 'BG_IN_PROGRESS' },
+              ],
+            },
           })
         : 0,
       offeringIds.length
         ? this.prisma.offerRecord.count({
-            where: { candidateId: { in: offeringIds }, stage: 'OFFER_TO_SEND' },
+            where: {
+              candidateId: { in: offeringIds },
+              OR: [
+                { workflowStage: 'WRITTEN_OFFER', stageStatus: 'PENDING', offerSentAt: null },
+                { workflowStage: null, stage: 'OFFER_TO_SEND' },
+              ],
+            },
           })
         : 0,
       this.prisma.candidate.count({
         where: {
           AND: [scope, { stage: 'HR_SCREENING' }, { appliedAt: { gte: start, lte: end } }],
+        },
+      }),
+      this.prisma.interview.count({
+        where: {
+          AND: [{ time: { gte: start, lte: end } }, { status: { not: 'CANCELLED' } }, { candidate: scope }],
         },
       }),
       this.prisma.interview.findMany({
@@ -109,6 +125,8 @@ export class DashboardService {
       }),
     ]);
 
+    const { toSchedule, feedbackPending: feedback } = await this.classifyInterviews(activeInterviews, now);
+
     const counts: Record<TodoKey, number> = {
       UNASSIGNED: unassigned,
       HR_SCREENING: screening,
@@ -120,7 +138,7 @@ export class DashboardService {
     };
 
     return {
-      generatedAt: new Date().toISOString(),
+      generatedAt: now.toISOString(),
       date: start.toISOString().slice(0, 10),
       timezone: 'UTC 日期口径（与周期报表一致）',
       todos: (Object.keys(TODO_LABELS) as TodoKey[]).map((key) => ({
@@ -135,7 +153,7 @@ export class DashboardService {
           denominator: '今日新增且当前处于 HR 初筛的候选人',
         },
         interviews: {
-          count: interviewsToday.length,
+          count: interviewsTodayCount,
           label: '今日面试',
           items: interviewsToday.map((interview) => ({
             id: interview.id,
@@ -214,7 +232,8 @@ export class DashboardService {
     if (!job) throw new NotFoundException('职位不存在');
 
     const scope = this.authorization.candidateWhere(actor, 'candidate:read');
-    const [stageRows, interviews, candidates] = await Promise.all([
+    const now = new Date();
+    const [stageRows, allJobInterviews, candidates] = await Promise.all([
       this.prisma.candidate.groupBy({
         by: ['stage'],
         where: { AND: [scope, { jobId }] },
@@ -222,9 +241,8 @@ export class DashboardService {
       }),
       this.prisma.interview.findMany({
         where: { AND: [{ jobId }, { status: { in: ['TO_SCHEDULE', 'FEEDBACK_PENDING'] } }, { candidate: scope }] },
-        select: { id: true, candidateId: true, status: true, time: true, round: true },
+        select: { id: true, candidateId: true, status: true, time: true, endTime: true, round: true },
         orderBy: { time: 'asc' },
-        take: 20,
       }),
       this.prisma.candidate.findMany({
         where: { AND: [scope, { jobId }] },
@@ -232,13 +250,18 @@ export class DashboardService {
       }),
     ]);
 
-    const offers = candidates.length
-      ? await this.prisma.offerRecord.groupBy({
-          by: ['stage'],
+    const interviewSummary = await this.classifyInterviews(allJobInterviews, now);
+    const offerRecords = candidates.length
+      ? await this.prisma.offerRecord.findMany({
           where: { candidateId: { in: candidates.map((candidate) => candidate.id) } },
-          _count: { _all: true },
+          select: { workflowStage: true, stage: true },
         })
       : [];
+    const offerBuckets: Record<string, number> = {};
+    for (const offer of offerRecords) {
+      const key = offer.workflowStage ?? offer.stage;
+      offerBuckets[key] = (offerBuckets[key] ?? 0) + 1;
+    }
 
     const [departmentNames, recruiterNames] = await Promise.all([
       resolveDepartmentNames(this.prisma, [job.departmentId]),
@@ -285,11 +308,17 @@ export class DashboardService {
         onboarded: reached('ONBOARDED'),
       },
       interviews: {
-        toSchedule: interviews.filter((interview) => interview.status === 'TO_SCHEDULE').length,
-        feedbackPending: interviews.filter((interview) => interview.status === 'FEEDBACK_PENDING').length,
-        items: interviews,
+        toSchedule: interviewSummary.toSchedule,
+        feedbackPending: interviewSummary.feedbackPending,
+        items: interviewSummary.items.slice(0, 20).map((interview) => ({
+          id: interview.id,
+          candidateId: interview.candidateId,
+          status: interview.effectiveStatus,
+          time: interview.time,
+          round: interview.round,
+        })),
       },
-      offers: Object.fromEntries(offers.map((row) => [row.stage, row._count._all])),
+      offers: offerBuckets,
       channels: this.groupChannels(candidates),
     };
   }
@@ -312,6 +341,7 @@ export class DashboardService {
         id: true,
         status: true,
         time: true,
+        endTime: true,
         round: true,
         candidateId: true,
         candidate: { select: { name: true, job: { select: { title: true } } } },
@@ -319,8 +349,18 @@ export class DashboardService {
       orderBy: { time: 'desc' },
       take: 100,
     });
+    const interviewFeedbackRows = interviews.length
+      ? await this.prisma.interviewFeedback.findMany({
+          where: { interviewId: { in: interviews.map((item) => item.id) }, interviewerId: actor.id },
+          select: { interviewId: true },
+        })
+      : [];
+    const mySubmittedFeedback = new Set(interviewFeedbackRows.map((row) => row.interviewId));
     for (const interview of interviews) {
-      const isFeedback = interview.status === 'FEEDBACK_PENDING';
+      const ended = (interview.endTime ?? interview.time).getTime() <= now.getTime();
+      const isFeedback =
+        interview.status === 'FEEDBACK_PENDING' || (ended && !mySubmittedFeedback.has(interview.id));
+      if (ended && mySubmittedFeedback.has(interview.id)) continue;
       items.push({
         id: `${isFeedback ? 'feedback' : 'mention'}:${interview.id}`,
         category: isFeedback ? 'FEEDBACK' : 'MENTION',
@@ -371,25 +411,37 @@ export class DashboardService {
       const offers = await this.prisma.offerRecord.findMany({
         where: {
           candidateId: { in: offerCandidates.map((candidate) => candidate.id) },
-          OR: [{ stage: 'BG_IN_PROGRESS' }, { stage: 'OFFER_TO_SEND' }, { stage: 'OFFER_SENT' }],
+          OR: [
+            { workflowStage: 'BACKGROUND_APPROVAL', stageStatus: 'PENDING' },
+            { workflowStage: 'WRITTEN_OFFER', stageStatus: 'PENDING' },
+            { workflowStage: null, stage: { in: ['BG_IN_PROGRESS', 'OFFER_TO_SEND', 'OFFER_SENT'] } },
+          ],
         },
-        select: { candidateId: true, stage: true, updatedAt: true },
+        select: {
+          candidateId: true,
+          stage: true,
+          workflowStage: true,
+          stageStatus: true,
+          offerSentAt: true,
+          updatedAt: true,
+        },
         orderBy: { updatedAt: 'desc' },
       });
       const byId = new Map(offerCandidates.map((candidate) => [candidate.id, candidate]));
       for (const offer of offers) {
         const candidate = byId.get(offer.candidateId);
         if (!candidate) continue;
-        const stageLabel =
-          offer.stage === 'BG_IN_PROGRESS'
-            ? '背调待确认'
-            : offer.stage === 'OFFER_TO_SEND'
-              ? '书面 offer 待发送'
-              : 'offer 已发送待回执';
+        const bucket =
+          offer.workflowStage === 'BACKGROUND_APPROVAL' || (!offer.workflowStage && offer.stage === 'BG_IN_PROGRESS')
+            ? { key: 'BG_CONFIRM', label: '背调待确认' }
+            : (offer.workflowStage === 'WRITTEN_OFFER' && !offer.offerSentAt) ||
+                (!offer.workflowStage && offer.stage === 'OFFER_TO_SEND')
+              ? { key: 'OFFER_TO_SEND', label: '书面 offer 待发送' }
+              : { key: 'OFFER_SENT', label: 'offer 已发送待回执' };
         items.push({
-          id: `offer:${offer.candidateId}:${offer.stage}`,
+          id: `offer:${offer.candidateId}:${bucket.key}`,
           category: 'OFFER',
-          title: `${stageLabel}：${candidate.name}`,
+          title: `${bucket.label}：${candidate.name}`,
           detail: candidate.job?.title ?? '未关联职位',
           at: offer.updatedAt.toISOString(),
           page: 'candidates',
@@ -434,15 +486,53 @@ export class DashboardService {
     payload: { ids?: string[]; all?: boolean },
   ) {
     const state = await this.getReadState(actor.id);
+    const incoming = Array.isArray(payload.ids)
+      ? payload.ids.filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 128)
+      : [];
+    const mergedIds = [...new Set([...state.ids, ...incoming])].slice(-500);
     const next: ReadState = payload.all
       ? { ids: [], allReadAt: new Date().toISOString() }
-      : { ids: [...new Set([...state.ids, ...(payload.ids ?? [])])], allReadAt: state.allReadAt };
+      : { ids: mergedIds, allReadAt: state.allReadAt };
     await this.prisma.systemSetting.upsert({
       where: { key: `${READ_KEY_PREFIX}${actor.id}` },
       create: { key: `${READ_KEY_PREFIX}${actor.id}`, value: JSON.stringify(next) },
       update: { value: JSON.stringify(next) },
     });
     return { allReadAt: next.allReadAt, readIds: next.ids.length };
+  }
+
+  /**
+   * 面试表只落库 TO_SCHEDULE / CANCELLED，待评价（FEEDBACK_PENDING）由结束时间与面评记录共同决定。
+   */
+  private async classifyInterviews<
+    T extends { id: string; status: string; time: Date; endTime: Date | null },
+  >(rows: T[], now: Date) {
+    const endedIds = rows
+      .filter((row) => row.status === 'TO_SCHEDULE' && (row.endTime ?? row.time).getTime() <= now.getTime())
+      .map((row) => row.id);
+    const feedbackRows = endedIds.length
+      ? await this.prisma.interviewFeedback.findMany({
+          where: { interviewId: { in: endedIds } },
+          select: { interviewId: true },
+          distinct: ['interviewId'],
+        })
+      : [];
+    const hasFeedback = new Set(feedbackRows.map((row) => row.interviewId));
+
+    let toSchedule = 0;
+    let feedbackPending = 0;
+    const items: Array<T & { effectiveStatus: 'TO_SCHEDULE' | 'FEEDBACK_PENDING' }> = [];
+    for (const row of rows) {
+      const ended = (row.endTime ?? row.time).getTime() <= now.getTime();
+      if (row.status === 'FEEDBACK_PENDING' || (ended && !hasFeedback.has(row.id))) {
+        feedbackPending += 1;
+        items.push({ ...row, effectiveStatus: 'FEEDBACK_PENDING' });
+      } else if (!ended) {
+        toSchedule += 1;
+        items.push({ ...row, effectiveStatus: 'TO_SCHEDULE' });
+      }
+    }
+    return { toSchedule, feedbackPending, items };
   }
 
   private async getReadState(userId: string): Promise<ReadState> {

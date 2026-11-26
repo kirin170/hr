@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles, Users, UsersRound } from 'lucide-react'
+import { logout } from '../api'
 import type { CurrentUser, PageKey } from '../types'
 import { getDashboardSummary } from '../api'
 import { cn } from '../utils'
@@ -105,7 +106,7 @@ export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
         <div className="sidebar-user">
           <span className="avatar avatar-sm avatar-warm">{(me?.displayName || '未').slice(0, 1)}</span>
           {!collapsed && <span className="sidebar-user-copy"><strong>{me?.displayName || '未登录'}</strong><small>{me?.roles.map((role) => role.name).join(' · ') || '暂无角色'}</small></span>}
-          {!collapsed && <button className="icon-button icon-button-small" title="退出登录"><LogOut size={15} /></button>}
+          {!collapsed && <button className="icon-button icon-button-small" title="退出登录" onClick={() => { void logout() }}><LogOut size={15} /></button>}
         </div>
         <button className="collapse-button" onClick={() => setCollapsed(!collapsed)} title={collapsed ? '展开侧栏' : '收起侧栏'}>
           <span className={cn('collapse-chevron', collapsed && 'collapse-chevron-forward')}>‹</span>

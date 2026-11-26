@@ -190,7 +190,10 @@ describe('IntakeService 入场列表与监控（ATS-008）', () => {
         }),
       },
     };
-    const authorization = { scopesFor: vi.fn().mockReturnValue(['ALL']) };
+    const authorization = {
+      scopesFor: vi.fn().mockReturnValue(['ALL']),
+      canAccessSensitiveField: vi.fn().mockResolvedValue(false),
+    };
     const service = buildService(prisma, authorization);
 
     const result = await service.monitor({ mailbox: 'hr@example.com' }, actor);

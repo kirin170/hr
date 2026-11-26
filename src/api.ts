@@ -124,6 +124,20 @@ export function startDingTalkLogin(): void {
   window.location.assign(`${authApiBase}/auth/dingtalk/login`)
 }
 
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${authApiBase}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+  } catch {
+    // 即使后端不可达，仍清理本地令牌并回到登录页
+  } finally {
+    setAccessToken(null)
+    window.dispatchEvent(new Event('talentflow-auth-required'))
+  }
+}
+
 export async function loginLocal(identifier: string, secret: string): Promise<string> {
   let response: Response
   try {
@@ -468,12 +482,33 @@ export function listRequisitionTimeline(id: string): Promise<CandidateTimelineEv
 
 // ---------- 组织基础数据 ----------
 
+export function getDirectory(): Promise<{ departments: ApiDepartment[]; users: ApiUser[] }> {
+  return request<{ departments: ApiDepartment[]; users: ApiUser[] }>('/v1/authz/directory')
+}
+
 export function listDepartments(): Promise<ApiDepartment[]> {
   return request<ApiDepartment[]>('/v1/authz/departments')
 }
 
 export function listUsers(): Promise<ApiUser[]> {
   return request<ApiUser[]>('/v1/authz/users')
+}
+
+export type CandidateInterviewSummary = {
+  id: string
+  candidateId: string
+  jobId: string
+  round: number
+  mode: string
+  time: string
+  endTime: string | null
+  location: string | null
+  interviewerIds: string[]
+  status: string
+}
+
+export function listCandidateInterviews(candidateId: string): Promise<CandidateInterviewSummary[]> {
+  return request<CandidateInterviewSummary[]>(`/interviews${toQuery({ candidateId })}`)
 }
 
 // ---------- 简历入场（FR-ENT-1/3～10） ----------
@@ -690,7 +725,7 @@ export async function openAttachment(fileId: string): Promise<void> {
   const signed = await request<{ url: string; fileName: string }>(
     `/v1/attachments/${encodeURIComponent(fileId)}/read-url`,
   )
-  window.open(signed.url, '_blank', 'noopener')
+  window.open(signed.url, '_blank', 'noopener,noreferrer')
 }
 
 // ---------- 来源记录与校招投递（ATS-009） ----------

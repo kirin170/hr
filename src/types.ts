@@ -154,6 +154,7 @@ export type JobListItem = ApiJob & {
   code: string
   status: 'ACTIVE' | 'CLOSED'
   recruiterId: string | null
+  interviewPlanId?: string | null
   requirements: string | null
   channel: string | null
   isVirtual: boolean

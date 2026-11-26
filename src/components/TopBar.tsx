@@ -19,12 +19,18 @@ export function TopBar({ title, subtitle, onSearch, onOpenSettings, me, onOpenAd
   const [open, setOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifications, setNotifications] = useState<{id:string; name:string; onboardDate:string; readAt:string | null}[]>([])
+  const canReadOnboardingReminders =
+    me?.roles.some((role) => role.permissions.includes('candidate:stage:update')) ?? false
   useEffect(() => {
+    if (!canReadOnboardingReminders) {
+      setNotifications([])
+      return
+    }
     let active = true
     const load = () => request<typeof notifications>('/onboarding-reminders').then(rows => { if (active) setNotifications(rows) }).catch(() => { if (active) setNotifications([]) })
     void load(); const timer = window.setInterval(load, 60_000)
     return () => { active = false; window.clearInterval(timer) }
-  }, [])
+  }, [canReadOnboardingReminders])
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {

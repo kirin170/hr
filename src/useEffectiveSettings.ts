@@ -4,11 +4,17 @@ import { getEffectiveSettings } from './api'
 
 let cached: EffectiveSettings | null = null
 let pending: Promise<EffectiveSettings> | null = null
+let version = 0
 
-/** 管理后台改动配置后调用，让表单拿到新的必填/字典/原因选项 */
+/** 管理后台改动配置或切换登录态后调用，让表单拿到新的必填/字典/原因选项 */
 export function invalidateEffectiveSettings(): void {
+  version += 1
   cached = null
   pending = null
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('talentflow-auth-required', invalidateEffectiveSettings)
 }
 
 /**
@@ -19,17 +25,19 @@ export function useEffectiveSettings(): EffectiveSettings | null {
   const [value, setValue] = useState<EffectiveSettings | null>(cached)
   useEffect(() => {
     let active = true
+    const ticket = version
     if (!pending) {
       pending = getEffectiveSettings().catch((error: unknown) => {
-        pending = null
+        if (ticket === version) pending = null
         throw error
       })
     }
     pending.then((next) => {
+      if (ticket !== version) return
       cached = next
       if (active) setValue(next)
     }).catch(() => {
-      if (active) setValue(null)
+      if (active && ticket === version) setValue(null)
     })
     return () => { active = false }
   }, [])

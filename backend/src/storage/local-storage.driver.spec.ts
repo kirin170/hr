@@ -71,10 +71,14 @@ describe('LocalStorageDriver 私有读写（技术设计 §8.1）', () => {
     ).rejects.toThrow();
   });
 
-  it('非本地环境缺少签名密钥时拒绝启动', () => {
+  it('非本地环境（含未设置 APP_ENV）缺少或过短的签名密钥时拒绝启动', () => {
     expect(() => localStorageOptionsFromEnv({ APP_ENV: 'production' })).toThrow(
       /STORAGE_SIGNING_SECRET/,
     );
+    expect(() => localStorageOptionsFromEnv({})).toThrow(/STORAGE_SIGNING_SECRET/);
+    expect(() =>
+      localStorageOptionsFromEnv({ APP_ENV: 'production', STORAGE_SIGNING_SECRET: 'too-short' }),
+    ).toThrow(/STORAGE_SIGNING_SECRET/);
     expect(
       localStorageOptionsFromEnv({ APP_ENV: 'local', JWT_ACCESS_SECRET: 'jwt-secret' })
         .signingSecret,

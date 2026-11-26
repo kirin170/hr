@@ -131,11 +131,17 @@ export function createClient({ apiBase, store, fetchImpl = globalThis.fetch, now
   };
 }
 
+const MAX_RESUME_BYTES = 20 * 1024 * 1024;
+
 /** 附件必须由扩展自己取字节；服务端不做 URL 下载。 */
 export async function fetchResumeBytes(url, fetchImpl = globalThis.fetch) {
   const res = await fetchImpl(url, { credentials: 'omit' });
   if (!res.ok) throw new Error('ATTACHMENT_UNAVAILABLE');
+  const contentLength = Number(res.headers?.get?.('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_RESUME_BYTES) {
+    throw new Error('ATTACHMENT_UNAVAILABLE');
+  }
   const buffer = await res.arrayBuffer();
-  if (!buffer.byteLength) throw new Error('ATTACHMENT_UNAVAILABLE');
+  if (!buffer.byteLength || buffer.byteLength > MAX_RESUME_BYTES) throw new Error('ATTACHMENT_UNAVAILABLE');
   return buffer;
 }

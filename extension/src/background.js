@@ -20,11 +20,37 @@ async function activeTab() {
   return tab ?? null;
 }
 
-async function extractFromPage(tabId) {
-  return chrome.tabs.sendMessage(tabId, { type: 'ats.extract' });
+async function extractFromPage(tabId, adapter) {
+  return chrome.tabs.sendMessage(tabId, {
+    type: 'ats.extract',
+    adapterId: adapter?.id,
+    adapterVersion: adapter?.version,
+  });
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+function isTrustedPopupSender(sender) {
+  if (!sender || sender.id !== chrome.runtime.id) return false;
+  if (sender.tab) return false;
+  return sender.url === chrome.runtime.getURL('src/popup.html');
+}
+
+function resolveSafeResumeUrl(rawResumeUrl, tabUrl) {
+  const pageUrl = new URL(tabUrl);
+  const resolved = new URL(rawResumeUrl, pageUrl);
+  if (resolved.protocol !== 'https:' && resolved.protocol !== 'http:') {
+    throw new Error('ATTACHMENT_UNAVAILABLE');
+  }
+  if (resolved.origin !== pageUrl.origin) {
+    throw new Error('ATTACHMENT_UNAVAILABLE');
+  }
+  return resolved.href;
+}
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!isTrustedPopupSender(sender)) {
+    sendResponse({ error: { text: '未授权的扩展消息来源。', action: 'none' } });
+    return false;
+  }
   void (async () => {
     try {
       switch (message?.type) {
@@ -75,12 +101,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             sendResponse({ error: { code: 'SOURCE_SITE_UNSUPPORTED', text: '该站点尚未支持导入。', action: 'none' } });
             return;
           }
-          const extracted = await extractFromPage(tab.id);
+          const extracted = await extractFromPage(tab.id, adapter);
           if (!extracted?.ok) { sendResponse({ error: { text: '页面资料读取失败，请刷新后重试。', action: 'retry' } }); return; }
           let resume = null;
           if (extracted.data.resumeUrl) {
-            try { resume = await fetchResumeBytes(new URL(extracted.data.resumeUrl, tab.url).href); }
-            catch { sendResponse({ error: { code: 'ATTACHMENT_UNAVAILABLE', text: '简历附件获取失败，请重试或改用手工上传。', action: 'retry' } }); return; }
+            try {
+              const safeUrl = resolveSafeResumeUrl(extracted.data.resumeUrl, tab.url);
+              resume = await fetchResumeBytes(safeUrl);
+            } catch {
+              sendResponse({ error: { code: 'ATTACHMENT_UNAVAILABLE', text: '简历附件获取失败，请重试或改用手工上传。', action: 'retry' } });
+              return;
+            }
           }
           const requestId = message.retry && lastRequestId ? lastRequestId : crypto.randomUUID();
           lastRequestId = requestId;

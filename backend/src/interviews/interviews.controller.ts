@@ -41,11 +41,11 @@ export class InterviewsController {
   addTranscript(@Param('id') id: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.service.addTranscript(id, body, actor); }
   @Get(':id/transcripts/:linkId/materials') @RequirePermission('candidate:read') @AuditAction('interview.transcript.materials.list', 'Interview')
   transcriptMaterials(@Param('id') id: string, @Param('linkId') linkId: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.list(id, linkId, actor); }
-  @Post(':id/transcripts/:linkId/fetch') @RequirePermission('candidate:read') @AuditAction('interview.transcript.fetch', 'Interview')
+  @Post(':id/transcripts/:linkId/fetch') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcript.fetch', 'Interview')
   fetchTranscript(@Param('id') id: string, @Param('linkId') linkId: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.fetchMaterial(id, linkId, actor); }
   @Post(':id/transcripts/:linkId/materials') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcript.materials.create', 'Interview')
   addTranscriptMaterial(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.addManualMaterial(id, linkId, body, actor); }
-  @Post(':id/transcripts/:linkId/interview-eval') @RequirePermission('candidate:read') @AuditAction('interview.transcript.interview_eval', 'Interview')
+  @Post(':id/transcripts/:linkId/interview-eval') @RequirePermission('candidate:stage:update') @AuditAction('interview.transcript.interview_eval', 'Interview')
   deliverInterviewEval(@Param('id') id: string, @Param('linkId') linkId: string, @Body() body: unknown, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.deliverToInterviewEval(id, linkId, body, actor); }
   @Get(':id/interview-eval') @RequirePermission('candidate:read') @AuditAction('interview.interview_eval.list', 'Interview')
   interviewEvalRuns(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) { return this.transcriptsService.evalRuns(id, actor); }

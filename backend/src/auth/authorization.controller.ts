@@ -28,6 +28,16 @@ export class AuthorizationController {
     return actor;
   }
 
+  /**
+   * 业务协作基础目录（仅返回在用部门与在职人员最小展示字段，面向所有已登录业务用户）：
+   * 供新建职位选部门/负责人、个人菜单展示所属部门等使用，无需 authz:read 管理权限。
+   */
+  @Get('directory')
+  @AuditAction('authz.directory.read', 'Department')
+  directory() {
+    return this.authorization.directory();
+  }
+
   @Get('roles')
   @RequirePermission('authz:read')
   @AuditAction('authz.roles.read', 'Role')

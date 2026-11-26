@@ -266,6 +266,9 @@ export class RequisitionsService {
   async update(id: string, value: unknown, actor: AuthenticatedUser) {
     const input = this.asRecord(value);
     const current = await this.findScoped(id, actor, 'requisition:manage');
+    if (current.status !== RequisitionStatus.ACTIVE) {
+      throw new ConflictException('已关闭需求不支持直接编辑，请先回退为招聘中');
+    }
     this.assertNoReadOnlyFields(input);
 
     const data: Prisma.JobRequisitionUpdateManyMutationInput = {};

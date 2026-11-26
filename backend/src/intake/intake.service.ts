@@ -614,10 +614,13 @@ export class IntakeService {
 
     const job = await this.prisma.job.findUnique({
       where: { id: targetJobId },
-      select: { id: true, code: true, title: true, isVirtual: true, recruiterId: true },
+      select: { id: true, code: true, title: true, isVirtual: true, recruiterId: true, status: true },
     });
     if (!job) {
       throw new NotFoundException('职位不存在');
+    }
+    if (job.status && job.status !== JobStatus.ACTIVE) {
+      throw new BadRequestException('已关闭职位不允许分配候选人');
     }
 
     const intake = await this.prisma.resumeIntake.findUnique({
@@ -629,6 +632,22 @@ export class IntakeService {
     await this.assertIntakeAccessible(intake, actor, 'intake:manage');
     if (!intake.candidateId) {
       throw new BadRequestException(`Intake ${intakeId} has no candidate`);
+    }
+
+    const existingCandidate = await this.prisma.candidate.findUnique?.({
+      where: { id: intake.candidateId },
+      select: { id: true, stage: true, lockedState: true },
+    });
+    if (existingCandidate) {
+      if (existingCandidate.lockedState === 'INOPERABLE') {
+        throw new BadRequestException('候选人处于锁定状态，不允许重新分配职位');
+      }
+      if (
+        existingCandidate.stage !== CandidateStage.UNASSIGNED &&
+        existingCandidate.stage !== CandidateStage.VIRTUAL_POOL
+      ) {
+        throw new BadRequestException('仅待分配池或校招容器中的候选人可通过入场分配职位');
+      }
     }
 
     // 虚拟职位是校招容器：分配后停留在容器内，不进入「人才推荐」（PRD §3.1 路径③）
@@ -645,21 +664,21 @@ export class IntakeService {
         where: { id: intake.id },
         data: { jobId: targetJobId },
       }),
+      ...(!job.isVirtual
+        ? [
+            this.prisma.campusApplication.updateMany({
+              where: { intakeId: intake.id },
+              data: {
+                candidateId: intake.candidateId,
+                assignedJobId: targetJobId,
+                assignedAt: new Date(),
+                assignedById: actor.id,
+                status: 'ASSIGNED',
+              },
+            }),
+          ]
+        : []),
     ]);
-
-    // 校招投递人工分配正式职位：只补充分配结果，原始个人意愿保持不变（功能需求 §4.9）
-    if (!job.isVirtual) {
-      await this.prisma.campusApplication.updateMany({
-        where: { intakeId: intake.id },
-        data: {
-          candidateId: candidate.id,
-          assignedJobId: targetJobId,
-          assignedAt: new Date(),
-          assignedById: actor.id,
-          status: 'ASSIGNED',
-        },
-      });
-    }
 
     await this.timeline.record({
       entityType: 'Candidate',
@@ -942,18 +961,25 @@ export class IntakeService {
   async listPool(query: PoolListQuery, actor: AuthenticatedUser) {
     const pageSize = this.clampInt(query.pageSize, 20, 1, 100);
     const page = this.clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
     const conditions: Prisma.CandidateWhereInput[] = [
       this.authorization.candidateWhere(actor, 'intake:read'),
-      { poolType: PoolType.UNASSIGNED },
+      { poolType: PoolType.UNASSIGNED, stage: CandidateStage.UNASSIGNED },
     ];
     const keyword = query.keyword?.trim();
     if (keyword) {
       conditions.push({
-        OR: [
-          { name: { contains: keyword } },
-          { phone: { contains: keyword } },
-          { email: { contains: keyword } },
-        ],
+        OR: canReadContacts
+          ? [
+              { name: { contains: keyword } },
+              { phone: { contains: keyword } },
+              { email: { contains: keyword } },
+            ]
+          : [{ name: { contains: keyword } }],
       });
     }
     const where: Prisma.CandidateWhereInput = { AND: conditions };
@@ -991,11 +1017,6 @@ export class IntakeService {
       select: { id: true, status: true, isDraft: true, errorCode: true },
     });
     const airRunMap = new Map(airRuns.map((run) => [run.id, run]));
-    const canReadContacts = await this.authorization.canAccessSensitiveField(
-      actor,
-      SensitiveField.CANDIDATE_CONTACT,
-      'READ',
-    );
 
     return {
       items: candidates.map((candidate) => {
@@ -1124,7 +1145,7 @@ export class IntakeService {
       .filter((value): value is number => value !== null)
       .sort((a, b) => a - b);
 
-    const [assignedCount, recentFailures] = await Promise.all([
+    const [assignedCount, recentFailures, canReadContacts] = await Promise.all([
       this.prisma.resumeIntake.count({
         where: { AND: [where, { jobId: { not: null } }] },
       }),
@@ -1149,6 +1170,11 @@ export class IntakeService {
           jobId: true,
         },
       }),
+      this.authorization.canAccessSensitiveField(
+        actor,
+        SensitiveField.CANDIDATE_CONTACT,
+        'READ',
+      ),
     ]);
 
     const entered = total - notEntered;
@@ -1188,7 +1214,9 @@ export class IntakeService {
         errorCode: group.errorCode ?? 'UNKNOWN',
         count: group._count._all,
       })),
-      recentFailures,
+      recentFailures: canReadContacts
+        ? recentFailures
+        : recentFailures.map((row) => ({ ...row, mailFrom: null })),
     };
   }
 
@@ -1354,10 +1382,14 @@ export class IntakeService {
       }
 
       const duplicate = await this.findDuplicateCandidate(value.phone, value.email);
-      if (
-        duplicate &&
-        (await this.authorization.canAccessCandidate(actor, 'intake:manage', duplicate.id))
-      ) {
+      if (duplicate) {
+        // 无论命中的候选人是否在操作者可见范围内，一律走 DUPLICATE 分支防止跨范围重复建档；
+        // 不可见时对返回体隐藏 duplicateOfCandidateId，避免信息泄露。
+        const canSeeDuplicate = await this.authorization.canAccessCandidate(
+          actor,
+          'intake:manage',
+          duplicate.id,
+        );
         const intake = await this.prisma.resumeIntake.create({
           data: {
             source: value.source,
@@ -1381,7 +1413,7 @@ export class IntakeService {
           source: value.source,
           referrerName: value.referrerName,
           referralCode: value.referralCode,
-          candidateId: duplicate.id,
+          candidateId: canSeeDuplicate ? duplicate.id : null,
           intakeId: intake.id,
           errorCode: null,
           errorMessage: '手机号或邮箱命中已有候选人，已按查重跳过',
@@ -1550,7 +1582,22 @@ export class IntakeService {
       throw new NotFoundException(`Excel batch ${batchId} not found`);
     }
     await this.assertExcelBatchAccessible(batch.createdById, actor);
-    return batch;
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    if (canReadContacts) return batch;
+    return {
+      ...batch,
+      rows: batch.rows.map((row) => {
+        const payload =
+          row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+            ? { ...(row.payload as Record<string, unknown>), phone: null, email: null }
+            : row.payload;
+        return { ...row, payload };
+      }),
+    };
   }
 
   /** 失败行导出：模板同构 + 错误码/原因，修正后可再次导入 */
@@ -1568,13 +1615,18 @@ export class IntakeService {
       throw new NotFoundException(`Excel batch ${batchId} not found`);
     }
     await this.assertExcelBatchAccessible(batch.createdById, actor);
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
     const rows: FailedRowExport[] = batch.rows.map((row) => {
       const payload = (row.payload ?? {}) as Record<string, string | null>;
       return {
         rowNumber: row.rowNumber,
         name: payload.name ?? null,
-        phone: payload.phone ?? null,
-        email: payload.email ?? null,
+        phone: canReadContacts ? (payload.phone ?? null) : null,
+        email: canReadContacts ? (payload.email ?? null) : null,
         jobCode: payload.jobCode ?? null,
         source: payload.source ?? null,
         errorCode: row.errorCode,
@@ -2079,17 +2131,24 @@ export class IntakeService {
   async listCampusApplications(query: CampusApplicationQuery, actor: AuthenticatedUser) {
     const pageSize = this.clampInt(query.pageSize, 20, 1, 100);
     const page = this.clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
     const candidateConditions: Prisma.CandidateWhereInput[] = [
       this.authorization.candidateWhere(actor, 'intake:read'),
     ];
     const keyword = query.keyword?.trim();
     if (keyword) {
       candidateConditions.push({
-        OR: [
-          { name: { contains: keyword } },
-          { phone: { contains: keyword } },
-          { email: { contains: keyword } },
-        ],
+        OR: canReadContacts
+          ? [
+              { name: { contains: keyword } },
+              { phone: { contains: keyword } },
+              { email: { contains: keyword } },
+            ]
+          : [{ name: { contains: keyword } }],
       });
     }
     const candidates = await this.prisma.candidate.findMany({
@@ -2107,7 +2166,7 @@ export class IntakeService {
     if (jobId) conditions.push({ jobId });
     const where: Prisma.CampusApplicationWhereInput = { AND: conditions };
 
-    const [applications, total, canReadContacts] = await Promise.all([
+    const [applications, total] = await Promise.all([
       this.prisma.campusApplication.findMany({
         where,
         orderBy: { createdAt: 'desc' },
@@ -2115,11 +2174,6 @@ export class IntakeService {
         take: pageSize,
       }),
       this.prisma.campusApplication.count({ where }),
-      this.authorization.canAccessSensitiveField(
-        actor,
-        SensitiveField.CANDIDATE_CONTACT,
-        'READ',
-      ),
     ]);
     const jobIds = this.uniqueStrings(
       applications.flatMap((application) => [application.jobId, application.assignedJobId]),

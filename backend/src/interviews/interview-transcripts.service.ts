@@ -244,7 +244,7 @@ export class InterviewTranscriptsService {
     }
 
     const feedback = await this.db.interviewFeedback.findMany({
-      where: { interviewId: interview.id },
+      where: { interviewId: interview.id, visibleToInterviewers: true },
       orderBy: { createdAt: 'asc' },
       select: { interviewerId: true, conclusion: true, content: true },
     });

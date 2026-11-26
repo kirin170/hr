@@ -17,11 +17,15 @@ function loadRegistry() {
   return registryPromise;
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!sender || sender.id !== chrome.runtime.id) return false;
   if (message?.type !== 'ats.extract') return false;
   void (async () => {
     try {
       const registry = await loadRegistry();
+      if (message.adapterId && message.adapterVersion) {
+        try { registry.setActiveVersion(message.adapterId, message.adapterVersion); } catch { /* 忽略未知版本 */ }
+      }
       const adapter = registry.resolve(location.host, message.operatorId ?? 'anonymous');
       if (!adapter) { sendResponse({ ok: false, reason: 'SOURCE_SITE_UNSUPPORTED' }); return; }
       const data = adapter.extract(document);

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { SensitiveField } from '@prisma/client';
+import { SensitiveField } from '@prisma/client';
 import { AuditService } from '../audit/audit.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
@@ -54,10 +54,26 @@ export class RetentionService {
     const dryRun = options.dryRun === true;
     const actorId = options.actorId ?? null;
     const requestId = options.requestId ?? `retention-${now.getTime()}`;
-    const windowDays = Math.min(policy.resumeDays, policy.sensitiveDays);
+    const resumeCutoff = new Date(now.getTime() - policy.resumeDays * DAY_MS);
+    const sensitiveCutoff = new Date(now.getTime() - policy.sensitiveDays * DAY_MS);
 
+    // 将到期条件直接下推到 SQL，防止大量未到期普通简历占满批次饿死已到期敏感附件，同时命中 expiresAt 索引
     const candidates = await this.prisma.resumeFile.findMany({
-      where: { createdAt: { lte: new Date(now.getTime() - windowDays * DAY_MS) } },
+      where: {
+        OR: [
+          { expiresAt: { lte: now } },
+          {
+            category: {
+              in: [SensitiveField.BACKGROUND_MATERIALS, SensitiveField.BANK_STATEMENTS],
+            },
+            createdAt: { lte: sensitiveCutoff },
+          },
+          {
+            OR: [{ category: null }, { category: SensitiveField.CANDIDATE_CONTACT }],
+            createdAt: { lte: resumeCutoff },
+          },
+        ],
+      },
       orderBy: { createdAt: 'asc' },
       take: policy.batchSize,
       select: {

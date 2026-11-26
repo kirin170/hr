@@ -205,6 +205,9 @@ export class JobsService {
         });
         return this.toDtoNamed(created);
       } catch (error) {
+        if (this.isUniqueViolation(error, 'requisitionId')) {
+          throw new ConflictException('该招聘需求已关联其他职位');
+        }
         if (!this.isUniqueViolation(error, 'code')) throw error;
       }
     }
@@ -236,7 +239,13 @@ export class JobsService {
     }
     if ('recruiterId' in input) {
       const next = this.optionalText(input.recruiterId);
-      if (next) await this.assertUser(next);
+      if (next !== current.recruiterId) {
+        const isAdmin = actor.roles.some((role) => role.code === 'ADMIN');
+        if (!isAdmin && current.recruiterId !== actor.id) {
+          throw new ForbiddenException('仅系统管理员或当前招聘负责人可变更职位负责人');
+        }
+        if (next) await this.assertUser(next);
+      }
       assign('recruiterId', next, current.recruiterId);
     }
     if ('requirements' in input) {
@@ -287,6 +296,12 @@ export class JobsService {
     if ('status' in input) {
       if (input.status !== JobStatus.ACTIVE && input.status !== JobStatus.CLOSED) {
         throw new BadRequestException('状态必须为 ACTIVE 或 CLOSED');
+      }
+      if (input.status !== current.status) {
+        const canClose = actor.roles.some((role) => role.permissions.includes('job:close'));
+        if (!canClose) {
+          throw new ForbiddenException('缺少关闭/变更职位状态的权限（job:close）');
+        }
       }
       assign('status', input.status, current.status);
     }

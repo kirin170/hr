@@ -187,13 +187,15 @@ export class DingTalkApiClient {
 
   /**
    * 新版 OpenAPI（api.dingtalk.com/v1.0），使用应用令牌。
-   * 令牌失效时清除进程缓存后由 retryRead 重试；错误只保留平台错误码，不携带令牌或响应原文。
+   * 仅 GET 请求自动重试网络超时/5xx；非幂等 POST 禁止在超时或 5xx（远端状态不明）时自动重发，
+   * 仅在明确未执行业务的 401/InvalidAuthentication 或 429 限流时退避重试。
    */
   async requestOpenApi<T>(
     method: 'GET' | 'POST',
     path: string,
     options: { query?: Record<string, string>; body?: unknown } = {},
   ): Promise<T> {
+    const allowUncertainRetry = method === 'GET';
     return this.retryRead(async () => {
       const url = new URL(`${API_BASE}${path}`);
       for (const [key, value] of Object.entries(options.query ?? {})) {
@@ -212,13 +214,16 @@ export class DingTalkApiClient {
       try {
         response = await fetch(url.toString(), init);
       } catch {
-        throw new DingTalkApiError('network_error', true);
+        throw new DingTalkApiError('network_error', allowUncertainRetry);
       }
-      return this.readOpenApiPayload<T>(response);
+      return this.readOpenApiPayload<T>(response, allowUncertainRetry);
     });
   }
 
-  private async readOpenApiPayload<T>(response: Response): Promise<T> {
+  private async readOpenApiPayload<T>(
+    response: Response,
+    allowUncertainRetry = true,
+  ): Promise<T> {
     let payload: unknown;
     try {
       payload = await response.json();
@@ -234,7 +239,9 @@ export class DingTalkApiClient {
       if (response.status === 401) this.invalidateAppToken();
       throw new DingTalkApiError(
         this.platformCode(record) ?? `http_${response.status}`,
-        response.status === 401 || response.status === 429 || response.status >= 500,
+        response.status === 401 ||
+          response.status === 429 ||
+          (allowUncertainRetry && response.status >= 500),
       );
     }
     if (!record) throw new DingTalkApiError('invalid_response', false);

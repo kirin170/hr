@@ -97,6 +97,16 @@ export function extractDocxText(buffer: Buffer): string {
   return decodeXmlText(xml.toString('utf8'));
 }
 
+const MAX_INFLATE_BYTES = 10 * 1024 * 1024;
+const MAX_PDF_TEXT_CHARS = 120_000;
+
+function safeFromCodePoint(codePoint: number): string {
+  if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) {
+    return '';
+  }
+  return String.fromCodePoint(codePoint);
+}
+
 function decodeXmlText(xml: string): string {
   return xml
     .replace(/<w:tab[^>]*\/>/g, '\t')
@@ -108,8 +118,8 @@ function decodeXmlText(xml: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => safeFromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) => safeFromCodePoint(Number(dec)))
     .replace(/&amp;/g, '&');
 }
 
@@ -135,10 +145,10 @@ export function readZipEntry(buffer: Buffer, entryName: string): Buffer | null {
     const localExtraLength = buffer.readUInt16LE(localOffset + 28);
     const dataStart = localOffset + 30 + localNameLength + localExtraLength;
     const data = buffer.subarray(dataStart, dataStart + compressedSize);
-    if (method === 0) return data;
+    if (method === 0) return data.length <= MAX_INFLATE_BYTES ? data : null;
     if (method === 8) {
       try {
-        return inflateRawSync(data);
+        return inflateRawSync(data, { maxOutputLength: MAX_INFLATE_BYTES });
       } catch {
         return null;
       }
@@ -159,8 +169,9 @@ function findEndOfCentralDirectory(buffer: Buffer): number {
 /** 从 PDF 内容流抽取文本（仅支持未加密、非 CID 字体的常规文本型 PDF）。 */
 export function extractPdfText(buffer: Buffer): string {
   const chunks: string[] = [];
+  let totalChars = 0;
   let cursor = 0;
-  while (cursor < buffer.length) {
+  while (cursor < buffer.length && totalChars < MAX_PDF_TEXT_CHARS) {
     const streamIndex = buffer.indexOf('stream', cursor);
     if (streamIndex === -1) break;
     let dataStart = streamIndex + 6;
@@ -172,10 +183,10 @@ export function extractPdfText(buffer: Buffer): string {
     const dictionary = buffer.toString('latin1', Math.max(0, streamIndex - 500), streamIndex);
     if (dictionary.includes('/FlateDecode')) {
       try {
-        data = inflateSync(data);
+        data = inflateSync(data, { maxOutputLength: MAX_INFLATE_BYTES });
       } catch {
         try {
-          data = inflateRawSync(data);
+          data = inflateRawSync(data, { maxOutputLength: MAX_INFLATE_BYTES });
         } catch {
           cursor = endIndex + 9;
           continue;
@@ -183,7 +194,12 @@ export function extractPdfText(buffer: Buffer): string {
       }
     }
     const text = decodePdfContentStream(data.toString('latin1'));
-    if (text.trim()) chunks.push(text);
+    if (text.trim()) {
+      const remaining = MAX_PDF_TEXT_CHARS - totalChars;
+      const clipped = text.length > remaining ? text.slice(0, remaining) : text;
+      chunks.push(clipped);
+      totalChars += clipped.length;
+    }
     cursor = endIndex + 9;
   }
   return chunks.join('\n');

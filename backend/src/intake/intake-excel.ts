@@ -282,6 +282,13 @@ export interface FailedRowExport {
   errorMessage?: string | null;
 }
 
+/** 防止导出 Excel 被注入公式（= + - @ \t \r 开头时前置单引号中和）。 */
+function neutralizeFormulaCell(value: string | null | undefined): string {
+  const text = value ?? '';
+  if (!text) return '';
+  return /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+}
+
 /** 失败行导出：与模板列一致，追加错误码与失败原因，便于修正后重新导入 */
 export async function buildFailedRowsWorkbook(rows: FailedRowExport[]): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -300,16 +307,16 @@ export async function buildFailedRowsWorkbook(rows: FailedRowExport[]): Promise<
   sheet.views = [{ state: 'frozen', ySplit: 1 }];
   for (const row of rows) {
     sheet.addRow({
-      name: row.name ?? '',
-      phone: row.phone ?? '',
-      email: row.email ?? '',
-      jobCode: row.jobCode ?? '',
-      source: row.source ?? '',
-      referrerName: row.referrerName ?? '',
-      referralCode: row.referralCode ?? '',
+      name: neutralizeFormulaCell(row.name),
+      phone: neutralizeFormulaCell(row.phone),
+      email: neutralizeFormulaCell(row.email),
+      jobCode: neutralizeFormulaCell(row.jobCode),
+      source: neutralizeFormulaCell(row.source),
+      referrerName: neutralizeFormulaCell(row.referrerName),
+      referralCode: neutralizeFormulaCell(row.referralCode),
       note: '',
-      errorCode: row.errorCode ?? '',
-      errorMessage: row.errorMessage ?? '',
+      errorCode: neutralizeFormulaCell(row.errorCode),
+      errorMessage: neutralizeFormulaCell(row.errorMessage),
       rowNumber: row.rowNumber,
     });
   }

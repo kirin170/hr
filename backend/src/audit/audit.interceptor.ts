@@ -2,6 +2,7 @@ import {
   CallHandler,
   ExecutionContext,
   Injectable,
+  Logger,
   NestInterceptor,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -13,6 +14,8 @@ import { AuditService } from './audit.service.js';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(
     private readonly reflector: Reflector,
     private readonly audit: AuditService,
@@ -29,18 +32,25 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       mergeMap(async (result: unknown) => {
         const safeSummary = this.safeSummary(result);
-        await this.audit.write({
-          actorId: this.actorId(request, result, metadata.action),
-          action: metadata.action,
-          resourceType: metadata.resourceType,
-          resourceId: this.resourceId(request, result),
-          requestId: this.audit.requestId(request),
-          beforeSummary: undefined,
-          afterSummary: safeSummary,
-          ip: request.ip,
-          userAgent: request.headers['user-agent'],
-          outcome: AuditOutcome.SUCCESS,
-        });
+        try {
+          await this.audit.write({
+            actorId: this.actorId(request, result, metadata.action),
+            action: metadata.action,
+            resourceType: metadata.resourceType,
+            resourceId: this.resourceId(request, result),
+            requestId: this.audit.requestId(request),
+            beforeSummary: undefined,
+            afterSummary: safeSummary,
+            ip: request.ip,
+            userAgent: request.headers['user-agent'],
+            outcome: AuditOutcome.SUCCESS,
+          });
+        } catch (auditError) {
+          // 业务操作已提交，审计写入失败记录告警但不误伤业务响应或伪装为 DENIED
+          this.logger.error(
+            `审计日志写入失败（${metadata.action}）：${(auditError as Error).message}`,
+          );
+        }
         return result;
       }),
       catchError((error: unknown) =>

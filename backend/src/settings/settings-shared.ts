@@ -52,6 +52,11 @@ export function idList(value: unknown): string[] {
   return value as string[];
 }
 
+function clip191(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  return value.length > 191 ? value.slice(0, 191) : value;
+}
+
 function auditData(
   actor: AuthenticatedUser,
   ctx: AuditContext,
@@ -62,15 +67,15 @@ function auditData(
   after: unknown,
 ): Prisma.AuditLogUncheckedCreateInput {
   return {
-    actorId: actor.id,
-    action,
-    resourceType,
-    resourceId,
-    requestId: ctx.requestId,
+    actorId: clip191(actor.id),
+    action: clip191(action) ?? 'unknown',
+    resourceType: clip191(resourceType) ?? 'Setting',
+    resourceId: clip191(resourceId),
+    requestId: clip191(ctx.requestId) ?? 'unknown',
     beforeSummary: sanitizeForAudit(before),
     afterSummary: sanitizeForAudit(after),
-    ip: ctx.ip ?? null,
-    userAgent: ctx.userAgent ?? null,
+    ip: clip191(ctx.ip),
+    userAgent: clip191(ctx.userAgent),
     outcome: AuditOutcome.SUCCESS,
   };
 }

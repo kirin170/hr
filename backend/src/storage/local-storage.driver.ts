@@ -26,8 +26,9 @@ export function localStorageOptionsFromEnv(
 ): LocalStorageOptions {
   const baseDir = resolve(env.LOCAL_STORAGE_DIR ?? '.storage');
   const secret = env.STORAGE_SIGNING_SECRET?.trim() || env.JWT_ACCESS_SECRET?.trim();
-  if (!secret && (env.APP_ENV ?? 'local') !== 'local') {
-    throw new Error('STORAGE_SIGNING_SECRET 未配置：非本地环境必须提供附件签名密钥');
+  const isLocal = env.APP_ENV === 'local';
+  if (!isLocal && (!secret || Buffer.byteLength(secret) < 32)) {
+    throw new Error('STORAGE_SIGNING_SECRET 未配置或长度不足 32 字节：非本地环境必须提供附件签名密钥');
   }
   const port = env.APP_PORT ?? env.PORT ?? '3000';
   const publicBaseUrl = (env.API_BASE_URL?.trim() || `http://127.0.0.1:${port}`).replace(

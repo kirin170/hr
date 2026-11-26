@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { CalendarDays, Plus, X } from 'lucide-react'
 import { useApp } from '../context'
-import { request } from '../api'
+import { getCandidateDetail, request } from '../api'
+import type { Candidate } from '../types'
 
 type Row = { id: string; candidateId: string; jobId: string; candidate: { name: string }; round: number; mode: string; time: string; endTime: string | null; location: string | null; status: string; interviewerIds: string[]; responses: Record<string, string> | null }
 type Person = { id: string; displayName: string }
@@ -59,15 +60,65 @@ export function Interviews({ onOpenCandidate, openNew }: { onOpenCandidate: (id:
     </div>{showCreate && <InterviewModal onClose={() => setShowCreate(false)} />}{selected && <InterviewDetail row={selected} onClose={() => setSelected(null)} />}{configure && <TemplateEditor onClose={() => setConfigure(false)} />}</div>
 }
 
+const toBeijingIso = (localDateTime: string) => {
+  const normalized = localDateTime.length === 16 ? `${localDateTime}:00` : localDateTime
+  const parsed = new Date(`${normalized}+08:00`)
+  if (Number.isNaN(parsed.getTime())) throw new Error('面试时间格式无效')
+  return parsed.toISOString()
+}
+
 export function InterviewModal({ onClose, initialCandidate }: { onClose: () => void; initialCandidate?: string }) {
-  const { data, toast } = useApp(); const [candidateId, setCandidateId] = useState(initialCandidate || ''); const [people, setPeople] = useState<Person[]>([]); const [selected, setSelected] = useState<string[]>([]); const [round, setRound] = useState(1); const [mode, setMode] = useState('VIDEO'); const [startAt, setStart] = useState(''); const [endAt, setEnd] = useState(''); const [location, setLocation] = useState(''); const [availability, setAvailability] = useState<{ id: string; availabilitySlots: {startAt: string; endAt: string}[] }[]>([])
-  const candidate = data.candidates.find(c => c.id === candidateId)
+  const { data, toast } = useApp()
+  const [candidateId, setCandidateId] = useState(initialCandidate || '')
+  const [fetchedCandidate, setFetchedCandidate] = useState<Candidate | null>(null)
+  const [people, setPeople] = useState<Person[]>([])
+  const [selected, setSelected] = useState<string[]>([])
+  const [round, setRound] = useState(1)
+  const [mode, setMode] = useState('VIDEO')
+  const [startAt, setStart] = useState('')
+  const [endAt, setEnd] = useState('')
+  const [location, setLocation] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [availability, setAvailability] = useState<{ id: string; availabilitySlots: {startAt: string; endAt: string}[] }[]>([])
+  const candidateList = fetchedCandidate && !data.candidates.some(c => c.id === fetchedCandidate.id)
+    ? [fetchedCandidate, ...data.candidates]
+    : data.candidates
+  const candidate = candidateList.find(c => c.id === candidateId)
+  useEffect(() => {
+    if (!initialCandidate || data.candidates.some(c => c.id === initialCandidate)) return
+    let active = true
+    void getCandidateDetail(initialCandidate).then((item) => { if (active) setFetchedCandidate(item) }).catch(() => {})
+    return () => { active = false }
+  }, [initialCandidate, data.candidates])
   useEffect(() => { request<Person[]>('/interviews/interviewers').then(setPeople).catch(e => toast(message(e), 'info')) }, [])
   useEffect(() => { if (!candidateId) { setAvailability([]); return }; request<typeof availability>(`/interviews/availability/${encodeURIComponent(candidateId)}`).then(setAvailability).catch(e => toast(message(e), 'info')) }, [candidateId])
-  const submit = async () => { try { if (!candidate || !startAt || !endAt) throw new Error('请选择候选人并填写时间'); const result = await send<ScheduleResult>('/interviews', { candidateId, jobId: candidate.jobId, round, mode, startAt: new Date(`${startAt}:00+08:00`).toISOString(), endAt: new Date(`${endAt}:00+08:00`).toISOString(), location, interviewerIds: selected }); toast(scheduleMessage(result, '已安排')); refreshEvent(); onClose() } catch (e) { toast(message(e), 'info') } }
-  return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3><CalendarDays size={18} /> 安排面试</h3><button className="icon-button" onClick={onClose}><X size={18} /></button></div><div className="modal-body"><label className="form-field">候选人<select value={candidateId} onChange={e => setCandidateId(e.target.value)}><option value="">请选择</option>{data.candidates.filter(c => c.jobId).map(c => <option key={c.id} value={c.id}>{c.name} · {c.jobId}</option>)}</select></label>
+  const submit = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      if (!candidate || !candidate.jobId || !startAt || !endAt) throw new Error('请选择已分配职位的候选人并填写时间')
+      const result = await send<ScheduleResult>('/interviews', {
+        candidateId,
+        jobId: candidate.jobId,
+        round,
+        mode,
+        startAt: toBeijingIso(startAt),
+        endAt: toBeijingIso(endAt),
+        location,
+        interviewerIds: selected,
+      })
+      toast(scheduleMessage(result, '已安排'))
+      refreshEvent()
+      onClose()
+    } catch (e) {
+      toast(message(e), 'info')
+    } finally {
+      setBusy(false)
+    }
+  }
+  return <div className="modal-backdrop"><div className="modal interview-modal"><div className="modal-header"><h3><CalendarDays size={18} /> 安排面试</h3><button className="icon-button" onClick={onClose}><X size={18} /></button></div><div className="modal-body"><label className="form-field">候选人<select value={candidateId} onChange={e => setCandidateId(e.target.value)}><option value="">请选择</option>{candidateList.filter(c => c.jobId).map(c => <option key={c.id} value={c.id}>{c.name} · {c.jobTitle || c.jobId}</option>)}</select></label>
   <p>筛选通过时记录的可约面时间（北京时间）：</p>{availability.flatMap(a => (a.availabilitySlots || []).map((slot, index) => <button className="text-button" key={`${a.id}-${index}`} onClick={() => { setStart(localInput(slot.startAt)); setEnd(localInput(slot.endAt)) }}>{timeLabel(slot.startAt)} — {timeLabel(slot.endAt)}</button>))}
-  <div className="form-grid"><label className="form-field">轮次<input type="number" min="1" value={round} onChange={e => setRound(Number(e.target.value))} /></label><label className="form-field">形式<select value={mode} onChange={e => setMode(e.target.value)}><option value="VIDEO">视频</option><option value="ONSITE">现场</option><option value="PHONE">电话</option></select></label></div><div className="form-grid"><label className="form-field">开始<input type="datetime-local" value={startAt} onChange={e => setStart(e.target.value)} /></label><label className="form-field">结束<input type="datetime-local" value={endAt} onChange={e => setEnd(e.target.value)} /></label></div><label className="form-field">地点或链接<input value={location} onChange={e => setLocation(e.target.value)} /></label><p>面试官（可多选）</p>{people.map(p => <label key={p.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(p.id)} onChange={e => setSelected(e.target.checked ? [...selected, p.id] : selected.filter(id => id !== p.id))} /> {p.displayName}</label>)}</div><div className="modal-footer"><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" onClick={submit}>安排</button></div></div></div>
+  <div className="form-grid"><label className="form-field">轮次<input type="number" min="1" value={round} onChange={e => setRound(Number(e.target.value))} /></label><label className="form-field">形式<select value={mode} onChange={e => setMode(e.target.value)}><option value="VIDEO">视频</option><option value="ONSITE">现场</option><option value="PHONE">电话</option></select></label></div><div className="form-grid"><label className="form-field">开始<input type="datetime-local" value={startAt} onChange={e => setStart(e.target.value)} /></label><label className="form-field">结束<input type="datetime-local" value={endAt} onChange={e => setEnd(e.target.value)} /></label></div><label className="form-field">地点或链接<input value={location} onChange={e => setLocation(e.target.value)} /></label><p>面试官（可多选）</p>{people.map(p => <label key={p.id} style={{display:'block'}}><input type="checkbox" checked={selected.includes(p.id)} onChange={e => setSelected(e.target.checked ? [...selected, p.id] : selected.filter(id => id !== p.id))} /> {p.displayName}</label>)}</div><div className="modal-footer"><button className="button button-secondary" onClick={onClose}>取消</button><button className="button button-primary" disabled={busy} onClick={submit}>{busy ? '提交中…' : '安排'}</button></div></div></div>
 }
 function TemplateEditor({ onClose }: { onClose: () => void }) {
   const { toast } = useApp(); const [fields, setFields] = useState<Field[]>([{ key: 'name', label: '姓名', type: 'text', required: true, options: [] }])

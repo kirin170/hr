@@ -1,9 +1,10 @@
 import { OnboardingPanel } from './OnboardingPanel'
 import { OfferPanel } from './OfferPanel'
-import { ArrowLeft, BriefcaseBusiness, CalendarDays, Check, CheckCircle2, ChevronDown, ChevronRight, Clock3, Download, ExternalLink, FileText, Mail, MapPin, MessageSquare, MoreHorizontal, Phone, Plus, Star, UserRound, X } from 'lucide-react'
+import { CalendarDays, Check, ChevronDown, Clock3, ExternalLink, FileText, Mail, MoreHorizontal, Phone, Plus, Star, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { getCandidate, getCandidateDepartment, getCandidateJob } from '../data'
-import { activateCandidateFromPool, getCandidateDetail, getCandidatePoolHistory, getCandidateTimeline, listJobs, recordDepartmentScreening, setCandidateLockedState, undoCandidateStage, updateCandidateStage } from '../api'
+import { activateCandidateFromPool, getCandidateDetail, getCandidatePoolHistory, getCandidateTimeline, listCandidateInterviews, listJobs, recordDepartmentScreening, setCandidateLockedState, undoCandidateStage, updateCandidateStage } from '../api'
+import type { CandidateInterviewSummary } from '../api'
 import { useApp } from '../context'
 import type { Candidate, CandidateMainStage, CandidatePoolHistoryEntry, CandidateStage, CandidateTimelineEvent, JobListItem } from '../types'
 import { useEffectiveSettings } from '../useEffectiveSettings'
@@ -16,6 +17,8 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
   const archiveReasons = effective?.archiveReasons ?? []
   const candidateFromList = getCandidate(data, candidateId)
   const [detailCandidate, setDetailCandidate] = useState<Candidate | null>(null)
+  const [detailLoading, setDetailLoading] = useState(true)
+  const [interviews, setInterviews] = useState<CandidateInterviewSummary[]>([])
   const [timeline, setTimeline] = useState<CandidateTimelineEvent[]>([])
   const [timelineLoading, setTimelineLoading] = useState(true)
   const [tab, setTab] = useState<'overview' | 'resume' | 'timeline'>('overview')
@@ -46,6 +49,8 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
   useEffect(() => {
     let active = true
     setDetailCandidate(null)
+    setDetailLoading(true)
+    setInterviews([])
     setTimeline([])
     setPoolHistory([])
     setTimelineLoading(true)
@@ -53,6 +58,13 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
       if (active) setDetailCandidate(item)
     }).catch((error: unknown) => {
       if (active) toast(error instanceof Error ? error.message : '候选人详情加载失败', 'info')
+    }).finally(() => {
+      if (active) setDetailLoading(false)
+    })
+    listCandidateInterviews(candidateId).then((rows) => {
+      if (active) setInterviews(rows.filter((item) => item.status !== 'CANCELLED'))
+    }).catch(() => {
+      if (active) setInterviews([])
     })
     getCandidateTimeline(candidateId).then((events) => {
       if (active) setTimeline(events)
@@ -74,10 +86,15 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
   const candidate = detailCandidate?.id === candidateId
     ? { ...candidateFromList, ...detailCandidate }
     : candidateFromList
-  if (!candidate) return null
+  if (!candidate) {
+    if (!detailLoading) return null
+    return <>
+      <div className="drawer-backdrop" onClick={onClose} />
+      <aside className="candidate-drawer"><header className="drawer-header"><button className="icon-button" onClick={onClose}><X size={19} /></button></header><div className="drawer-body"><div className="empty-inline">正在加载候选人详情…</div></div></aside>
+    </>
+  }
   const job = getCandidateJob(candidate)
   const department = getCandidateDepartment(candidate)
-  const interviews = data.interviews.filter(interview => interview.candidateId === candidate.id && interview.status !== 'cancelled')
 
   const applyCandidateUpdate = (updated: Candidate) => {
     setDetailCandidate(updated)
@@ -90,6 +107,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
       const updated = await updateCandidateStage(candidate.id, stage)
       applyCandidateUpdate(updated)
       setShowStageMenu(false)
+      setTimeline(await getCandidateTimeline(candidate.id))
       toast(`已推进至「${stageMeta[stage].label}」`)
     } catch (error) {
       toast(error instanceof Error ? error.message : '阶段更新失败', 'info')
@@ -254,18 +272,23 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
           </section>}
           <section className="drawer-section">
             <div className="drawer-section-title"><h3>简历摘要</h3><span className="subtle-label">系统提取</span></div>
-            <p className="resume-summary">{candidate.summary}</p>
-            <button className="resume-file" onClick={() => setTab('resume')}><span><FileText size={19} /></span><div><strong>{candidate.resumeName}</strong><small>PDF · 1.8 MB · 附件简历</small></div><ExternalLink size={15} /></button>
+            <p className="resume-summary">{candidate.summary || '暂无简历摘要'}</p>
+            {candidate.resumeName && <button className="resume-file" onClick={() => setTab('resume')}><span><FileText size={19} /></span><div><strong>{candidate.resumeName}</strong><small>附件简历</small></div><ExternalLink size={15} /></button>}
           </section>
           <section className="drawer-section">
             <div className="drawer-section-title"><h3>工作经历</h3></div>
-            <div className="work-timeline">{candidate.workHistory.map((work, i) => <div className="work-item" key={i}><span className={cn('work-dot', i === 0 && 'current')} /><div><strong>{work.company}</strong><span>{work.title}</span><small>{work.period}</small></div></div>)}</div>
+            {candidate.workHistory.length > 0 ? <div className="work-timeline">{candidate.workHistory.map((work, i) => <div className="work-item" key={i}><span className={cn('work-dot', i === 0 && 'current')} /><div><strong>{work.company}</strong><span>{work.title}</span><small>{work.period}</small></div></div>)}</div> : <div className="empty-inline">暂无工作经历</div>}
           </section>
           <section className="drawer-section">
             <div className="drawer-section-title"><h3>面试记录</h3><button className="text-button" onClick={() => onSchedule(candidate)}><Plus size={14} />添加</button></div>
-            {interviews.length > 0 ? <div className="drawer-interviews">{interviews.map(interview => <div key={interview.id}><span className="interview-round">{interview.round.split(' · ')[0]}</span><div><strong>{interview.round}</strong><span>{interview.date} {interview.start} · {interview.interviewers.join('、')}</span></div><span className={cn('mini-status', interview.status)}>{interview.status === 'completed' ? '已完成' : interview.status === 'pending_feedback' ? '待反馈' : '待进行'}</span></div>)}</div> : <div className="empty-inline">暂无面试记录</div>}
+            {interviews.length > 0 ? <div className="drawer-interviews">{interviews.map(interview => {
+              const statusClass = interview.status === 'COMPLETED' ? 'completed' : interview.status === 'FEEDBACK_PENDING' ? 'pending_feedback' : 'scheduled'
+              const statusText = interview.status === 'COMPLETED' ? '已完成' : interview.status === 'FEEDBACK_PENDING' ? '待反馈' : '待进行'
+              const formattedTime = new Date(interview.time).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
+              return <div key={interview.id}><span className="interview-round">第 {interview.round} 轮</span><div><strong>第 {interview.round} 轮 · {interview.mode}</strong><span>{formattedTime}{interview.location ? ` · ${interview.location}` : ''}</span></div><span className={cn('mini-status', statusClass)}>{statusText}</span></div>
+            })}</div> : <div className="empty-inline">暂无面试记录</div>}
           </section>
-          <section className="drawer-note"><div className="drawer-section-title"><h3>招聘备注</h3><button className="text-button">编辑</button></div><p>{candidate.note || '暂无备注。记录候选人的沟通要点、期望与风险，让团队协作更顺畅。'}</p></section>
+          <section className="drawer-note"><div className="drawer-section-title"><h3>招聘备注</h3></div><p>{candidate.note || '暂无备注。'}</p></section>
         </>}
         {tab === 'resume' && <ResumeTab candidate={candidate} />}
         {tab === 'timeline' && <TimelineTab entries={timeline} loading={timelineLoading} />}
@@ -276,10 +299,10 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
 
 function ResumeTab({ candidate }: { candidate: Candidate }) {
   return <div className="resume-tab">
-    <div className="resume-toolbar"><span><FileText size={17} />{candidate.resumeName}</span><div><button className="button button-secondary button-sm"><Download size={15} />下载</button><button className="button button-primary button-sm"><ExternalLink size={15} />新窗口打开</button></div></div>
+    <div className="resume-toolbar"><span><FileText size={17} />{candidate.resumeName || '未上传简历附件'}</span></div>
     <div className="resume-paper">
-      <div className="resume-paper-head"><div><h2>{candidate.name}</h2><p>{candidate.currentTitle} · {candidate.experience}工作经验</p></div><div>{candidate.phone}<br />{candidate.email}</div></div>
-      <hr /><h3>个人简介</h3><p>{candidate.summary}</p><h3>工作经历</h3>{candidate.workHistory.map((work, i) => <div className="resume-work" key={i}><div><strong>{work.company}</strong><span>{work.period}</span></div><p>{work.title}</p><ul><li>负责核心业务系统的设计、开发与持续优化，保障项目按期高质量交付。</li><li>参与跨部门协作与技术方案评审，推动关键业务指标持续提升。</li></ul></div>)}<h3>教育经历</h3><div className="resume-education"><strong>{candidate.school}</strong><span>{candidate.education}</span></div>
+      <div className="resume-paper-head"><div><h2>{candidate.name}</h2><p>{candidate.currentTitle || '职位未填写'}{candidate.experience ? ` · ${candidate.experience}` : ''}</p></div><div>{candidate.phone || '—'}<br />{candidate.email || '—'}</div></div>
+      <hr /><h3>个人简介</h3><p>{candidate.summary || '暂无简介'}</p><h3>工作经历</h3>{candidate.workHistory.length > 0 ? candidate.workHistory.map((work, i) => <div className="resume-work" key={i}><div><strong>{work.company}</strong><span>{work.period}</span></div><p>{work.title}</p></div>) : <p className="hint">暂无解析的工作经历</p>}<h3>教育经历</h3><div className="resume-education"><strong>{candidate.school || '—'}</strong><span>{candidate.education || '—'}</span></div>
     </div>
   </div>
 }
