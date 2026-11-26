@@ -768,6 +768,33 @@ async function publicFetch<T>(path: string, init: RequestInit = {}): Promise<T> 
   return response.json() as Promise<T>
 }
 
+export type RegistrationField = {
+  key: string
+  label: string
+  type: string
+  required: boolean
+  options: string[]
+}
+
+export function openInterviewRegistration(token: string): Promise<{ fields: RegistrationField[] }> {
+  return publicFetch<{ fields: RegistrationField[] }>('/interview-registration/open', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  })
+}
+
+export function submitInterviewRegistration(
+  token: string,
+  values: Record<string, string>,
+): Promise<unknown> {
+  return publicFetch('/interview-registration/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, values }),
+  })
+}
+
 export function listCampusJobs(): Promise<{ items: CampusJob[] }> {
   return publicFetch<{ items: CampusJob[] }>(`${campusBase}/jobs`)
 }

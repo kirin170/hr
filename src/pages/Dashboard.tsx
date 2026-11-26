@@ -87,13 +87,21 @@ export function Dashboard({ onNavigate, onOpenCandidate }: DashboardProps) {
   const category = notifications?.categories.find((item) => item.key === activeCategory) ?? notifications?.categories[0]
 
   const handleReadAll = async () => {
-    await markDashboardNotificationsRead({ all: true })
-    setNotifications(await getDashboardNotifications())
+    try {
+      await markDashboardNotificationsRead({ all: true })
+      setNotifications(await getDashboardNotifications())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '标记已读失败')
+    }
   }
 
   const handleOpenNotification = async (id: string, page: string, candidateId: string | null) => {
-    await markDashboardNotificationsRead({ ids: [id] })
-    setNotifications(await getDashboardNotifications())
+    try {
+      await markDashboardNotificationsRead({ ids: [id] })
+      setNotifications(await getDashboardNotifications())
+    } catch {
+      // 标记已读失败不阻塞跳转
+    }
     if (candidateId) onOpenCandidate(candidateId)
     else onNavigate(page as PageKey)
   }

@@ -253,8 +253,10 @@ export class BrowserImportService {
     actor: AuthenticatedUser,
     query: { status?: string; page?: number; pageSize?: number },
   ) {
-    const pageSize = Math.min(Math.max(query.pageSize ?? 20, 1), 100);
-    const page = Math.max(query.page ?? 1, 1);
+    const rawPageSize = Number(query.pageSize ?? 20);
+    const rawPage = Number(query.page ?? 1);
+    const pageSize = Number.isFinite(rawPageSize) ? Math.min(Math.max(Math.trunc(rawPageSize), 1), 100) : 20;
+    const page = Number.isFinite(rawPage) ? Math.min(Math.max(Math.trunc(rawPage), 1), 10_000) : 1;
     const conditions: Prisma.BrowserImportTaskWhereInput[] = [{ operatorId: actor.id }];
     if (query.status) {
       const status = query.status.toUpperCase();

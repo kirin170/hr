@@ -8,19 +8,21 @@ import { NotificationOutboxService } from './notification-outbox.service.js';
 @Injectable()
 export class OnboardingNotificationScanner implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<void> | null = null;
   private readonly logger = new Logger(OnboardingNotificationScanner.name);
   constructor(private readonly db: PrismaService, private readonly auth: AuthorizationService, private readonly reminders: OnboardingRemindersService, private readonly prefs: NotificationPreferenceService, private readonly outbox: NotificationOutboxService) {}
   onModuleInit() {
     if (process.env.APP_PROCESS_ROLE !== 'worker' || process.env.DINGTALK_NOTIFICATION_SCAN_ENABLED !== 'true') return;
     const tick = () => {
-      if (this.running) return;
-      this.running = true;
-      void this.scan().catch(() => this.logger.warn('保温通知扫描失败，稍后重试')).finally(() => { this.running = false; });
+      if (this.inFlight) return;
+      this.inFlight = this.scan().catch(() => this.logger.warn('保温通知扫描失败，稍后重试')).finally(() => { this.inFlight = null; });
     };
     tick(); this.timer = setInterval(tick, 60_000); this.timer.unref();
   }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
+  async onModuleDestroy() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.inFlight) await this.inFlight;
+  }
   async scan(now = new Date()) {
     let cursor: string | undefined;
     const earliest = new Date(now.getTime() - 7 * 86_400_000);

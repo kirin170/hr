@@ -729,7 +729,7 @@ export class CandidatesService {
   }
 
   async batchUpdateStage(value: unknown, actor: AuthenticatedUser) {
-    const input = this.asRecord<{ candidateIds?: unknown; stage?: unknown; reason?: unknown }>(value);
+    const input = this.asRecord<{ candidateIds?: unknown; stage?: unknown; reason?: unknown; reasonId?: unknown }>(value);
     if (!Array.isArray(input.candidateIds) || input.candidateIds.length < 1 || input.candidateIds.length > 100
       || input.candidateIds.some((id) => typeof id !== 'string' || !id.trim())) {
       throw new BadRequestException('候选人列表必须包含 1 至 100 个有效 ID');
@@ -739,7 +739,7 @@ export class CandidatesService {
     const results: { id: string; ok: boolean; error?: string }[] = [];
     for (const id of ids) {
       try {
-        await this.updateStage(id, { stage, reason: input.reason }, actor);
+        await this.updateStage(id, { stage, reason: input.reason, reasonId: input.reasonId }, actor);
         results.push({ id, ok: true });
       } catch (error) {
         results.push({ id, ok: false, error: error instanceof Error ? error.message : '操作失败' });
@@ -880,7 +880,16 @@ export class CandidatesService {
     if (from === DbCandidateStage.ARCHIVED) {
       throw new ConflictException('已归档候选人需通过人才库激活动作恢复');
     }
-    if (to === DbCandidateStage.ARCHIVED) return;
+    if (to === DbCandidateStage.ARCHIVED) {
+      if (
+        from === DbCandidateStage.ONBOARDED ||
+        from === DbCandidateStage.PROBATION ||
+        from === DbCandidateStage.ENDED
+      ) {
+        throw new ConflictException('已入职或试用期结束的候选人不支持归档');
+      }
+      return;
+    }
     if (from === DbCandidateStage.UNASSIGNED || from === DbCandidateStage.VIRTUAL_POOL) {
       throw new ConflictException('待分配候选人需先通过职位分配动作进入人才推荐');
     }
@@ -931,7 +940,12 @@ export class CandidatesService {
       data: {
         stage: nextStage,
         ...(isArchive && !alreadyArchived
-          ? { archiveReasonText: reason, archiveReasonId: reasonId, archiveChannel: current.channel }
+          ? {
+              poolType: 'NONE',
+              archiveReasonText: reason,
+              archiveReasonId: reasonId,
+              archiveChannel: current.channel,
+            }
           : {}),
       },
     });

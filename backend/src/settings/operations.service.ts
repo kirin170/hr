@@ -264,15 +264,23 @@ export class OperationsService {
     if (!process.env.REDIS_URL) {
       return { name: 'Redis', status: 'NOT_CONFIGURED', detail: '未配置 REDIS_URL，队列不可用' };
     }
-    const client = new Redis({ ...redisConnection(), lazyConnect: true, connectTimeout: 2000, maxRetriesPerRequest: 1 });
+    let client: Redis | null = null;
     try {
+      client = new Redis({
+        ...redisConnection(),
+        lazyConnect: true,
+        connectTimeout: 2000,
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null,
+      });
+      client.on('error', () => {});
       await client.ping();
       return { name: 'Redis', status: 'UP', detail: '连接正常' };
     } catch (error) {
       this.logger.warn(`Redis probe failed: ${(error as Error).message}`);
       return { name: 'Redis', status: 'DOWN', detail: '缓存与任务队列连接失败' };
     } finally {
-      client.disconnect();
+      client?.disconnect();
     }
   }
 }

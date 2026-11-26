@@ -77,6 +77,7 @@ export class InterviewsService {
   private dto<T extends { interviewerIds: string | null }>(row: T) { return { ...row, interviewerIds: ids(row.interviewerIds) }; }
 
   async list(actor: AuthenticatedUser, filter: { candidateId?: string; jobId?: string; status?: string; keyword?: string }) {
+    const scopes = this.auth.scopesFor(actor, 'candidate:read');
     const where: Prisma.InterviewWhereInput = {};
     if (filter.candidateId) where.candidateId = filter.candidateId;
     if (filter.jobId) where.jobId = filter.jobId;
@@ -84,16 +85,69 @@ export class InterviewsService {
       if (!Object.values(InterviewStatus).includes(filter.status as InterviewStatus)) throw new BadRequestException('状态无效');
     }
     if (filter.keyword) where.candidate = { name: { contains: filter.keyword } };
-    const rows = await this.db.interview.findMany({ where, include: { candidate: { select: { id: true, name: true } } }, orderBy: { time: 'asc' } });
-    const allowed = await Promise.all(rows.map(row => this.canRead(row.candidateId, row.jobId, actor)));
-    const visible = rows.filter((_, i) => allowed[i]);
-    const feedback = await this.db.interviewFeedback.findMany({ where: { interviewId: { in: visible.map(row => row.id) } }, select: { interviewId: true, interviewerId: true } });
+    const rows = await this.db.interview.findMany({
+      where,
+      include: { candidate: { select: { id: true, name: true, createdById: true } } },
+      orderBy: { time: 'asc' },
+      take: 500,
+    });
+    let visible = rows;
+    if (!scopes.includes(DataScope.ALL) && rows.length > 0) {
+      const jobIds = [...new Set(rows.map((row) => row.jobId))];
+      const needParticipation = scopes.some(
+        (s) => s === DataScope.PARTICIPATING || s === DataScope.DEPARTMENT_AND_PARTICIPATING,
+      );
+      const [jobs, participations] = await Promise.all([
+        this.db.job.findMany({
+          where: { id: { in: jobIds } },
+          select: { id: true, recruiterId: true, departmentId: true },
+        }),
+        needParticipation
+          ? this.db.interview.findMany({
+              where: {
+                jobId: { in: jobIds },
+                interviewerIds: { contains: `|${actor.id}|` },
+              },
+              select: { candidateId: true, jobId: true },
+            })
+          : Promise.resolve([]),
+      ]);
+      const jobMap = new Map(jobs.map((job) => [job.id, job]));
+      const participated = new Set(participations.map((p) => `${p.candidateId}:${p.jobId}`));
+      visible = rows.filter((row) => {
+        const job = jobMap.get(row.jobId);
+        const hasParticipation = participated.has(`${row.candidateId}:${row.jobId}`);
+        return scopes.some((scope) => {
+          if (scope === DataScope.SELF) return row.candidate?.createdById === actor.id;
+          if (scope === DataScope.OWN_JOBS) return row.candidate?.createdById === actor.id || job?.recruiterId === actor.id;
+          if (scope === DataScope.DEPARTMENT) return !!job && actor.departmentIds.includes(job.departmentId);
+          if (scope === DataScope.PARTICIPATING) return hasParticipation;
+          if (scope === DataScope.DEPARTMENT_AND_PARTICIPATING) return hasParticipation || (!!job && actor.departmentIds.includes(job.departmentId));
+          return false;
+        });
+      });
+    }
+    const feedback = visible.length
+      ? await this.db.interviewFeedback.findMany({ where: { interviewId: { in: visible.map(row => row.id) } }, select: { interviewId: true, interviewerId: true } })
+      : [];
+    const feedbackByInterview = new Map<string, Set<string>>();
+    for (const item of feedback) {
+      const set = feedbackByInterview.get(item.interviewId) ?? new Set<string>();
+      set.add(item.interviewerId);
+      feedbackByInterview.set(item.interviewId, set);
+    }
+    const now = new Date();
     return visible.map(row => {
       const people = ids(row.interviewerIds);
-      const finished = row.endTime && row.endTime <= new Date();
-      const complete = people.length > 0 && people.every(id => feedback.some(f => f.interviewId === row.id && f.interviewerId === id));
+      const finished = row.endTime && row.endTime <= now;
+      const submitted = feedbackByInterview.get(row.id);
+      const complete = people.length > 0 && people.every(id => submitted?.has(id));
       const status = row.status === InterviewStatus.CANCELLED ? row.status : finished ? (complete ? InterviewStatus.COMPLETED : InterviewStatus.FEEDBACK_PENDING) : row.status;
-      return { ...this.dto(row), status };
+      return {
+        ...this.dto(row),
+        candidate: { id: row.candidate.id, name: row.candidate.name },
+        status,
+      };
     }).filter(row => !filter.status || row.status === filter.status);
   }
   async history(id: string, actor: AuthenticatedUser) {
@@ -116,7 +170,10 @@ export class InterviewsService {
   }
   async create(value: unknown, actor: AuthenticatedUser) {
     const input = record(value); const candidateId = required(input.candidateId, '候选人'); const jobId = required(input.jobId, '职位');
-    await this.manageable(candidateId, jobId, actor);
+    const candidate = await this.manageable(candidateId, jobId, actor);
+    if (['ARCHIVED', 'ENDED', 'ONBOARDED', 'PROBATION'].includes(candidate.stage)) {
+      throw new BadRequestException('候选人当前阶段不允许安排面试');
+    }
     const round = Number(input.round); if (!Number.isInteger(round) || round < 1) throw new BadRequestException('轮次无效');
     const mode = required(input.mode, '面试方式') as InterviewMode; if (!Object.values(InterviewMode).includes(mode)) throw new BadRequestException('面试方式无效');
     if (!Array.isArray(input.interviewerIds)) throw new BadRequestException('面试官必填');
@@ -194,7 +251,9 @@ export class InterviewsService {
     return { queued: recipients.length };
   }
   async addFeedback(id: string, value: unknown, actor: AuthenticatedUser) {
-    const row = await this.target(id, actor); const input = record(value); const interviewerId = required(input.interviewerId, '面试官');
+    const row = await this.target(id, actor);
+    if (row.status === 'CANCELLED') throw new BadRequestException('已取消的面试不支持填写评价');
+    const input = record(value); const interviewerId = required(input.interviewerId, '面试官');
     if (!ids(row.interviewerIds).includes(interviewerId)) throw new BadRequestException('评价人不是本轮面试官');
     const proxy = interviewerId !== actor.id;
     if (proxy) await this.manageable(row.candidateId, row.jobId, actor);

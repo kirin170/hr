@@ -1,5 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { AuditAction, RequirePermission } from '../auth/auth.decorators.js';
+import { SensitiveField } from '@prisma/client';
+import { AuditAction, CurrentUser, RequirePermission } from '../auth/auth.decorators.js';
+import type { AuthenticatedUser } from '../auth/auth.types.js';
+import { AuthorizationService } from '../auth/authorization.service.js';
 import { MailConfigService, type MailInboxInput } from './mail-config.service.js';
 import { MailPollService } from './mail-poll.service.js';
 
@@ -12,6 +15,7 @@ export class MailController {
   constructor(
     private readonly configs: MailConfigService,
     private readonly poll: MailPollService,
+    private readonly authorization: AuthorizationService,
   ) {}
 
   @Get()
@@ -66,7 +70,21 @@ export class MailController {
   /** 抓取监控：该邮箱最近处理记录与失败归因（FR-ENT-8） */
   @Get(':id/messages')
   @RequirePermission('intake:read')
-  async messages(@Param('id') id: string, @Query('limit') limit?: string) {
-    return { items: await this.poll.listMessages(id, Number(limit) || 20) };
+  async messages(
+    @Param('id') id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @Query('limit') limit?: string,
+  ) {
+    const canReadContacts = await this.authorization.canAccessSensitiveField(
+      actor,
+      SensitiveField.CANDIDATE_CONTACT,
+      'READ',
+    );
+    const items = await this.poll.listMessages(id, Number(limit) || 20);
+    return {
+      items: canReadContacts
+        ? items
+        : items.map((item) => ({ ...item, fromAddress: null })),
+    };
   }
 }

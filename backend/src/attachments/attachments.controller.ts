@@ -49,6 +49,7 @@ export class AttachmentsController {
     response.setHeader('Content-Type', file.mimeType);
     response.setHeader('Content-Length', String(buffer.length));
     response.setHeader('Content-Disposition', contentDisposition(file.fileName));
+    response.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     response.setHeader('Cache-Control', 'private, no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.send(buffer);

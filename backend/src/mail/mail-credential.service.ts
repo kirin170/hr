@@ -28,8 +28,13 @@ export class MailCredentialService {
     if (!ivPart || !tagPart || !dataPart) {
       throw new InternalServerErrorException('邮箱凭据密文格式无效');
     }
-    const decipher = createDecipheriv(ALGORITHM, this.key(), Buffer.from(ivPart, 'base64'));
-    decipher.setAuthTag(Buffer.from(tagPart, 'base64'));
+    const iv = Buffer.from(ivPart, 'base64');
+    const tag = Buffer.from(tagPart, 'base64');
+    if (iv.length !== IV_BYTES || tag.length !== 16) {
+      throw new InternalServerErrorException('邮箱凭据密文格式无效');
+    }
+    const decipher = createDecipheriv(ALGORITHM, this.key(), iv, { authTagLength: 16 });
+    decipher.setAuthTag(tag);
     return Buffer.concat([
       decipher.update(Buffer.from(dataPart, 'base64')),
       decipher.final(),
@@ -49,7 +54,7 @@ export class MailCredentialService {
       return decoded;
     }
 
-    if ((process.env.APP_ENV ?? 'local') !== 'local') {
+    if (process.env.APP_ENV !== 'local' || process.env.NODE_ENV === 'production') {
       throw new InternalServerErrorException('非本地环境必须配置 MAIL_CREDENTIAL_KEY');
     }
 

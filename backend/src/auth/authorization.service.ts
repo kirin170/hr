@@ -1,13 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { DataScope, SensitiveField } from '@prisma/client';
-import { IdentityProvider, UserStatus } from '@prisma/client';
-import type { Prisma } from '@prisma/client';
+import { DataScope, IdentityProvider, Prisma, SensitiveField, UserStatus } from '@prisma/client';
 import type { AuthenticatedUser, SensitiveAction } from './auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
@@ -346,13 +345,20 @@ export class AuthorizationService {
     if (!input.code.trim() || !input.name.trim()) {
       throw new BadRequestException('用户组 code 和 name 为必填项');
     }
-    return this.prisma.userGroup.create({
-      data: {
-        code: input.code.trim(),
-        name: input.name.trim(),
-        description: input.description?.trim() || undefined,
-      },
-    });
+    try {
+      return await this.prisma.userGroup.create({
+        data: {
+          code: input.code.trim(),
+          name: input.name.trim(),
+          description: input.description?.trim() || undefined,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('用户组编码已存在');
+      }
+      throw error;
+    }
   }
 
   async createDepartment(input: {
@@ -372,13 +378,20 @@ export class AuthorizationService {
     ) {
       throw new NotFoundException('上级部门不存在');
     }
-    return this.prisma.department.create({
-      data: {
-        code: input.code.trim(),
-        name: input.name.trim(),
-        parentId: input.parentId,
-      },
-    });
+    try {
+      return await this.prisma.department.create({
+        data: {
+          code: input.code.trim(),
+          name: input.name.trim(),
+          parentId: input.parentId,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('部门编码已存在');
+      }
+      throw error;
+    }
   }
 
   async createUser(input: {
@@ -405,34 +418,41 @@ export class AuthorizationService {
     ) {
       throw new NotFoundException('部门不存在');
     }
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          employeeNo: input.employeeNo?.trim() || undefined,
-          displayName: input.displayName.trim(),
-          email: input.email?.trim() || undefined,
-          departmentId: input.departmentId,
-          status: UserStatus.ACTIVE,
-          ...(input.departmentId
-            ? {
-                departmentMemberships: {
-                  create: { departmentId: input.departmentId, isPrimary: true },
-                },
-              }
-            : {}),
-        },
-        select: { id: true, employeeNo: true, displayName: true, email: true, departmentId: true, status: true },
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const user = await tx.user.create({
+          data: {
+            employeeNo: input.employeeNo?.trim() || undefined,
+            displayName: input.displayName.trim(),
+            email: input.email?.trim() || undefined,
+            departmentId: input.departmentId,
+            status: UserStatus.ACTIVE,
+            ...(input.departmentId
+              ? {
+                  departmentMemberships: {
+                    create: { departmentId: input.departmentId, isPrimary: true },
+                  },
+                }
+              : {}),
+          },
+          select: { id: true, employeeNo: true, displayName: true, email: true, departmentId: true, status: true },
+        });
+        await tx.identityLink.create({
+          data: {
+            provider: input.identityProvider,
+            subject: input.identitySubject.trim(),
+            userId: user.id,
+            verifiedAt: input.identityProvider === IdentityProvider.LOCAL ? new Date() : undefined,
+          },
+        });
+        return user;
       });
-      await tx.identityLink.create({
-        data: {
-          provider: input.identityProvider,
-          subject: input.identitySubject.trim(),
-          userId: user.id,
-          verifiedAt: input.identityProvider === IdentityProvider.LOCAL ? new Date() : undefined,
-        },
-      });
-      return user;
-    });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('用户工号、邮箱或外部身份标识已存在');
+      }
+      throw error;
+    }
   }
 
   async listUsers(limit = 100) {

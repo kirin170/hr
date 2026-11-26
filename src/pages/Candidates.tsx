@@ -45,7 +45,6 @@ const bulkTargets: { key: CandidateMainStage | 'ARCHIVED'; label: string }[] = [
   { key: 'OFFERING', label: '人工推进至沟通 Offer' },
   { key: 'ONBOARDED', label: '确认入职' },
   { key: 'PROBATION', label: '开始试用期' },
-  { key: 'ENDED', label: '结束试用期' },
   { key: 'ARCHIVED', label: '归档' },
 ]
 

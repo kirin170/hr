@@ -31,7 +31,11 @@ export class AiEvalWorkerService implements OnModuleInit, OnModuleDestroy {
       if (!job) return;
       const attempts = job.opts.attempts ?? 1;
       if (job.attemptsMade >= attempts) {
-        void this.aiRunService.markEvalFailed(job.data.runId, error);
+        void this.aiRunService.markEvalFailed(job.data.runId, error).catch((markErr: unknown) => {
+          this.logger.error(
+            `Failed to record eval failure for run ${job.data.runId}: ${(markErr as Error).message}`,
+          );
+        });
       }
     });
 

@@ -25,16 +25,33 @@ export function OfferPanel({ candidateId, onChanged }: { candidateId: string; on
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<unknown>(null)
   const [busy, setBusy] = useState(false)
-  const refresh = useCallback(async () => {
+  const loadOffer = useCallback(async (isActive?: () => boolean) => {
     const { offer: value } = await request<{ offer: Offer | null }>(base)
+    if (isActive && !isActive()) return
     setOffer(value)
     if (value) {
       setLevel(value.hireLevel || ''); setOa(value.oaApprovalId || '')
       setOnboard(value.onboardDate ? value.onboardDate.slice(0,10) : '')
-      setMaterials(await request<Material[]>(`${base}/materials`))
+      const nextMaterials = await request<Material[]>(`${base}/materials`)
+      if (isActive && !isActive()) return
+      setMaterials(nextMaterials)
+    } else {
+      setLevel(''); setOa(''); setOnboard(''); setMaterials([])
     }
   }, [base])
-  useEffect(() => { setLoading(true); setError(''); setPreview(null); refresh().catch(e => setError(e.message)).finally(() => setLoading(false)); request<Reason[]>('/v1/offer-reasons').then(setReasons).catch(() => setReasons([])) }, [refresh])
+  const refresh = useCallback(() => loadOffer(), [loadOffer])
+  useEffect(() => {
+    let active = true
+    const isActive = () => active
+    setLoading(true); setError(''); setPreview(null); setOffer(null); setMaterials([])
+    loadOffer(isActive)
+      .catch((e: unknown) => { if (active) setError(e instanceof Error ? e.message : '加载失败') })
+      .finally(() => { if (active) setLoading(false) })
+    request<Reason[]>('/v1/offer-reasons')
+      .then((rows) => { if (active) setReasons(rows) })
+      .catch(() => { if (active) setReasons([]) })
+    return () => { active = false }
+  }, [loadOffer])
   useEffect(() => { setInitiator('COMPANY'); setReasonId(''); setReasonText('') }, [offer?.workflowStage])
   const act = async (action: string, payload: Record<string,unknown> = {}) => {
     setBusy(true); setError('')

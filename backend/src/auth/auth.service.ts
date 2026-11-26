@@ -214,12 +214,19 @@ export class AuthService {
     const tokenHash = this.tokens.hashRefreshToken(rawToken);
     const session = await this.prisma.refreshSession.findUnique({
       where: { tokenHash },
-      select: { userId: true },
+      select: { userId: true, familyId: true },
     });
-    await this.prisma.refreshSession.updateMany({
-      where: { tokenHash, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    if (session?.familyId) {
+      await this.prisma.refreshSession.updateMany({
+        where: { familyId: session.familyId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    } else {
+      await this.prisma.refreshSession.updateMany({
+        where: { tokenHash, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+    }
     return session?.userId;
   }
 

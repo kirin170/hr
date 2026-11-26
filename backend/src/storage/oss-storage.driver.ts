@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OSS from 'ali-oss';
-import type {
-  StorageDriver,
-  StoragePutInput,
-  StorageReadUrl,
-  StorageReadUrlInput,
+import {
+  isSafeStorageKey,
+  type StorageDriver,
+  type StoragePutInput,
+  type StorageReadUrl,
+  type StorageReadUrlInput,
 } from './storage.types.js';
 
 export interface OssStorageOptions {
@@ -69,7 +70,14 @@ export class OssStorageDriver implements StorageDriver {
     });
   }
 
+  private assertKey(key: string): void {
+    if (!isSafeStorageKey(key)) {
+      throw new Error(`非法的对象存储 key: ${key}`);
+    }
+  }
+
   async put(input: StoragePutInput): Promise<void> {
+    this.assertKey(input.key);
     await this.client.put(input.key, input.body, {
       mime: input.contentType,
       headers: { 'x-oss-object-acl': 'private' },
@@ -77,12 +85,14 @@ export class OssStorageDriver implements StorageDriver {
   }
 
   async createReadUrl(input: StorageReadUrlInput): Promise<StorageReadUrl> {
+    this.assertKey(input.key);
     const ttlSeconds = Math.max(1, Math.floor(input.ttlSeconds));
     const url = this.client.signatureUrl(input.key, { expires: ttlSeconds });
     return { url, expiresAt: new Date(Date.now() + ttlSeconds * 1000) };
   }
 
   async delete(key: string): Promise<void> {
+    this.assertKey(key);
     try {
       await this.client.delete(key);
     } catch (error) {
@@ -95,6 +105,7 @@ export class OssStorageDriver implements StorageDriver {
   }
 
   async exists(key: string): Promise<boolean> {
+    if (!isSafeStorageKey(key)) return false;
     try {
       await this.client.head(key);
       return true;
@@ -105,6 +116,7 @@ export class OssStorageDriver implements StorageDriver {
   }
 
   async read(key: string): Promise<Buffer> {
+    this.assertKey(key);
     const result = await this.client.get(key);
     return Buffer.isBuffer(result.content) ? result.content : Buffer.from(result.content);
   }

@@ -15,19 +15,21 @@ type Delivery = { id: string; eventKey: string; sourceKey: string; recipientId: 
 export class NotificationDeliveryWorker implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(NotificationDeliveryWorker.name);
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<void> | null = null;
   constructor(private readonly db: PrismaService, private readonly outbox: NotificationOutboxService, private readonly api: DingTalkApiClient, private readonly notice: DingTalkWorkNoticeClient, private readonly auth: AuthorizationService, private readonly reminders: OnboardingRemindersService, private readonly prefs: NotificationPreferenceService) {}
 
   onModuleInit() {
     if (process.env.APP_PROCESS_ROLE !== 'worker' || process.env.DINGTALK_NOTIFICATION_DELIVERY_ENABLED !== 'true') return;
     const tick = () => {
-      if (this.running) return;
-      this.running = true;
-      void this.run().catch(() => this.logger.warn('通知投递任务失败，稍后重试')).finally(() => { this.running = false; });
+      if (this.inFlight) return;
+      this.inFlight = this.run().catch(() => this.logger.warn('通知投递任务失败，稍后重试')).finally(() => { this.inFlight = null; });
     };
     tick(); this.timer = setInterval(tick, 60_000); this.timer.unref();
   }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
+  async onModuleDestroy() {
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    if (this.inFlight) await this.inFlight;
+  }
 
   async run(now = new Date()) {
     if (process.env.DINGTALK_NOTIFICATION_DELIVERY_ENABLED !== 'true') return;

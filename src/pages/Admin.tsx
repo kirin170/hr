@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertTriangle, ArrowDown, ArrowUp, Download, Lock, RefreshCw, Save, ShieldCheck, Trash2, UserCog } from 'lucide-react'
 import * as api from '../api'
 import type {
@@ -65,7 +65,7 @@ export function Admin() {
 
   useEffect(() => { void load() }, [load])
 
-  const run = useCallback(async (key: string, action: () => Promise<unknown>, success: string) => {
+  const run = useCallback(async (key: string, action: () => Promise<unknown>, success: string): Promise<boolean> => {
     setBusy(key)
     setError('')
     try {
@@ -74,10 +74,12 @@ export function Admin() {
       invalidateEffectiveSettings()
       await load()
       toast(success)
+      return true
     } catch (err) {
       const message = msg(err)
       setError(message)
       toast(message, 'info')
+      return false
     } finally {
       setBusy('')
     }
@@ -113,7 +115,7 @@ export function Admin() {
   )
 }
 
-type RunFn = (key: string, action: () => Promise<unknown>, success: string) => Promise<void>
+type RunFn = (key: string, action: () => Promise<unknown>, success: string) => Promise<boolean>
 
 // ---------- 招聘基础配置 ----------
 
@@ -220,8 +222,8 @@ function DictSection({ overview, busy, run }: { overview: AdminOverview; busy: s
                   <>
                     <button className="text-button" disabled={busy === item.id || !editing.label.trim()} onClick={() => {
                       const label = editing.label.trim()
-                      setEditing(null)
                       void run(item.id, () => api.updateDictItem(item.id, { version: item.version, label }), '选项已改名')
+                        .then((ok) => { if (ok) setEditing(null) })
                     }}><Save size={13} />保存</button>
                     <button className="text-button" onClick={() => setEditing(null)}>取消</button>
                   </>
@@ -243,8 +245,8 @@ function DictSection({ overview, busy, run }: { overview: AdminOverview; busy: s
         <input className="admin-input" value={draft} placeholder={`新增${typeLabel}选项`} onChange={(event) => setDraft(event.target.value)} />
         <button className="button button-primary button-sm" disabled={!draft.trim() || busy === `dict-create-${type}`} onClick={() => {
           const label = draft.trim()
-          setDraft('')
           void run(`dict-create-${type}`, () => api.createDictItem({ type, label }), '选项已新增')
+            .then((ok) => { if (ok) setDraft('') })
         }}>新增</button>
       </div>
     </section>
@@ -299,8 +301,8 @@ function PlanSection({ overview, busy, run }: { overview: AdminOverview; busy: s
         <input className="admin-input" placeholder="说明（可选）" value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
         <button className="button button-primary button-sm" disabled={!draft.name.trim() || busy === 'plan-create'} onClick={() => {
           const payload = { name: draft.name.trim(), rounds: Number(draft.rounds), description: draft.description.trim() || undefined }
-          setDraft({ name: '', rounds: '2', description: '' })
           void run('plan-create', () => api.createInterviewPlan(payload), '面试方案已新增')
+            .then((ok) => { if (ok) setDraft({ name: '', rounds: '2', description: '' }) })
         }}>新增方案</button>
       </div>
     </section>
@@ -362,8 +364,8 @@ function ReasonsTab({ overview, busy, run }: { overview: AdminOverview; busy: st
               <input className="admin-input" placeholder="新增原因（如：薪资未谈拢）" value={drafts[type] || ''} onChange={(event) => setDrafts({ ...drafts, [type]: event.target.value })} />
               <button className="button button-primary button-sm" disabled={!(drafts[type] || '').trim() || busy === `reason-create-${type}`} onClick={() => {
                 const label = (drafts[type] || '').trim()
-                setDrafts({ ...drafts, [type]: '' })
                 void run(`reason-create-${type}`, () => api.createReasonOption({ type, label }), '原因已新增')
+                  .then((ok) => { if (ok) setDrafts((prev) => ({ ...prev, [type]: '' })) })
               }}>新增</button>
             </div>
           </section>
@@ -484,17 +486,19 @@ function AccessTab() {
     return () => { active = false }
   }, [load])
 
-  const run = async (key: string, action: () => Promise<unknown>, success: string) => {
+  const run = async (key: string, action: () => Promise<unknown>, success: string): Promise<boolean> => {
     setBusy(key)
     setError('')
     try {
       await action()
       await load()
       toast(success)
+      return true
     } catch (err) {
       const message = msg(err)
       setError(message)
       toast(message, 'info')
+      return false
     } finally {
       setBusy('')
     }
@@ -552,8 +556,8 @@ function AccessTab() {
           <input className="admin-input" placeholder="名称" value={groupDraft.name} onChange={(event) => setGroupDraft({ ...groupDraft, name: event.target.value })} />
           <button className="button button-primary button-sm" disabled={!groupDraft.code.trim() || !groupDraft.name.trim() || busy === 'group-create'} onClick={() => {
             const payload = { code: groupDraft.code.trim(), name: groupDraft.name.trim() }
-            setGroupDraft({ code: '', name: '' })
             void run('group-create', () => api.createAuthzGroup(payload), '权限组已创建')
+              .then((ok) => { if (ok) setGroupDraft({ code: '', name: '' }) })
           }}>新建权限组</button>
         </div>
       </section>
@@ -583,8 +587,8 @@ function AccessTab() {
           </select>
           <button className="button button-primary button-sm" disabled={!departmentDraft.code.trim() || !departmentDraft.name.trim() || busy === 'department-create'} onClick={() => {
             const payload = { code: departmentDraft.code.trim(), name: departmentDraft.name.trim(), parentId: departmentDraft.parentId || undefined }
-            setDepartmentDraft({ code: '', name: '', parentId: '' })
             void run('department-create', () => api.createAuthzDepartment(payload), '部门已创建')
+              .then((ok) => { if (ok) setDepartmentDraft({ code: '', name: '', parentId: '' }) })
           }}>新建部门</button>
         </div>
       </section>
@@ -745,17 +749,19 @@ function IntegrationsTab() {
     return () => { active = false }
   }, [load])
 
-  const run = async (key: string, action: () => Promise<unknown>, success: string) => {
+  const run = async (key: string, action: () => Promise<unknown>, success: string): Promise<boolean> => {
     setBusy(key)
     setError('')
     try {
       await action()
       await load()
       toast(success)
+      return true
     } catch (err) {
       const message = msg(err)
       setError(message)
       toast(message, 'info')
+      return false
     } finally {
       setBusy('')
     }
@@ -832,8 +838,8 @@ function IntegrationsTab() {
               username: draft.username.trim() || undefined,
               password: draft.password || undefined,
             }
-            setDraft({ ...draft, address: '', host: '', username: '', password: '' })
             void run('mailbox-create', () => api.createMailboxConfig(payload), '邮箱已新增')
+              .then((ok) => { if (ok) setDraft((prev) => ({ ...prev, address: '', host: '', username: '', password: '' })) })
           }}>新增邮箱</button>
         </div>
       </section>
@@ -876,8 +882,8 @@ function IntegrationsTab() {
           <input className="admin-input" placeholder="操作者用户 ID" value={revokeId} onChange={(event) => setRevokeId(event.target.value)} />
           <button className="button button-secondary button-sm" disabled={!revokeId.trim() || busy === 'revoke'} onClick={() => {
             const operatorId = revokeId.trim()
-            setRevokeId('')
             void run('revoke', () => api.revokeBrowserImportTokens(operatorId), '该操作者的令牌已吊销')
+              .then((ok) => { if (ok) setRevokeId('') })
           }}>吊销令牌</button>
         </div>
       </section>
@@ -1055,30 +1061,38 @@ function AuditTab() {
   const [rows, setRows] = useState<AuditLogRow[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const reqIdRef = useRef(0)
 
-  const query = useCallback(() => ({
-    actorId: filters.actorId.trim() || undefined,
-    actionPrefix: filters.actionPrefix.trim() || undefined,
-    resourceType: filters.resourceType.trim() || undefined,
-    resourceId: filters.resourceId.trim() || undefined,
-    from: filters.from ? new Date(filters.from).toISOString() : undefined,
-    to: filters.to ? new Date(filters.to).toISOString() : undefined,
+  const buildQuery = useCallback((f: typeof filters) => ({
+    actorId: f.actorId.trim() || undefined,
+    actionPrefix: f.actionPrefix.trim() || undefined,
+    resourceType: f.resourceType.trim() || undefined,
+    resourceId: f.resourceId.trim() || undefined,
+    from: f.from ? new Date(`${f.from}T00:00:00+08:00`).toISOString() : undefined,
+    to: f.to ? new Date(`${f.to}T23:59:59.999+08:00`).toISOString() : undefined,
     limit: 200,
-  }), [filters])
+  }), [])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (f: typeof filters) => {
+    const reqId = ++reqIdRef.current
     setLoading(true)
     try {
-      setRows(await api.listAuditLogs(query()))
+      const nextRows = await api.listAuditLogs(buildQuery(f))
+      if (reqId !== reqIdRef.current) return
+      setRows(nextRows)
       setError('')
     } catch (err) {
+      if (reqId !== reqIdRef.current) return
       setError(msg(err))
     } finally {
-      setLoading(false)
+      if (reqId === reqIdRef.current) setLoading(false)
     }
-  }, [query])
+  }, [buildQuery])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void load({ actorId: '', actionPrefix: '', resourceType: '', resourceId: '', from: '', to: '' })
+    return () => { reqIdRef.current += 1 }
+  }, [load])
 
   return (
     <section className="panel admin-section">
@@ -1087,17 +1101,17 @@ function AuditTab() {
           <h3>操作审计</h3>
           <p className="hint">按对象、动作与时间检索；审计内容已脱敏，不包含凭据与密钥。</p>
         </div>
-        <button className="button button-secondary button-sm" onClick={() => { void api.exportAuditLogs(query()).catch((err: unknown) => setError(msg(err))) }}><Download size={13} />导出 CSV</button>
+        <button className="button button-secondary button-sm" onClick={() => { void api.exportAuditLogs(buildQuery(filters)).catch((err: unknown) => setError(msg(err))) }}><Download size={13} />导出 CSV</button>
       </div>
-      <div className="admin-filters">
+      <form className="admin-filters" onSubmit={(event) => { event.preventDefault(); void load(filters) }}>
         <input className="admin-input" placeholder="操作者 ID" value={filters.actorId} onChange={(event) => setFilters({ ...filters, actorId: event.target.value })} />
         <input className="admin-input" placeholder="动作前缀，如 settings." value={filters.actionPrefix} onChange={(event) => setFilters({ ...filters, actionPrefix: event.target.value })} />
         <input className="admin-input" placeholder="对象类型" value={filters.resourceType} onChange={(event) => setFilters({ ...filters, resourceType: event.target.value })} />
         <input className="admin-input" placeholder="对象 ID" value={filters.resourceId} onChange={(event) => setFilters({ ...filters, resourceId: event.target.value })} />
         <input className="admin-input" type="date" value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} />
         <input className="admin-input" type="date" value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} />
-        <button className="button button-primary button-sm" disabled={loading} onClick={() => { void load() }}>{loading ? '查询中…' : '查询'}</button>
-      </div>
+        <button type="submit" className="button button-primary button-sm" disabled={loading}>{loading ? '查询中…' : '查询'}</button>
+      </form>
       {error && <p className="form-error">{error}</p>}
       <table className="admin-table">
         <thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>对象</th><th>结果</th><th>来源 IP</th></tr></thead>

@@ -40,7 +40,7 @@ describe('DingTalkCallbackCrypto', () => {
       timestamp: reply.timeStamp,
       nonce: reply.nonce,
       encrypted: reply.encrypt,
-      signature: `${reply.msg_signature.slice(0, -1)}0`,
+      signature: `${reply.msg_signature.slice(0, -1)}${reply.msg_signature.endsWith('0') ? '1' : '0'}`,
     })).toBe(false);
 
     vi.stubEnv('DINGTALK_CALLBACK_OWNER_KEY', 'wrong-app');

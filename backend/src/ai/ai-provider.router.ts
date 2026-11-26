@@ -9,7 +9,7 @@ import {
   type ProviderEndpointConfig,
 } from './model-provider.js';
 import { OpenAiCompatibleProvider } from './openai-compatible.provider.js';
-import type { AiScene } from './ai.contract.js';
+import { AiContractError, type AiScene } from './ai.contract.js';
 
 export type { AiProviderAttempt } from './model-provider.js';
 
@@ -81,9 +81,14 @@ export class AiProviderRouter {
         const failure =
           error instanceof AiProviderError
             ? error
-            : new AiProviderError(AI_ERROR_CODES.INTERNAL, (error as Error).message, {
-                provider: provider.name,
-              });
+            : error instanceof AiContractError
+              ? new AiProviderError(AI_ERROR_CODES.OUTPUT_INVALID, error.message, {
+                  retryable: true,
+                  provider: provider.name,
+                })
+              : new AiProviderError(AI_ERROR_CODES.INTERNAL, (error as Error).message, {
+                  provider: provider.name,
+                });
         attempts.push({
           provider: provider.name,
           code: failure.code,

@@ -55,6 +55,15 @@ const KIND_BY_EXTENSION: Record<string, DetectedFileKind> = {
 
 const OCTET_STREAM = 'application/octet-stream';
 
+const CANONICAL_MIME_BY_KIND: Record<DetectedFileKind, string> = {
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+};
+
 const ALLOWED_MIME_BY_KIND: Record<DetectedFileKind, ReadonlySet<string>> = {
   pdf: new Set(['application/pdf', OCTET_STREAM]),
   doc: new Set(['application/msword', 'application/x-msword', OCTET_STREAM]),
@@ -142,7 +151,7 @@ export function validateUpload(
     );
   }
 
-  return { ok: true, extension, kind, mimeType, size };
+  return { ok: true, extension, kind, mimeType: CANONICAL_MIME_BY_KIND[detected], size };
 }
 
 function startsWith(buffer: Buffer, signature: number[]): boolean {

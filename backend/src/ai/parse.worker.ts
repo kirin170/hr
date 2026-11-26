@@ -46,7 +46,11 @@ export class ParseWorkerService implements OnModuleInit, OnModuleDestroy {
       }
       const attempts = job.opts.attempts ?? 1;
       if (job.attemptsMade >= attempts) {
-        void this.aiRunService.markParseFailed(job.data.intakeId, error);
+        void this.aiRunService.markParseFailed(job.data.intakeId, error).catch((markErr: unknown) => {
+          this.logger.error(
+            `Failed to record parse failure for intake ${job.data.intakeId}: ${(markErr as Error).message}`,
+          );
+        });
       }
     });
 

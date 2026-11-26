@@ -57,13 +57,20 @@ export type CycleSummary = {
 /** 周期汇总：均值/中位数/最长/最短，空集合全部为 null 而不是 0。 */
 export function summarize(days: number[]): CycleSummary {
   if (!days.length) return { count: 0, average: null, median: null, max: null, min: null };
-  const total = days.reduce((sum, value) => sum + value, 0);
+  let total = 0;
+  let max = days[0];
+  let min = days[0];
+  for (const value of days) {
+    total += value;
+    if (value > max) max = value;
+    if (value < min) min = value;
+  }
   return {
     count: days.length,
     average: Math.round((total / days.length) * 10) / 10,
     median: median(days),
-    max: Math.max(...days),
-    min: Math.min(...days),
+    max,
+    min,
   };
 }
 

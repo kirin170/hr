@@ -12,11 +12,15 @@ export interface ParseJobData {
 /** Redis 连接参数（技术设计 §9.4：REDIS_URL） */
 export function redisConnection() {
   const url = new URL(process.env.REDIS_URL ?? 'redis://127.0.0.1:6379');
+  const dbSegment = url.pathname.replace(/^\/+/, '');
+  const parsedDb = dbSegment ? Number(dbSegment) : undefined;
   return {
     host: url.hostname,
     port: Number(url.port || 6379),
-    username: url.username || undefined,
-    password: url.password || undefined,
+    username: url.username ? decodeURIComponent(url.username) : undefined,
+    password: url.password ? decodeURIComponent(url.password) : undefined,
+    ...(parsedDb !== undefined && Number.isInteger(parsedDb) && parsedDb >= 0 ? { db: parsedDb } : {}),
+    ...(url.protocol === 'rediss:' ? { tls: {} } : {}),
     maxRetriesPerRequest: null,
   };
 }

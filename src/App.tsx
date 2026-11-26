@@ -77,7 +77,7 @@ export default function App() {
     if (next === 'interviews') setInterviewOpenKey(0)
   }
 
-  const openCandidate = (id: string | null) => setSelectedCandidateId(id)
+  const openCandidate = useCallback((id: string | null) => setSelectedCandidateId(id), [])
 
   const scheduleCandidate = (candidate: Candidate) => {
     setSelectedCandidateId(null)
@@ -96,7 +96,7 @@ export default function App() {
     <div className="app-shell">
       <Sidebar page={page} onNavigate={navigate} onSettings={() => setShowSettings(true)} me={me} />
       <div className="app-main">
-        <TopBar title={meta.title} subtitle={meta.subtitle} onSearch={setSearch} onOpenSettings={() => setShowSettings(true)} me={me} onOpenAdmin={() => navigate('admin')} />
+        <TopBar title={meta.title} subtitle={meta.subtitle} search={search} onSearch={setSearch} onOpenSettings={() => setShowSettings(true)} me={me} onOpenAdmin={() => navigate('admin')} />
         <main className="content">
           {page === 'dashboard' && <Dashboard onNavigate={navigate} onOpenCandidate={openCandidate} />}
           {page === 'positions' && <Positions />}

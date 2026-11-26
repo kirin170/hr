@@ -228,6 +228,16 @@ export class DictSettingsService {
       groups.forEach((group) => add('JOB_LEVEL', group.jobLevel, group._count._all));
     }
 
+    const reqTypes = labelsOf('REQUISITION_TYPE');
+    if (reqTypes.length) {
+      const groups = await client.jobRequisition.groupBy({
+        by: ['requisitionType'],
+        where: { requisitionType: { in: reqTypes } },
+        _count: { _all: true },
+      });
+      groups.forEach((group) => add('REQUISITION_TYPE', group.requisitionType, group._count._all));
+    }
+
     for (const label of labelsOf('TAG')) {
       // tags 以 JSON 文本保存，按带引号的完整取值匹配，避免“前端”命中“前端负责人”
       add('TAG', label, await client.candidate.count({ where: { tags: { contains: JSON.stringify(label) } } }));

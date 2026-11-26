@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { createContext, useCallback, useContext, useMemo } from 'react'
 import type { ApiJob, AppData, Candidate, Interview } from './types'
-import { createCandidate as createCandidateRequest, listCandidates, updateCandidateStage } from './api'
+import { createCandidate as createCandidateRequest, updateCandidateStage } from './api'
 
 export type Toast = { id: number; message: string; type?: 'success' | 'info' }
 
@@ -40,7 +40,7 @@ type AppProviderProps = {
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, addToast, toasts, dismissToast, children }: AppProviderProps) {
-  const addCandidate = async (candidate: Candidate) => {
+  const addCandidate = useCallback(async (candidate: Candidate) => {
     const created = await createCandidateRequest(candidate)
     setData((prev) => ({
       ...prev,
@@ -48,28 +48,65 @@ export function AppProvider({ data, setData, resetData, candidatesLoading, candi
       activities: [{ id: `ac-${Date.now()}`, actor: '我', action: '新建了候选人', target: created.name, time: '刚刚', color: '#6675E8', icon: 'user' as const }, ...prev.activities],
     }))
     return created
-  }
+  }, [setData])
 
-  const updateCandidate = async (id: string, patch: Partial<Candidate>) => {
+  const updateCandidate = useCallback(async (id: string, patch: Partial<Candidate>) => {
     if (patch.stage === undefined) return null
     const updated = await updateCandidateStage(id, patch.stage)
     setData((prev) => ({ ...prev, candidates: prev.candidates.map((candidate) => candidate.id === id ? { ...candidate, ...updated } : candidate) }))
     return updated
-  }
+  }, [setData])
 
-  const addInterview = (interview: Interview) => {
+  const addInterview = useCallback((interview: Interview) => {
     setData((prev) => ({
       ...prev,
       interviews: [interview, ...prev.interviews],
       activities: [{ id: `ac-${Date.now()}`, actor: '我', action: '安排了面试', target: `${prev.candidates.find(c => c.id === interview.candidateId)?.name || '候选人'} · ${interview.round}`, time: '刚刚', color: '#D58A28', icon: 'calendar' as const }, ...prev.activities],
     }))
-  }
+  }, [setData])
 
-  const updateInterview = (id: string, patch: Partial<Interview>) => {
+  const updateInterview = useCallback((id: string, patch: Partial<Interview>) => {
     setData((prev) => ({ ...prev, interviews: prev.interviews.map((interview) => interview.id === id ? { ...interview, ...patch } : interview) }))
-  }
+  }, [setData])
 
-  return <AppContext.Provider value={{ data, setData, resetData, candidatesLoading, candidatesError, apiJobs, selectedCandidateId, openCandidate, toasts, dismissToast, toast: addToast, addCandidate, updateCandidate, addInterview, updateInterview }}>{children}</AppContext.Provider>
+  const value = useMemo<AppContextValue>(
+    () => ({
+      data,
+      setData,
+      resetData,
+      candidatesLoading,
+      candidatesError,
+      apiJobs,
+      selectedCandidateId,
+      openCandidate,
+      toasts,
+      dismissToast,
+      toast: addToast,
+      addCandidate,
+      updateCandidate,
+      addInterview,
+      updateInterview,
+    }),
+    [
+      data,
+      setData,
+      resetData,
+      candidatesLoading,
+      candidatesError,
+      apiJobs,
+      selectedCandidateId,
+      openCandidate,
+      toasts,
+      dismissToast,
+      addToast,
+      addCandidate,
+      updateCandidate,
+      addInterview,
+      updateInterview,
+    ],
+  )
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
 
 export function useApp() {

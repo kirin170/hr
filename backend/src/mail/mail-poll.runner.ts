@@ -11,6 +11,7 @@ import { MailPollService } from './mail-poll.service.js';
 export class MailPollRunner implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MailPollRunner.name);
   private timer: NodeJS.Timeout | null = null;
+  private inFlight: Promise<void> | null = null;
 
   constructor(
     private readonly configs: MailConfigService,
@@ -23,15 +24,20 @@ export class MailPollRunner implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    void this.tick(true);
-    this.timer = setInterval(() => {
-      void this.tick(false);
-    }, 30_000);
+    const trigger = (initial: boolean) => {
+      if (this.inFlight) return;
+      this.inFlight = this.tick(initial).finally(() => {
+        this.inFlight = null;
+      });
+    };
+    trigger(true);
+    this.timer = setInterval(() => trigger(false), 30_000);
     this.timer.unref();
   }
 
-  onModuleDestroy(): void {
+  async onModuleDestroy(): Promise<void> {
     if (this.timer) clearInterval(this.timer);
+    if (this.inFlight) await this.inFlight.catch(() => undefined);
   }
 
   private async tick(initial: boolean): Promise<void> {

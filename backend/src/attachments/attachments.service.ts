@@ -70,7 +70,14 @@ export class AttachmentsService {
       throw new NotFoundException('附件不存在');
     }
 
-    if (file.storageKey.startsWith('offer-materials/') && isExpired(file, new Date())) throw new NotFoundException('材料已到期');
+    const now = new Date();
+    if (
+      file.storageKey.startsWith('offer-materials/')
+        ? isExpired(file, now)
+        : Boolean(file.expiresAt && file.expiresAt.getTime() <= now.getTime())
+    ) {
+      throw new NotFoundException('附件已到期');
+    }
     await this.assertFileAccessible(file.id, actor, file.storageKey);
     if (file.category) {
       await this.authorization.assertSensitiveFieldAccess(actor, file.category, 'READ');
@@ -143,7 +150,13 @@ export class AttachmentsService {
       where: { storageKey: key },
       select: { id: true, fileName: true, mimeType: true, size: true, category: true, createdAt: true, expiresAt: true },
     });
-    if (!file || (key.startsWith('offer-materials/') && isExpired(file, new Date())) || !(await this.storage.objectExists(key))) {
+    const now = new Date();
+    const expired = file
+      ? key.startsWith('offer-materials/')
+        ? isExpired(file, now)
+        : Boolean(file.expiresAt && file.expiresAt.getTime() <= now.getTime())
+      : true;
+    if (!file || expired || !(await this.storage.objectExists(key))) {
       throw new NotFoundException('附件不存在');
     }
 

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -69,6 +70,12 @@ export class IntakeController {
     @CurrentUser() actor: AuthenticatedUser,
     @Body() body: EmailIntakeBody = {},
   ) {
+    const appEnv = (process.env.APP_ENV ?? '').trim().toLowerCase();
+    const isAllowed =
+      appEnv === 'local' || appEnv === 'test' || (!appEnv && process.env.NODE_ENV === 'test');
+    if (!isAllowed) {
+      throw new ForbiddenException('仅本地或测试环境允许使用模拟邮箱入场');
+    }
     return this.intake.ingestEmailMock({ ...body, actorId: actor.id });
   }
 

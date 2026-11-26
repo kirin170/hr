@@ -8,14 +8,14 @@ import { UserMenu } from './UserMenu'
 export type TopBarProps = {
   title: string
   subtitle?: string
+  search: string
   onSearch: (value: string) => void
   onOpenSettings: () => void
   me: CurrentUser | null
   onOpenAdmin?: () => void
 }
 
-export function TopBar({ title, subtitle, onSearch, onOpenSettings, me, onOpenAdmin }: TopBarProps) {
-  const [search, setSearch] = useState('')
+export function TopBar({ title, subtitle, search, onSearch, onOpenSettings, me, onOpenAdmin }: TopBarProps) {
   const [open, setOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifications, setNotifications] = useState<{id:string; name:string; onboardDate:string; readAt:string | null}[]>([])
@@ -55,7 +55,7 @@ export function TopBar({ title, subtitle, onSearch, onOpenSettings, me, onOpenAd
           <input
             ref={inputRef}
             value={search}
-            onChange={(event) => { setSearch(event.target.value); onSearch(event.target.value) }}
+            onChange={(event) => onSearch(event.target.value)}
             placeholder="搜索候选人、职位或流程"
           />
           <kbd><Command size={11} /> K</kbd>

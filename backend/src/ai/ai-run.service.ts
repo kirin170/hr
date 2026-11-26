@@ -537,12 +537,19 @@ export class AiRunService {
         retryable: false,
       });
     }
-    const transcriptText = material.originalText ?? material.summary ?? '';
-    if (transcriptText.trim().length < 20) {
+    const rawTranscriptText = material.originalText ?? material.summary ?? '';
+    if (rawTranscriptText.trim().length < 20) {
       throw new AiProviderError(AI_ERROR_CODES.CONTENT_UNSUPPORTED, '听记素材文本不足，请人工评估', {
         retryable: false,
       });
     }
+    // 限制单次模型调用的转写文本与定位引用上限，避免超长面试打爆上下文或引发高额计费
+    const MAX_TRANSCRIPT_CHARS = 60_000;
+    const MAX_SOURCE_REFS = 300;
+    const transcriptText =
+      rawTranscriptText.length > MAX_TRANSCRIPT_CHARS
+        ? `${rawTranscriptText.slice(0, MAX_TRANSCRIPT_CHARS)}\n…（超长内容已截断）`
+        : rawTranscriptText;
 
     const { result, provider } = await this.router.run(
       'INTERVIEW_EVAL',
@@ -551,7 +558,7 @@ export class AiRunService {
         candidate.evaluateInterview({
           input,
           transcriptText,
-          allowedSourceRefs: this.allowedRefs(material),
+          allowedSourceRefs: this.allowedRefs(material).slice(0, MAX_SOURCE_REFS),
         }),
     );
     await this.persistEvalSuccess(
@@ -910,13 +917,14 @@ function maskContacts(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(maskContacts);
   if (!value || typeof value !== 'object') return value;
   const result: Record<string, unknown> = {};
+  const contactKeys = new Set(['phone', 'email', 'contactEmail', 'mailFrom']);
   for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-    if ((key === 'phone' || key === 'email') && item && typeof item === 'object') {
+    if (contactKeys.has(key) && item && typeof item === 'object') {
       const field = item as Record<string, unknown>;
       result[key] = { ...field, value: null, confidence: 0 };
       continue;
     }
-    if (key === 'phone' || key === 'email') {
+    if (contactKeys.has(key)) {
       result[key] = null;
       continue;
     }

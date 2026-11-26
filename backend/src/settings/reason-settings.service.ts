@@ -108,6 +108,9 @@ export class ReasonSettingsService {
           if (isOtherLabel(current.label)) {
             throw new ConflictException('「其他」是集合内的固定选项，不能改名为普通选项');
           }
+          if (isOtherLabel(label)) {
+            throw new ConflictException(`${REASON_SET_LABELS[current.type]}已包含「其他」选项，不能将普通选项改名为「其他」`);
+          }
           await this.assertLabelFree(tx, current.type, label, id);
           data.label = label;
           before.label = current.label;

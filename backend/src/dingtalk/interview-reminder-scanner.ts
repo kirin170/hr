@@ -7,27 +7,30 @@ import { interviewReminderMinutes } from './notification-timing.js';
 @Injectable()
 export class InterviewReminderScanner implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<void> | null = null;
   private readonly logger = new Logger(InterviewReminderScanner.name);
   constructor(private readonly db: PrismaService, private readonly outbox: NotificationOutboxService) {}
 
   onModuleInit() {
     if (process.env.APP_PROCESS_ROLE !== 'worker' || process.env.DINGTALK_NOTIFICATION_SCAN_ENABLED !== 'true') return;
     const tick = () => {
-      if (this.running) return;
-      this.running = true;
-      void this.scan().catch(() => this.logger.warn('评价提醒扫描失败，稍后重试')).finally(() => { this.running = false; });
+      if (this.inFlight) return;
+      this.inFlight = this.scan().catch(() => this.logger.warn('评价提醒扫描失败，稍后重试')).finally(() => { this.inFlight = null; });
     };
     tick(); this.timer = setInterval(tick, 60_000); this.timer.unref();
   }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
+  async onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+    if (this.inFlight) await this.inFlight.catch(() => undefined);
+  }
 
   async scan(now = new Date()) {
     const endedBy = new Date(now.getTime() - 30 * 60_000);
+    const lookbackStart = new Date(now.getTime() - 14 * 86_400_000);
     let cursor: string | undefined;
     do {
       const interviews = await this.db.interview.findMany({
-        where: { status: { not: 'CANCELLED' }, endTime: { lte: endedBy } },
+        where: { status: { not: 'CANCELLED' }, endTime: { gte: lookbackStart, lte: endedBy } },
         select: { id: true, endTime: true, interviewerIds: true },
         orderBy: { id: 'asc' }, take: 100,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),

@@ -8,25 +8,28 @@ import { RESUME_TIMEOUT_STAGES, resumeTimeoutHours } from './notification-timing
 @Injectable()
 export class ResumeTimeoutScanner implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<void> | null = null;
   private readonly logger = new Logger(ResumeTimeoutScanner.name);
   constructor(private readonly db: PrismaService, private readonly auth: AuthorizationService, private readonly prefs: NotificationPreferenceService, private readonly outbox: NotificationOutboxService) {}
   onModuleInit() {
     if (process.env.APP_PROCESS_ROLE !== 'worker' || process.env.DINGTALK_NOTIFICATION_SCAN_ENABLED !== 'true') return;
     const tick = () => {
-      if (this.running) return;
-      this.running = true;
-      void this.scan().catch(() => this.logger.warn('简历超时扫描失败，稍后重试')).finally(() => { this.running = false; });
+      if (this.inFlight) return;
+      this.inFlight = this.scan().catch(() => this.logger.warn('简历超时扫描失败，稍后重试')).finally(() => { this.inFlight = null; });
     };
     tick(); this.timer = setInterval(tick, 60_000); this.timer.unref();
   }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
+  async onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+    if (this.inFlight) await this.inFlight.catch(() => undefined);
+  }
   async scan(now = new Date()) {
     const hours = resumeTimeoutHours();
     const cutoff = new Date(now.getTime() - hours * 3_600_000);
+    const lookbackStart = new Date(now.getTime() - 90 * 86_400_000);
     let cursor: string | undefined;
     do {
-      const rows = await this.db.candidate.findMany({ where: { stage: { in: [...RESUME_TIMEOUT_STAGES] }, lockedState: { not: 'INOPERABLE' }, updatedAt: { lte: cutoff }, job: { is: { recruiterId: { not: null } } } }, select: { id: true, updatedAt: true, job: { select: { recruiterId: true } } }, orderBy: { id: 'asc' }, take: 100, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
+      const rows = await this.db.candidate.findMany({ where: { stage: { in: [...RESUME_TIMEOUT_STAGES] }, lockedState: { not: 'INOPERABLE' }, updatedAt: { gte: lookbackStart, lte: cutoff }, job: { is: { recruiterId: { not: null } } } }, select: { id: true, updatedAt: true, job: { select: { recruiterId: true } } }, orderBy: { id: 'asc' }, take: 100, ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}) });
       for (const row of rows) {
         const recipientId = row.job?.recruiterId;
         if (!recipientId) continue;

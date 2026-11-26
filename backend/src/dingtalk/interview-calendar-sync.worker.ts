@@ -36,20 +36,22 @@ function versionToken(id: string, version: number) {
 @Injectable()
 export class InterviewCalendarSyncWorker implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private inFlight: Promise<void> | null = null;
   private readonly logger = new Logger(InterviewCalendarSyncWorker.name);
   constructor(private readonly db: PrismaService, private readonly queue: InterviewCalendarSyncService, private readonly api: DingTalkApiClient, private readonly client: DingTalkCalendarClient, private readonly identities: DingTalkCalendarIdentities, @Optional() private readonly outbox?: NotificationOutboxService) {}
   onModuleInit() {
     if (process.env.APP_PROCESS_ROLE !== 'worker') return;
     if (process.env.DINGTALK_CALENDAR_WRITE_ENABLED !== 'true' && process.env.DINGTALK_CALENDAR_READBACK_ENABLED !== 'true') return;
     const tick = () => {
-      if (this.running) return;
-      this.running = true;
-      void this.run().catch(() => this.logger.warn('日历同步失败，稍后重试')).finally(() => { this.running = false; });
+      if (this.inFlight) return;
+      this.inFlight = this.run().catch(() => this.logger.warn('日历同步失败，稍后重试')).finally(() => { this.inFlight = null; });
     };
     tick(); this.timer = setInterval(tick, 30_000); this.timer.unref();
   }
-  onModuleDestroy() { if (this.timer) clearInterval(this.timer); }
+  async onModuleDestroy() {
+    if (this.timer) clearInterval(this.timer);
+    if (this.inFlight) await this.inFlight.catch(() => undefined);
+  }
   async run(now = new Date()) {
     if (process.env.DINGTALK_CALENDAR_WRITE_ENABLED === 'true') {
       await this.queue.recoverUnknown(new Date(now.getTime() - 5 * 60_000), now);
@@ -145,8 +147,14 @@ export class InterviewCalendarSyncWorker implements OnModuleInit, OnModuleDestro
     } catch (error) {
       const failure = error instanceof DingTalkCalendarError || error instanceof DingTalkApiError ? error : null;
       const code = failure ? String(failure.code) : 'calendar_error';
-      // A transport error after a write began can represent a successful remote write.
-      const unknown = writing;
+      // 仅当写请求发出后出现传输中断/5xx/无法解析响应等“远端状态不明”错误时置 UNKNOWN；
+      // 明确的 429 限流可退避重试，明确的 4xx 拒绝直接落 FAILED 供人工重试，避免永久锁死在 UNKNOWN。
+      const ambiguousWrite =
+        !failure ||
+        code === 'network_error' ||
+        code === 'invalid_response' ||
+        /^http_5\d\d$/.test(code);
+      const unknown = writing && ambiguousWrite;
       await this.queue.fail(row, code, failure?.retryable ?? !writing, unknown, now);
     }
   }
