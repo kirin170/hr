@@ -32,7 +32,7 @@ const formatTime = (value: string | null) => {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN', { hour12: false })
 }
 
-export function IntakePool() {
+export function IntakePool({ embedded = false }: { embedded?: boolean } = {}) {
   const [tab, setTab] = useState<Tab>('pool')
   const [jobs, setJobs] = useState<JobListItem[]>([])
   const [users, setUsers] = useState<ApiUser[]>([])
@@ -50,19 +50,21 @@ export function IntakePool() {
 
   return (
     <div className="page-stack">
-      <div className="page-title-row">
-        <div>
-          <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 待分配池 / 临时待处理区</div>
-          <h2>待分配池</h2>
-          <p>邮箱与插件入场的简历先停留在此，由人事手工选职位；负责人由职位的招聘负责人带出。</p>
+      {!embedded && (
+        <div className="page-title-row">
+          <div>
+            <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 待分配池 / 临时待处理区</div>
+            <h2>待分配池</h2>
+            <p>邮箱与插件入场的简历先停留在此，由人事手工选职位；负责人由职位的招聘负责人带出。</p>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="stage-tabs">
-        <button className={cn('stage-tab', tab === 'pool' && 'active')} onClick={() => setTab('pool')}>
+      <div className={embedded ? 'intake-subtabs' : 'stage-tabs'}>
+        <button className={embedded ? cn('button button-sm', tab === 'pool' ? 'button-primary' : 'button-secondary') : cn('stage-tab', tab === 'pool' && 'active')} onClick={() => setTab('pool')}>
           <Inbox size={14} />待分配
         </button>
-        <button className={cn('stage-tab', tab === 'duplicates' && 'active')} onClick={() => setTab('duplicates')}>
+        <button className={embedded ? cn('button button-sm', tab === 'duplicates' ? 'button-primary' : 'button-secondary') : cn('stage-tab', tab === 'duplicates' && 'active')} onClick={() => setTab('duplicates')}>
           <GitMerge size={14} />待合并查重
         </button>
       </div>

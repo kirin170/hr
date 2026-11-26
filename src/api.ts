@@ -30,6 +30,7 @@ import type {
   AuthzGroup,
   AuthzRole,
   AuthzUser,
+  AuthzUserPage,
   FieldGrantRow,
   IntakeList,
   IntakeMonitor,
@@ -1035,8 +1036,26 @@ export function revokeBrowserImportTokens(operatorId: string): Promise<{ revoked
   })
 }
 
-export function triggerDingTalkSync(): Promise<Record<string, unknown>> {
-  return request('/v1/admin/organization/dingtalk/sync', { method: 'POST', body: JSON.stringify({}) })
+export type DingTalkSyncEventRow = {
+  id: string
+  eventType: string
+  subjectId: string | null
+  status: string
+  attempts: number
+  receivedAt: string | null
+  processedAt: string | null
+  lastError: string | null
+}
+
+export function triggerDingTalkSync(departmentId?: number): Promise<Record<string, unknown>> {
+  return request('/v1/admin/organization/dingtalk/sync', {
+    method: 'POST',
+    body: JSON.stringify(departmentId ? { departmentId } : {}),
+  })
+}
+
+export function listDingTalkSyncEvents(limit = 50): Promise<DingTalkSyncEventRow[]> {
+  return request<DingTalkSyncEventRow[]>(`/v1/admin/organization/dingtalk/events?limit=${limit}`)
 }
 
 export function retryDingTalkEvent(id: string): Promise<Record<string, unknown>> {
@@ -1052,8 +1071,40 @@ export function listAuthzGroups(): Promise<AuthzGroup[]> {
   return request<AuthzGroup[]>(`${authzBase}/groups`)
 }
 
-export function listAuthzUsers(): Promise<AuthzUser[]> {
-  return request<AuthzUser[]>(`${authzBase}/users`)
+export function listAuthzUsers(filters: {
+  limit?: number
+  q?: string
+  departmentId?: string
+  includeChildren?: boolean
+  roleCode?: string
+} = {}): Promise<AuthzUser[]> {
+  const qs = new URLSearchParams()
+  if (filters.limit !== undefined) qs.set('limit', String(filters.limit))
+  if (filters.q) qs.set('q', filters.q)
+  if (filters.departmentId) qs.set('departmentId', filters.departmentId)
+  if (filters.includeChildren) qs.set('includeChildren', 'true')
+  if (filters.roleCode) qs.set('roleCode', filters.roleCode)
+  const suffix = qs.toString() ? `?${qs}` : ''
+  return request<AuthzUser[]>(`${authzBase}/users${suffix}`)
+}
+
+export function listAuthzUsersPage(filters: {
+  page?: number
+  pageSize?: number
+  q?: string
+  departmentId?: string
+  includeChildren?: boolean
+  roleCode?: string
+} = {}): Promise<AuthzUserPage> {
+  const qs = new URLSearchParams()
+  if (filters.page !== undefined) qs.set('page', String(filters.page))
+  if (filters.pageSize !== undefined) qs.set('pageSize', String(filters.pageSize))
+  if (filters.q) qs.set('q', filters.q)
+  if (filters.departmentId) qs.set('departmentId', filters.departmentId)
+  if (filters.includeChildren) qs.set('includeChildren', 'true')
+  if (filters.roleCode) qs.set('roleCode', filters.roleCode)
+  const suffix = qs.toString() ? `?${qs}` : ''
+  return request<AuthzUserPage>(`${authzBase}/users/page${suffix}`)
 }
 
 export function listFieldGrants(): Promise<FieldGrantRow[]> {
@@ -1066,6 +1117,23 @@ export function createAuthzGroup(payload: { code: string; name: string; descript
 
 export function createAuthzDepartment(payload: { code: string; name: string; parentId?: string }): Promise<unknown> {
   return request(`${authzBase}/departments`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function createAuthzUser(payload: {
+  employeeNo?: string
+  displayName: string
+  email?: string
+  departmentId?: string
+  identityProvider: 'LOCAL' | 'DINGTALK'
+  identitySubject: string
+}): Promise<AuthzUser> {
+  return request<AuthzUser>(`${authzBase}/users`, { method: 'POST', body: JSON.stringify(payload) })
+}
+
+export function addAuthzGroupMember(groupId: string, userId: string): Promise<{ groupId: string; userId: string }> {
+  return request(`${authzBase}/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`, {
+    method: 'POST',
+  })
 }
 
 export function assignUserRoles(

@@ -10,6 +10,23 @@ import { DataScope, IdentityProvider, Prisma, SensitiveField, UserStatus } from 
 import type { AuthenticatedUser, SensitiveAction } from './auth.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 
+export type UserQueryFilter = {
+  q?: string;
+  departmentId?: string;
+  includeChildren?: boolean;
+  roleCode?: string;
+};
+
+const USER_LIST_SELECT = {
+  id: true,
+  employeeNo: true,
+  displayName: true,
+  email: true,
+  status: true,
+  departmentId: true,
+  roleAssignments: { select: { role: { select: { code: true, name: true } } } },
+} satisfies Prisma.UserSelect;
+
 @Injectable()
 export class AuthorizationService {
   constructor(private readonly prisma: PrismaService) {}
@@ -455,20 +472,72 @@ export class AuthorizationService {
     }
   }
 
-  async listUsers(limit = 100) {
+  private async buildUserWhere(filter?: UserQueryFilter): Promise<Prisma.UserWhereInput> {
+    const conditions: Prisma.UserWhereInput[] = [];
+    const q = filter?.q?.trim();
+    if (q) {
+      conditions.push({
+        OR: [
+          { displayName: { contains: q } },
+          { employeeNo: { contains: q } },
+          { email: { contains: q } },
+        ],
+      });
+    }
+    const departmentId = filter?.departmentId?.trim();
+    if (departmentId) {
+      if (filter?.includeChildren) {
+        const treeIds = await this.departmentTree([departmentId]);
+        const targetIds = treeIds.length ? treeIds : [departmentId];
+        conditions.push({
+          OR: [
+            { departmentId: { in: targetIds } },
+            { departmentMemberships: { some: { departmentId: { in: targetIds } } } },
+          ],
+        });
+      } else {
+        conditions.push({ departmentId });
+      }
+    }
+    const roleCode = filter?.roleCode?.trim();
+    if (roleCode) {
+      conditions.push({ roleAssignments: { some: { role: { code: roleCode } } } });
+    }
+    return conditions.length ? { AND: conditions } : {};
+  }
+
+  async listUsers(limit = 100, filter?: UserQueryFilter) {
     return this.prisma.user.findMany({
+      where: await this.buildUserWhere(filter),
       orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
       take: limit,
-      select: {
-        id: true,
-        employeeNo: true,
-        displayName: true,
-        email: true,
-        status: true,
-        departmentId: true,
-        roleAssignments: { select: { role: { select: { code: true, name: true } } } },
-      },
+      select: USER_LIST_SELECT,
     });
+  }
+
+  async listUsersPage(input: UserQueryFilter & { page?: number; pageSize?: number } = {}) {
+    const page = Number.isInteger(input.page) && (input.page ?? 0) >= 1 ? input.page! : 1;
+    const pageSize = Number.isInteger(input.pageSize)
+      ? Math.min(200, Math.max(1, input.pageSize!))
+      : 50;
+    const where = await this.buildUserWhere(input);
+    const [items, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: USER_LIST_SELECT,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
   }
 
   async createFieldGrant(
@@ -566,7 +635,6 @@ export class AuthorizationService {
       this.prisma.user.findMany({
         where: { status: UserStatus.ACTIVE },
         orderBy: [{ displayName: 'asc' }, { id: 'asc' }],
-        take: 500,
         select: { id: true, displayName: true, departmentId: true },
       }),
     ]);

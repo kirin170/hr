@@ -84,12 +84,41 @@ export class AuthorizationController {
   @Get('users')
   @RequirePermission('authz:read')
   @AuditAction('authz.users.read', 'User')
-  listUsers(@Query('limit') limit?: string) {
-    const parsed = limit === undefined ? 100 : Number(limit);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 500) {
-      throw new BadRequestException('limit 必须为 1 至 500 的整数');
-    }
-    return this.authorization.listUsers(parsed);
+  listUsers(
+    @Query('limit') limit?: string,
+    @Query('q') q?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('includeChildren') includeChildren?: string,
+    @Query('roleCode') roleCode?: string,
+  ) {
+    const parsed = this.parseBoundedInt(limit, 100, 1, 5000, 'limit 必须为 1 至 5000 的整数');
+    return this.authorization.listUsers(parsed, {
+      q,
+      departmentId,
+      includeChildren: includeChildren === 'true',
+      roleCode,
+    });
+  }
+
+  @Get('users/page')
+  @RequirePermission('authz:read')
+  @AuditAction('authz.users.read', 'User')
+  listUsersPage(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('q') q?: string,
+    @Query('departmentId') departmentId?: string,
+    @Query('includeChildren') includeChildren?: string,
+    @Query('roleCode') roleCode?: string,
+  ) {
+    return this.authorization.listUsersPage({
+      page: this.parseBoundedInt(page, 1, 1, 100_000, 'page 必须为正整数'),
+      pageSize: this.parseBoundedInt(pageSize, 50, 1, 200, 'pageSize 必须为 1 至 200 的整数'),
+      q,
+      departmentId,
+      includeChildren: includeChildren === 'true',
+      roleCode,
+    });
   }
 
   @Post('users')
@@ -197,5 +226,20 @@ export class AuthorizationController {
     if (typeof value !== 'string') return undefined;
     const text = value.trim();
     return text || undefined;
+  }
+
+  private parseBoundedInt(
+    value: string | undefined,
+    fallback: number,
+    min: number,
+    max: number,
+    message: string,
+  ): number {
+    if (value === undefined) return fallback;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+      throw new BadRequestException(message);
+    }
+    return parsed;
   }
 }

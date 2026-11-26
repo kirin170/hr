@@ -9,9 +9,13 @@ export type PageKey =
   | 'pipeline'
   | 'interviews'
   | 'probation'
-  | 'team'
   | 'reports'
-  | 'settings'
+  | 'adminOrg'
+  | 'adminUsers'
+  | 'adminAuth'
+  | 'adminConfig'
+  | 'adminOps'
+  | 'adminAudit'
   | 'admin'
 
 export type CandidateMainStage =
@@ -796,6 +800,14 @@ export type AuthzUser = {
   status: string
   departmentId: string | null
   roleAssignments: { role: { code: string; name: string } }[]
+}
+
+export type AuthzUserPage = {
+  items: AuthzUser[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
 }
 
 export type FieldGrantRow = {

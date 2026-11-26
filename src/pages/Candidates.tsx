@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, ListFilter, LockKeyhole, Plus, Search, SlidersHorizontal, Star, Upload, Users, X } from 'lucide-react'
+import { BriefcaseBusiness, ChevronDown, ChevronLeft, ChevronRight, Kanban, ListFilter, LockKeyhole, Plus, Search, SlidersHorizontal, Star, Upload, Users, X } from 'lucide-react'
 import { getDepartment } from '../data'
 import { useApp } from '../context'
 import {
@@ -19,7 +19,7 @@ import type { Candidate, CandidateFilter, CandidateMainStage, CandidateStageFilt
 import { useEffectiveSettings } from '../useEffectiveSettings'
 import { cn, stageMeta } from '../utils'
 
-type CandidatesProps = { search: string; onOpenCandidate: (id: string) => void; onAddCandidate: () => void; onBulkImport?: () => void }
+type CandidatesProps = { search: string; initialView?: 'list' | 'cards' | 'kanban'; onOpenCandidate: (id: string) => void; onAddCandidate: () => void; onBulkImport?: () => void }
 
 const PAGE_SIZE = 20
 /** 只有人才库总量（已归档）达到万级才压缩展示；阶段 Tab 与报表始终展示真实数量（ATS-013） */
@@ -55,7 +55,19 @@ const emptyFilters: CandidateFilter = {
 
 const poolPageSizes = [20, 50, 100] as const
 
-export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImport }: CandidatesProps) {
+const kanbanColumns: { key: CandidateMainStage; title: string; color: string }[] = [
+  { key: 'RECOMMENDED', title: '人才推荐', color: '#6E83E9' },
+  { key: 'HR_SCREENING', title: '初筛', color: '#E4A03D' },
+  { key: 'DEPT_SCREENING', title: '用人部门筛选', color: '#D58A28' },
+  { key: 'INTERVIEWING', title: '面试', color: '#9A72DE' },
+  { key: 'OFFERING', title: '沟通 Offer', color: '#E47D59' },
+  { key: 'PENDING_ONBOARD', title: '待入职', color: '#DB8A4C' },
+  { key: 'ONBOARDED', title: '已入职', color: '#22A97B' },
+  { key: 'PROBATION', title: '试用期', color: '#31A783' },
+  { key: 'ENDED', title: '结束', color: '#667085' },
+]
+
+export function Candidates({ search, initialView = 'list', onOpenCandidate, onAddCandidate, onBulkImport }: CandidatesProps) {
   const { data, setData, candidatesLoading, candidatesError, apiJobs, toast } = useApp()
   const effective = useEffectiveSettings()
   const channelOptions = effective?.dicts.CHANNEL ?? []
@@ -71,7 +83,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
   // 跳页：万级数据下页码条只展示当前附近 5 页，配合直接输入页码定位
   const [jumpPage, setJumpPage] = useState('')
   const [selected, setSelected] = useState<string[]>([])
-  const [view, setView] = useState<'list' | 'cards'>('list')
+  const [view, setView] = useState<'list' | 'cards' | 'kanban'>(initialView)
+  useEffect(() => { setView(initialView) }, [initialView])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [quickSearch, setQuickSearch] = useState('')
   const [savedFilters, setSavedFilters] = useState<SavedCandidateFilter[]>([])
@@ -110,6 +123,8 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
     }))
   }, [apiJobs, data.candidates])
 
+  const effectivePageSize = view === 'kanban' ? Math.max(pageSize, 100) : pageSize
+
   useEffect(() => {
     let active = true
     setLoadError(null)
@@ -117,7 +132,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
       ...queryFilters,
       stage: stage === 'ALL' ? undefined : stage,
       page,
-      pageSize,
+      pageSize: effectivePageSize,
     }).then((result) => {
       if (!active) return
       setRows(result.items)
@@ -129,7 +144,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
       if (active) setLoadError(error instanceof Error ? error.message : '候选人列表加载失败')
     })
     return () => { active = false }
-  }, [data.candidates, page, pageSize, queryFilters, refreshKey, stage])
+  }, [data.candidates, page, effectivePageSize, queryFilters, refreshKey, stage])
 
   useEffect(() => {
     let active = true
@@ -296,7 +311,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
       <datalist id="candidate-channel-options">{channelOptions.map((item) => <option key={item} value={item} />)}</datalist>
       <datalist id="candidate-tag-options">{tagOptions.map((item) => <option key={item} value={item} />)}</datalist>
       <div className="page-title-row">
-        <div><div className="eyebrow">候选人 <span className="eyebrow-separator">·</span> {allCount} 位</div><h2>简历库</h2><p>按招聘阶段和职位管理候选人，状态变更均由明确动作触发。</p></div>
+        <div><div className="eyebrow">候选人 <span className="eyebrow-separator">·</span> {allCount} 位</div><h2>候选人与流程</h2><p>支持列表、卡片与流程看板三种视图切换；状态变更均在候选人详情或批量动作中明确执行。</p></div>
         <div className="page-title-actions">
           <button className="button button-secondary" onClick={() => onBulkImport?.()}><Upload size={16} />批量导入</button>
           <button className="button button-primary" onClick={onAddCandidate}><Plus size={17} />添加候选人</button>
@@ -342,7 +357,11 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
             {savedFilterId && <button className="icon-button" title="删除保存的筛选" onClick={removeSavedFilter}><X size={14} /></button>}
             <span className="result-count">{total} 条结果</span>
             <div className="toolbar-spacer" />
-            <div className="view-switch"><button className={cn(view === 'list' && 'active')} onClick={() => setView('list')} title="列表视图"><ListFilter size={16} /></button><button className={cn(view === 'cards' && 'active')} onClick={() => setView('cards')} title="卡片视图"><div className="grid-view-icon"><i /><i /><i /><i /></div></button></div>
+            <div className="view-switch">
+              <button className={cn(view === 'list' && 'active')} onClick={() => setView('list')} title="列表视图"><ListFilter size={16} /></button>
+              <button className={cn(view === 'cards' && 'active')} onClick={() => setView('cards')} title="卡片视图"><div className="grid-view-icon"><i /><i /><i /><i /></div></button>
+              <button className={cn(view === 'kanban' && 'active')} onClick={() => setView('kanban')} title="流程看板"><Kanban size={15} /></button>
+            </div>
           </div>
 
           {filtersOpen && <div className="filter-panel candidate-filter-panel">
@@ -375,7 +394,7 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
               <tbody>{visible.map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} selected={selected.includes(candidate.id)} onSelect={() => toggleSelect(candidate.id)} onOpen={() => onOpenCandidate(candidate.id)} onAssign={() => assignCandidate(candidate)} />)}</tbody>
             </table>
             {visible.length === 0 && !candidatesLoading && !loadError && <EmptyState onReset={resetFilters} />}
-          </div> : <div className="candidate-card-grid">
+          </div> : view === 'cards' ? <div className="candidate-card-grid">
             {visible.map((candidate) => <button className="candidate-card" key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}>
               <div className="candidate-card-top"><span className="avatar avatar-lg" style={{ background: `${candidate.avatarColor}18`, color: candidate.avatarColor }}>{candidate.name.slice(-2)}</span><StageBadge stage={candidate.stage} /></div>
               <h4>{candidate.name}</h4><p>{candidate.currentTitle} · {candidate.currentCompany}</p>
@@ -384,6 +403,36 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
               <div className="candidate-card-footer"><span><Star size={14} fill="#EEA23E" stroke="#EEA23E" />{candidate.rating}.0</span><span>{candidate.lastActivity}</span></div>
             </button>)}
             {visible.length === 0 && !candidatesLoading && <EmptyState onReset={resetFilters} />}
+          </div> : <div className="kanban-board" style={{ padding: 14 }}>
+            {kanbanColumns.map((column) => {
+              const columnItems = visible.filter((candidate) => candidate.stage === column.key)
+              return (
+                <section className="kanban-column" key={column.key}>
+                  <header className="kanban-header">
+                    <div><i style={{ background: column.color }} /><strong>{column.title}</strong><span>{columnItems.length}</span></div>
+                  </header>
+                  <div className="kanban-list">
+                    {columnItems.map((candidate) => (
+                      <button className="kanban-card" key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}>
+                        <div className="kanban-card-top">
+                          <span className="avatar avatar-sm" style={{ background: `${candidate.avatarColor}18`, color: candidate.avatarColor }}>{candidate.name.slice(-2)}</span>
+                          <span className="kanban-name"><strong>{candidate.name}</strong></span>
+                          <span className="kanban-salary">{candidate.experience || '—'}</span>
+                        </div>
+                        <p>{[candidate.currentTitle, candidate.currentCompany].filter(Boolean).join(' · ') || '候选人档案'}</p>
+                        <div className="kanban-job"><span className="department-dot" style={{ background: candidate.departmentColor || '#8f9bef' }} />{candidate.jobTitle || '待分配职位'}</div>
+                        <div className="kanban-tags">{candidate.tags.slice(0, 2).map((tag) => <span key={tag}>{tag}</span>)}</div>
+                        <div className="kanban-footer">
+                          <span className="kanban-source">{candidate.source}</span>
+                          <span className="kanban-user"><span className="avatar avatar-xs avatar-warm">{(candidate.owner || '未').slice(-1)}</span>{candidate.owner || '未指定'}</span>
+                        </div>
+                      </button>
+                    ))}
+                    {columnItems.length === 0 && <div className="kanban-empty">暂无候选人</div>}
+                  </div>
+                </section>
+              )
+            })}
           </div>}
 
           <div className="table-footer"><span>显示 {total ? (page - 1) * pageSize + 1 : 0}-{Math.min(page * pageSize, total)}，共 {total} 条{archivedCount >= POOL_ABBREVIATE_THRESHOLD ? `（人才库总量 ${formatCount(archivedCount, true)}）` : ''}</span><div className="pagination"><button disabled={page === 1} onClick={() => goToPage(page - 1)}><ChevronLeft size={15} /></button>{Array.from({ length: Math.min(pages, 5) }, (_, index) => { const pageNumber = Math.max(1, Math.min(pages - 4, page - 2)) + index; return pageNumber <= pages ? <button key={pageNumber} className={page === pageNumber ? 'active' : ''} onClick={() => goToPage(pageNumber)}>{pageNumber}</button> : null })}<button disabled={page === pages} onClick={() => goToPage(page + 1)}><ChevronRight size={15} /></button><input className="page-jump" value={jumpPage} onChange={(event) => setJumpPage(event.target.value.replace(/\D/g, ''))} onKeyDown={(event) => { if (event.key === 'Enter' && jumpPage) { goToPage(Number(jumpPage)); setJumpPage('') } }} placeholder="跳至" aria-label="跳转页码" /><span className="page-jump-total">/ {pages}</span><select className="page-size" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1) }} aria-label="每页条数">{poolPageSizes.map((size) => <option key={size} value={size}>{size} 条/页</option>)}</select></div></div>

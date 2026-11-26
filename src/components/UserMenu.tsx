@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { BellRing, ShieldCheck, UserRound } from 'lucide-react'
+import { BellRing, LogOut, ShieldCheck, UserRound } from 'lucide-react'
 import type { CurrentUser, MyNotificationPreferences } from '../types'
-import { getDirectory, getMyNotificationPreferences, updateMyNotificationPreferences } from '../api'
+import { getDirectory, getMyNotificationPreferences, logout, updateMyNotificationPreferences } from '../api'
 import { cn } from '../utils'
 
 type UserMenuProps = {
@@ -59,7 +59,9 @@ export function UserMenu({ me, onClose, onOpenAdmin }: UserMenuProps) {
     }
   }
 
-  const canManageSettings = me?.roles.some((role) => role.permissions.includes('setting:read')) ?? false
+  const userPerms = new Set(me?.roles.flatMap((role) => role.permissions) ?? [])
+  const canOpenAdmin = ['setting:read', 'authz:read', 'authz:field-grant:manage', 'organization:sync', 'audit:read']
+    .some((code) => userPerms.has(code))
 
   return (
     <div className="user-menu" role="dialog" aria-label="用户菜单">
@@ -103,16 +105,24 @@ export function UserMenu({ me, onClose, onOpenAdmin }: UserMenuProps) {
       )}
       {error && <p className="form-error">{error}</p>}
       <div className="user-menu-foot">
-        {canManageSettings && onOpenAdmin && (
-          <button className="text-button" onClick={() => { onOpenAdmin(); onClose() }}><ShieldCheck size={14} />管理后台</button>
+        {canOpenAdmin && onOpenAdmin && (
+          <button className="text-button" onClick={() => { onOpenAdmin(); onClose() }}><ShieldCheck size={14} />系统管理</button>
         )}
-        <button className="text-button" onClick={onClose}>关闭</button>
+        <button className="text-button" style={{ marginLeft: 'auto' }} onClick={() => { onClose(); void logout() }}><LogOut size={14} />退出登录</button>
       </div>
     </div>
   )
 }
 
 function scopeLabel(scope: string): string {
-  const map: Record<string, string> = { SELF: '本人', DEPARTMENT: '本部门', DEPARTMENT_TREE: '本部门及下级', ALL: '全部' }
+  const map: Record<string, string> = {
+    SELF: '本人',
+    DEPARTMENT: '本部门',
+    DEPARTMENT_TREE: '本部门及下级',
+    OWN_JOBS: '负责职位',
+    PARTICIPATING: '参与面试或筛选',
+    DEPARTMENT_AND_PARTICIPATING: '本部门及参与',
+    ALL: '全部',
+  }
   return map[scope] || scope
 }

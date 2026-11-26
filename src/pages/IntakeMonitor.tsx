@@ -49,7 +49,7 @@ const formatTime = (value: string | null) => {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN', { hour12: false })
 }
 
-export function IntakeMonitor() {
+export function IntakeMonitor({ embedded = false }: { embedded?: boolean } = {}) {
   const { toast } = useApp()
   const [data, setData] = useState<MonitorData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -96,16 +96,18 @@ export function IntakeMonitor() {
 
   return (
     <div className="page-stack">
-      <div className="page-title-row">
-        <div>
-          <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 监控与失败归因</div>
-          <h2>入场监控</h2>
-          <p>按渠道、邮箱、接收时间观察进入/未进入、时延与去向；失败可重试，不重复建档。</p>
+      {!embedded && (
+        <div className="page-title-row">
+          <div>
+            <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 监控与失败归因</div>
+            <h2>入场监控</h2>
+            <p>按渠道、邮箱、接收时间观察进入/未进入、时延与去向；失败可重试，不重复建档。</p>
+          </div>
+          <div className="page-title-actions">
+            <button className="button button-secondary" onClick={() => void load()}><RefreshCw size={16} />刷新</button>
+          </div>
         </div>
-        <div className="page-title-actions">
-          <button className="button button-secondary" onClick={() => void load()}><RefreshCw size={16} />刷新</button>
-        </div>
-      </div>
+      )}
 
       <div className="panel">
         <div className="filter-panel">

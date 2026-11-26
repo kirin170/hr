@@ -101,10 +101,24 @@ const fileToBase64 = (file: File) =>
     reader.readAsDataURL(file)
   })
 
-export function Intake() {
+export function Intake({
+  embedded = false,
+  initialTab = 'upload',
+  tabGroup,
+}: { embedded?: boolean; initialTab?: Tab; tabGroup?: 'ingest' | 'records' } = {}) {
   const { toast } = useApp()
-  const [tab, setTab] = useState<Tab>('upload')
+  const [tab, setTab] = useState<Tab>(initialTab)
   const [jobs, setJobs] = useState<JobListItem[]>([])
+
+  const visibleTabs = tabGroup === 'ingest'
+    ? tabs.filter((item) => ['upload', 'manual', 'email', 'excel'].includes(item.key))
+    : tabGroup === 'records'
+      ? tabs.filter((item) => ['records', 'sources'].includes(item.key))
+      : tabs
+
+  useEffect(() => {
+    setTab(initialTab)
+  }, [initialTab])
 
   useEffect(() => {
     Promise.all([listJobs(), listJobs({ isVirtual: 'true' })])
@@ -118,24 +132,30 @@ export function Intake() {
 
   return (
     <div className="page-stack">
-      <div className="page-title-row">
-        <div>
-          <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 上传 / 手工 / 邮箱 / Excel</div>
-          <h2>简历入场</h2>
-          <p>PDF、Word、图片走 AI 解析草稿；Excel 走独立表格导入，不进入 AI 解析管道。</p>
+      {!embedded && (
+        <div className="page-title-row">
+          <div>
+            <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 上传 / 手工 / 邮箱 / Excel</div>
+            <h2>简历入场</h2>
+            <p>PDF、Word、图片走 AI 解析草稿；Excel 走独立表格导入，不进入 AI 解析管道。</p>
+          </div>
+          <div className="page-title-actions">
+            <button className="button button-secondary" onClick={() => void downloadExcelTemplate().catch((error) => toast(error.message, 'info'))}>
+              <Download size={16} />下载 Excel 模板
+            </button>
+          </div>
         </div>
-        <div className="page-title-actions">
-          <button className="button button-secondary" onClick={() => void downloadExcelTemplate().catch((error) => toast(error.message, 'info'))}>
-            <Download size={16} />下载 Excel 模板
-          </button>
-        </div>
-      </div>
+      )}
 
-      <div className="stage-tabs">
-        {tabs.map((item) => {
+      <div className={embedded ? 'intake-subtabs' : 'stage-tabs'}>
+        {visibleTabs.map((item) => {
           const Icon = item.icon
           return (
-            <button key={item.key} className={cn('stage-tab', tab === item.key && 'active')} onClick={() => setTab(item.key)}>
+            <button
+              key={item.key}
+              className={embedded ? cn('button button-sm', tab === item.key ? 'button-primary' : 'button-secondary') : cn('stage-tab', tab === item.key && 'active')}
+              onClick={() => setTab(item.key)}
+            >
               <Icon size={14} />{item.label}
             </button>
           )

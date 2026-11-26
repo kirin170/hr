@@ -30,7 +30,7 @@ const preferenceSummary = (application: ApiCampusApplication) => {
   return parts
 }
 
-export function Campus() {
+export function Campus({ embedded = false }: { embedded?: boolean } = {}) {
   const { toast } = useApp()
   const [data, setData] = useState<CampusApplicationList | null>(null)
   const [jobs, setJobs] = useState<JobListItem[]>([])
@@ -107,18 +107,20 @@ export function Campus() {
 
   return (
     <div className="page-stack">
-      <div className="page-title-row">
-        <div>
-          <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 校园招聘</div>
-          <h2>校招投递</h2>
-          <p>虚拟职位作为校招统一入口，人事按简历与个人意愿人工分配正式职位；原始意愿完整保留。</p>
+      {!embedded && (
+        <div className="page-title-row">
+          <div>
+            <div className="eyebrow">简历入场 <span className="eyebrow-separator">·</span> 校园招聘</div>
+            <h2>校招投递</h2>
+            <p>虚拟职位作为校招统一入口，人事按简历与个人意愿人工分配正式职位；原始意愿完整保留。</p>
+          </div>
+          <div className="page-title-actions">
+            <a className="button button-secondary" href="/campus" target="_blank" rel="noreferrer">
+              <GraduationCap size={16} />打开投递门户
+            </a>
+          </div>
         </div>
-        <div className="page-title-actions">
-          <a className="button button-secondary" href="/campus" target="_blank" rel="noreferrer">
-            <GraduationCap size={16} />打开投递门户
-          </a>
-        </div>
-      </div>
+      )}
 
       <div className="panel">
         <div className="candidate-toolbar">

@@ -1,35 +1,72 @@
 import { useEffect, useState } from 'react'
-import { Activity, ArrowUpRight, BarChart3, BriefcaseBusiness, Building2, CalendarDays, ChevronDown, CircleHelp, ClipboardCheck, FileSearch, GraduationCap, Inbox, LayoutDashboard, LogOut, Settings, ShieldCheck, Sparkles, Users, UsersRound } from 'lucide-react'
-import { logout } from '../api'
-import type { CurrentUser, PageKey } from '../types'
+import {
+  Activity,
+  BarChart3,
+  Building2,
+  CalendarDays,
+  ChevronDown,
+  ClipboardCheck,
+  FileSearch,
+  FileText,
+  KeyRound,
+  LayoutDashboard,
+  Network,
+  SlidersHorizontal,
+  UserCog,
+  Users,
+} from 'lucide-react'
 import { getDashboardSummary } from '../api'
+import type { CurrentUser, PageKey } from '../types'
 import { cn } from '../utils'
 
-type SidebarProps = { page: PageKey; onNavigate: (page: PageKey) => void; onSettings: () => void; me: CurrentUser | null }
+type SidebarProps = {
+  page: PageKey
+  onNavigate: (page: PageKey) => void
+  me: CurrentUser | null
+}
 
-const navPrimary: { key: PageKey; label: string; icon: typeof LayoutDashboard; badge?: string }[] = [
+type NavItem = {
+  key: PageKey
+  label: string
+  icon: typeof LayoutDashboard
+  permissionAny?: string[]
+}
+
+const navOverview: NavItem[] = [
   { key: 'dashboard', label: '工作台', icon: LayoutDashboard },
-  { key: 'positions', label: '职位与需求', icon: Building2 },
-  { key: 'intake', label: '简历入场', icon: FileSearch },
-  { key: 'pool', label: '待分配池', icon: Inbox },
-  { key: 'intakeMonitor', label: '入场监控', icon: Activity },
-  { key: 'campus', label: '校招投递', icon: GraduationCap },
-  { key: 'candidates', label: '简历库', icon: Users },
-  { key: 'pipeline', label: '招聘流程', icon: BriefcaseBusiness },
-  { key: 'interviews', label: '面试安排', icon: CalendarDays },
 ]
 
-const navSecondary: { key: PageKey; label: string; icon: typeof LayoutDashboard }[] = [
-  { key: 'probation', label: '试用期管理', icon: ClipboardCheck },
-  { key: 'team', label: '部门协同', icon: UsersRound },
+const navRecruiting: NavItem[] = [
+  { key: 'positions', label: '职位与需求', icon: Building2 },
+  { key: 'intake', label: '简历入场', icon: FileSearch },
+  { key: 'candidates', label: '候选人', icon: Users },
+  { key: 'interviews', label: '面试安排', icon: CalendarDays },
+  { key: 'probation', label: '入职与试用期', icon: ClipboardCheck },
+]
+
+const navAnalytics: NavItem[] = [
   { key: 'reports', label: '招聘数据', icon: BarChart3 },
 ]
 
-export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
+const navAdmin: NavItem[] = [
+  { key: 'adminOrg', label: '组织架构', icon: Network, permissionAny: ['authz:read', 'organization:sync'] },
+  { key: 'adminUsers', label: '成员管理', icon: UserCog, permissionAny: ['authz:read'] },
+  { key: 'adminAuth', label: '角色与权限', icon: KeyRound, permissionAny: ['authz:read', 'authz:field-grant:manage'] },
+  { key: 'adminConfig', label: '业务配置', icon: SlidersHorizontal, permissionAny: ['setting:read'] },
+  { key: 'adminOps', label: '集成与运维', icon: Activity, permissionAny: ['setting:read'] },
+  { key: 'adminAudit', label: '操作审计', icon: FileText, permissionAny: ['audit:read'] },
+]
+
+export function Sidebar({ page, onNavigate, me }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
-  // 面试安排角标使用今日面试真实数量，登录后再拉取，避免未登录时触发鉴权跳转
+  const [adminOpen, setAdminOpen] = useState(() => page.startsWith('admin'))
   const [interviewCount, setInterviewCount] = useState<number | null>(null)
   const meId = me?.id
+
+  useEffect(() => {
+    if (page.startsWith('admin')) setAdminOpen(true)
+  }, [page])
+
   useEffect(() => {
     if (!meId) {
       setInterviewCount(null)
@@ -47,68 +84,87 @@ export function Sidebar({ page, onNavigate, onSettings, me }: SidebarProps) {
       cancelled = true
     }
   }, [meId])
-  // 管理后台只对具备设置读取权限的角色开放，其余角色看不到入口
-  const canManageSettings = me?.roles.some((role) => role.permissions.includes('setting:read')) ?? false
+
+  const userPerms = new Set(me?.roles.flatMap((role) => role.permissions) ?? [])
+  const visibleAdmin = navAdmin.filter(
+    (item) => !item.permissionAny || item.permissionAny.some((code) => userPerms.has(code)),
+  )
+
+  const renderItem = (item: NavItem) => {
+    const Icon = item.icon
+    const badge = item.key === 'interviews' ? (interviewCount ? String(interviewCount) : undefined) : undefined
+    return (
+      <button
+        key={item.key}
+        className={cn('nav-item', page === item.key && 'nav-item-active')}
+        onClick={() => onNavigate(item.key)}
+        title={item.label}
+      >
+        <Icon size={18} strokeWidth={1.9} />
+        {!collapsed && <span>{item.label}</span>}
+        {!collapsed && badge && <span className="nav-badge">{badge}</span>}
+      </button>
+    )
+  }
+
   return (
     <aside className={cn('sidebar', collapsed && 'sidebar-collapsed')}>
       <div className="sidebar-brand">
         <div className="brand-mark"><span /><span /><span /></div>
-        {!collapsed && <span className="brand-copy">
-          <span className="brand-word">TalentFlow</span>
-          <span className="brand-subtitle">招聘管理系统</span>
-        </span>}
+        {!collapsed && (
+          <span className="brand-copy">
+            <span className="brand-word">TalentFlow</span>
+            <span className="brand-subtitle">招聘管理系统</span>
+          </span>
+        )}
       </div>
-      <button className="workspace-switch">
+
+      <div className="workspace-badge">
         <span className="workspace-logo">P</span>
-        {!collapsed && <><span className="workspace-copy"><strong>派派科技</strong><small>招聘管理工作台</small></span><ChevronDown size={14} /></>}
-      </button>
+        {!collapsed && (
+          <span className="workspace-copy">
+            <strong>派派科技</strong>
+            <small>招聘管理工作台</small>
+          </span>
+        )}
+      </div>
+
       <nav className="sidebar-nav">
-        <span className="nav-label">{!collapsed && '招聘管理'}</span>
-        {navPrimary.map((item) => {
-          const Icon = item.icon
-          const badge = item.key === 'interviews' ? (interviewCount ? String(interviewCount) : undefined) : item.badge
-          return (
-            <button key={item.key} className={cn('nav-item', page === item.key && 'nav-item-active')} onClick={() => onNavigate(item.key)} title={item.label}>
-              <Icon size={18} strokeWidth={1.9} />
-              {!collapsed && <span>{item.label}</span>}
-              {!collapsed && badge && <span className="nav-badge">{badge}</span>}
-            </button>
-          )
-        })}
-        <span className="nav-label nav-label-space">{!collapsed && '团队与组织'}</span>
-        {navSecondary.map((item) => {
-          const Icon = item.icon
-          return (
-            <button key={item.key} className={cn('nav-item', page === item.key && 'nav-item-active')} onClick={() => onNavigate(item.key)} title={item.label}>
-              <Icon size={18} strokeWidth={1.9} />
-              {!collapsed && <span>{item.label}</span>}
-            </button>
-          )
-        })}
-        {canManageSettings && <>
-          <span className="nav-label nav-label-space">{!collapsed && '系统管理'}</span>
-          <button className={cn('nav-item', page === 'admin' && 'nav-item-active')} onClick={() => onNavigate('admin')} title="管理后台">
-            <ShieldCheck size={18} strokeWidth={1.9} />
-            {!collapsed && <span>管理后台</span>}
-          </button>
-        </>}
+        <span className="nav-label">{!collapsed && '概览'}</span>
+        {navOverview.map(renderItem)}
+
+        <span className="nav-label nav-label-space">{!collapsed && '招聘执行'}</span>
+        {navRecruiting.map(renderItem)}
+
+        <span className="nav-label nav-label-space">{!collapsed && '数据分析'}</span>
+        {navAnalytics.map(renderItem)}
+
+        {visibleAdmin.length > 0 && (
+          <>
+            {!collapsed ? (
+              <button
+                type="button"
+                className="nav-group-toggle"
+                onClick={() => setAdminOpen((open) => !open)}
+                aria-expanded={adminOpen}
+              >
+                <span>系统管理</span>
+                <ChevronDown size={13} className={cn('nav-group-chevron', adminOpen && 'open')} />
+              </button>
+            ) : (
+              <span className="nav-label nav-label-space" />
+            )}
+            {(collapsed || adminOpen) && visibleAdmin.map(renderItem)}
+          </>
+        )}
       </nav>
-      {!collapsed && (
-        <div className="sidebar-tip">
-          <div className="sidebar-tip-icon"><Sparkles size={15} /></div>
-          <div><strong>让招聘更有序</strong><p>统一管理人才与协作流程</p></div>
-          <ArrowUpRight size={15} />
-        </div>
-      )}
+
       <div className="sidebar-footer">
-        <button className="nav-item" title="设置" onClick={onSettings}><Settings size={18} />{!collapsed && <span>设置</span>}</button>
-        <button className="nav-item" title="帮助中心"><CircleHelp size={18} />{!collapsed && <span>帮助中心</span>}</button>
-        <div className="sidebar-user">
-          <span className="avatar avatar-sm avatar-warm">{(me?.displayName || '未').slice(0, 1)}</span>
-          {!collapsed && <span className="sidebar-user-copy"><strong>{me?.displayName || '未登录'}</strong><small>{me?.roles.map((role) => role.name).join(' · ') || '暂无角色'}</small></span>}
-          {!collapsed && <button className="icon-button icon-button-small" title="退出登录" onClick={() => { void logout() }}><LogOut size={15} /></button>}
-        </div>
-        <button className="collapse-button" onClick={() => setCollapsed(!collapsed)} title={collapsed ? '展开侧栏' : '收起侧栏'}>
+        <button
+          className="collapse-button"
+          onClick={() => setCollapsed(!collapsed)}
+          title={collapsed ? '展开侧栏' : '收起侧栏'}
+        >
           <span className={cn('collapse-chevron', collapsed && 'collapse-chevron-forward')}>‹</span>
         </button>
       </div>

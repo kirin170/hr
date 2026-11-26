@@ -160,4 +160,84 @@ describe('AuthorizationService', () => {
       ),
     ).resolves.toBe(false);
   });
+
+  it('paginates and filters users without a 100-row cap, and returns full active directory', async () => {
+    const userFindMany = vi.fn().mockResolvedValueOnce([
+      {
+        id: 'u-1',
+        employeeNo: '021756',
+        displayName: '张三',
+        email: null,
+        status: 'ACTIVE',
+        departmentId: 'dept-1',
+        roleAssignments: [],
+      },
+    ]);
+    const userCount = vi.fn().mockResolvedValueOnce(2738);
+    const departmentFindMany = vi.fn().mockResolvedValueOnce([{ id: 'dept-1', code: 'D1', name: '研发部', parentId: null }]);
+    userFindMany.mockResolvedValueOnce([{ id: 'u-1', displayName: '张三', departmentId: 'dept-1' }]);
+
+    const authorization = new AuthorizationService({
+      user: { findMany: userFindMany, count: userCount },
+      department: { findMany: departmentFindMany },
+    } as unknown as PrismaService);
+
+    const pageResult = await authorization.listUsersPage({
+      page: 2,
+      pageSize: 50,
+      q: '张',
+      departmentId: 'dept-1',
+      roleCode: 'ADMIN',
+    });
+
+    expect(pageResult.total).toBe(2738);
+    expect(pageResult.page).toBe(2);
+    expect(pageResult.pageSize).toBe(50);
+    expect(pageResult.totalPages).toBe(55);
+    expect(userFindMany.mock.calls[0]?.[0]).toMatchObject({
+      skip: 50,
+      take: 50,
+      where: {
+        AND: [
+          { OR: [{ displayName: { contains: '张' } }, { employeeNo: { contains: '张' } }, { email: { contains: '张' } }] },
+          { departmentId: 'dept-1' },
+          { roleAssignments: { some: { role: { code: 'ADMIN' } } } },
+        ],
+      },
+    });
+
+    const dir = await authorization.directory();
+    expect(dir.users).toHaveLength(1);
+    expect(userFindMany.mock.calls[1]?.[0]).not.toHaveProperty('take');
+  });
+
+  it('expands child departments when includeChildren is enabled for user filtering', async () => {
+    const deptFindMany = vi
+      .fn()
+      .mockResolvedValueOnce([{ id: 'root' }])
+      .mockResolvedValueOnce([{ id: 'child-1' }])
+      .mockResolvedValueOnce([]);
+    const userFindMany = vi.fn().mockResolvedValueOnce([]);
+    const userCount = vi.fn().mockResolvedValueOnce(0);
+
+    const authorization = new AuthorizationService({
+      department: { findMany: deptFindMany },
+      user: { findMany: userFindMany, count: userCount },
+    } as unknown as PrismaService);
+
+    await authorization.listUsersPage({ departmentId: 'root', includeChildren: true });
+
+    expect(userFindMany.mock.calls[0]?.[0]).toMatchObject({
+      where: {
+        AND: [
+          {
+            OR: [
+              { departmentId: { in: ['root', 'child-1'] } },
+              { departmentMemberships: { some: { departmentId: { in: ['root', 'child-1'] } } } },
+            ],
+          },
+        ],
+      },
+    });
+  });
 });
