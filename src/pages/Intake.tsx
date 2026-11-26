@@ -275,11 +275,16 @@ function UploadTab({ jobs }: { jobs: JobListItem[] }) {
         </div>
       </div>
       <div className="intake-form-grid">
-        <label className="form-field">
+        <div className="form-field">
           <span>简历文件</span>
-          <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={pick} />
-          <small>{files.length ? `已选择 ${files.length} 个文件` : '未选择文件'}</small>
-        </label>
+          <label className="file-picker">
+            <input ref={inputRef} type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp" onChange={pick} />
+            <span className="file-picker-btn"><Upload size={12} />选择文件</span>
+            <span className={cn('file-picker-name', !files.length && 'empty')}>
+              {files.length ? (files.length === 1 ? files[0].name : `已选择 ${files.length} 个文件`) : '未选择文件（支持多选）'}
+            </span>
+          </label>
+        </div>
         <JobPicker jobs={jobs} value={jobId} onChange={setJobId} />
         <label className="form-field">
           <span>简历来源</span>
@@ -501,11 +506,16 @@ function EmailTab({ jobs }: { jobs: JobListItem[] }) {
         <label className="form-field"><span>邮件主题</span><input value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} placeholder="应聘后端工程师" /></label>
         <label className="form-field"><span>接收时间</span><input type="datetime-local" value={form.receivedAt} onChange={(event) => setForm({ ...form, receivedAt: event.target.value })} /></label>
         <JobPicker jobs={jobs} value={form.jobId} onChange={(jobId) => setForm({ ...form, jobId })} />
-        <label className="form-field">
+        <div className="form-field">
           <span>邮件附件</span>
-          <input type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.xlsx" onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
-          <small>{files.length ? `已选择 ${files.length} 个附件` : '未选择附件'}</small>
-        </label>
+          <label className="file-picker">
+            <input type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.xlsx" onChange={(event) => setFiles(Array.from(event.target.files ?? []))} />
+            <span className="file-picker-btn"><Paperclip size={12} />选择附件</span>
+            <span className={cn('file-picker-name', !files.length && 'empty')}>
+              {files.length ? (files.length === 1 ? files[0].name : `已选择 ${files.length} 个附件`) : '未选择附件（支持多选）'}
+            </span>
+          </label>
+        </div>
         <div className="intake-form-actions">
           <button className="button button-primary" onClick={() => void submit()} disabled={busy}>
             <Mail size={16} />{busy ? '提交中…' : '模拟接收'}
@@ -558,11 +568,16 @@ function ExcelTab() {
           </button>
         </div>
         <div className="intake-form-grid">
-          <label className="form-field">
+          <div className="form-field">
             <span>Excel 文件</span>
-            <input type="file" accept=".xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
-            <small>{file ? file.name : '未选择文件'}</small>
-          </label>
+            <label className="file-picker">
+              <input type="file" accept=".xlsx" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+              <span className="file-picker-btn"><FileSpreadsheet size={12} />选择表格</span>
+              <span className={cn('file-picker-name', !file && 'empty')}>
+                {file ? file.name : '请选择 .xlsx 文件'}
+              </span>
+            </label>
+          </div>
           <div className="intake-form-actions">
             <button className="button button-primary" onClick={() => void submit()} disabled={busy}>
               <Upload size={16} />{busy ? '导入中…' : '开始导入'}

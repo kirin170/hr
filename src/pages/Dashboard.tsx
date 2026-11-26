@@ -165,7 +165,7 @@ export function Dashboard({ onNavigate, onOpenCandidate }: DashboardProps) {
       <section className="dashboard-main-grid">
         <article className="panel">
           <div className="panel-header"><div><h3>我的待办</h3><p>点击任一待办直达对应列表</p></div></div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+          <div className="dashboard-todo-grid">
             {(summary?.todos ?? []).map((todo) => (
               <button
                 key={todo.key}
@@ -216,11 +216,11 @@ export function Dashboard({ onNavigate, onOpenCandidate }: DashboardProps) {
             <div><h3>通知 <span className="count-pill">{notifications?.unreadTotal ?? 0}</span></h3><p>{notifications?.source}</p></div>
             <button className="text-button" onClick={handleReadAll}><CheckCheck size={14} />全部已读</button>
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div className="dashboard-notify-tabs">
             {(notifications?.categories ?? []).map((item) => (
               <button
                 key={item.key}
-                className={cn('button', activeCategory === item.key ? 'button-primary' : 'button-secondary')}
+                className={cn('button button-sm', activeCategory === item.key ? 'button-primary' : 'button-secondary')}
                 onClick={() => setActiveCategory(item.key)}
               >
                 {item.label} {item.unread > 0 ? `(${item.unread})` : ''}
@@ -256,7 +256,7 @@ export function Dashboard({ onNavigate, onOpenCandidate }: DashboardProps) {
             </label>
           </div>
           {job360 ? (
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div className="dashboard-job360-body">
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10 }}>
                 <Job360Stat label="HC" value={`${job360.hc.headcount}`} />
                 <Job360Stat label="已入职" value={`${job360.hc.hiredCount}`} />
@@ -271,7 +271,7 @@ export function Dashboard({ onNavigate, onOpenCandidate }: DashboardProps) {
                   {job360.job.requisition?.recruitmentStartDate ? ` · 开始招聘 ${job360.job.requisition.recruitmentStartDate.slice(0, 10)}` : ''}
                 </span>
               </div>
-              <div style={{ display: 'grid', gap: 6 }}>
+              <div className="dashboard-job360-stages">
                 {Object.entries(job360.stageCounts).filter(([, count]) => count > 0).map(([stage, count]) => (
                   <div key={stage} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{STAGE_LABELS[stage] ?? stage}</span>

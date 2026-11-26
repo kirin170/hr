@@ -141,7 +141,7 @@ export function SourceRecords() {
         {error && <div className="empty-inline">加载失败：{error}</div>}
 
         {editing && (
-          <div className="intake-form-grid">
+          <div className="intake-form-grid intake-edit-form">
             <label className="form-field">
               <span>推荐人</span>
               <input value={editForm.referrerName} onChange={(event) => setEditForm({ ...editForm, referrerName: event.target.value })} />

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, GraduationCap, Loader2, MapPin, Send } from 'lucide-react'
+import { CheckCircle2, GraduationCap, Loader2, MapPin, Send, Upload } from 'lucide-react'
 import { listCampusJobs, submitCampusApplication } from '../api'
 import type { CampusApplyResult, CampusJob } from '../types'
+import { cn } from '../utils'
 
 const initialForm = {
   name: '',
@@ -197,15 +198,20 @@ export function CampusPortal() {
                   <span>来源标识</span>
                   <input value={form.referralCode} onChange={(event) => update('referralCode', event.target.value)} placeholder="选填，内推码或渠道活动标识" />
                 </label>
-                <label className="form-field">
+                <div className="form-field">
                   <span>简历附件</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
-                    onChange={(event) => setResume(event.target.files?.[0] ?? null)}
-                  />
-                  <small>{resume ? resume.name : '选填，支持 PDF / Word / 图片'}</small>
-                </label>
+                  <label className="file-picker">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                      onChange={(event) => setResume(event.target.files?.[0] ?? null)}
+                    />
+                    <span className="file-picker-btn"><Upload size={12} />选择文件</span>
+                    <span className={cn('file-picker-name', !resume && 'empty')}>
+                      {resume ? resume.name : '选填，PDF / Word / 图片'}
+                    </span>
+                  </label>
+                </div>
                 <label className="form-field campus-portal-wide">
                   <span>备注</span>
                   <textarea

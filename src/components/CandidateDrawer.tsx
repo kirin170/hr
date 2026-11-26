@@ -264,7 +264,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
             <div className="info-grid">
               <div><span>工作年限</span><strong>{candidate.experience}</strong></div><div><span>最高学历</span><strong>{candidate.education}</strong></div><div><span>毕业院校</span><strong>{candidate.school}</strong></div><div><span>当前公司</span><strong>{candidate.currentCompany}</strong></div>
             </div>
-            <div className="tag-row drawer-tags">{candidate.tags.map(tag => <span key={tag}>{tag}</span>)}<button><Plus size={13} />添加标签</button></div>
+            <div className="tag-row drawer-tags">{candidate.tags.map(tag => <span key={tag}>{tag}</span>)}<button className="text-button"><Plus size={13} />添加标签</button></div>
           </section>
           {poolHistory.length > 0 && <section className="drawer-section">
             <div className="drawer-section-title"><h3>人才库历史</h3><span className="subtle-label">{poolHistory.length} 次归档</span></div>
@@ -285,7 +285,7 @@ export function CandidateDrawer({ candidateId, onClose, onSchedule }: { candidat
               const statusClass = interview.status === 'COMPLETED' ? 'completed' : interview.status === 'FEEDBACK_PENDING' ? 'pending_feedback' : 'scheduled'
               const statusText = interview.status === 'COMPLETED' ? '已完成' : interview.status === 'FEEDBACK_PENDING' ? '待反馈' : '待进行'
               const formattedTime = new Date(interview.time).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false })
-              return <div key={interview.id}><span className="interview-round">第 {interview.round} 轮</span><div><strong>第 {interview.round} 轮 · {interview.mode}</strong><span>{formattedTime}{interview.location ? ` · ${interview.location}` : ''}</span></div><span className={cn('mini-status', statusClass)}>{statusText}</span></div>
+              return <div className="interview-round" key={interview.id}><span className="interview-round-date"><strong>第 {interview.round} 轮</strong></span><div><strong>第 {interview.round} 轮 · {interview.mode}</strong><span>{formattedTime}{interview.location ? ` · ${interview.location}` : ''}</span></div><span className={cn('mini-status', statusClass)}>{statusText}</span></div>
             })}</div> : <div className="empty-inline">暂无面试记录</div>}
           </section>
           <section className="drawer-note"><div className="drawer-section-title"><h3>招聘备注</h3></div><p>{candidate.note || '暂无备注。'}</p></section>

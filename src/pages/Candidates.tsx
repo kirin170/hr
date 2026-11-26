@@ -364,13 +364,13 @@ export function Candidates({ search, onOpenCandidate, onAddCandidate, onBulkImpo
             {bulkAction === 'STAGE' && <select value={bulkTarget} onChange={(event) => setBulkTarget(event.target.value as CandidateMainStage | 'ARCHIVED')} aria-label="批量动作目标">{bulkTargets.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}</select>}
             {bulkAction === 'SCREENING' && <><select value={bulkScreeningResult} onChange={(event) => setBulkScreeningResult(event.target.value as 'PASS' | 'HOLD' | 'REJECT')} aria-label="部门筛选结论"><option value="PASS">通过</option><option value="HOLD">待定</option><option value="REJECT">淘汰</option></select>{bulkScreeningResult === 'PASS' && <><input value={bulkScreeningReason} onChange={(event) => setBulkScreeningReason(event.target.value)} placeholder="筛选原因（必填）" aria-label="筛选原因" /><input type="datetime-local" value={bulkAvailabilityStart} onChange={(event) => setBulkAvailabilityStart(event.target.value)} aria-label="可约开始时间" /><input type="datetime-local" value={bulkAvailabilityEnd} onChange={(event) => setBulkAvailabilityEnd(event.target.value)} aria-label="可约结束时间" /></>}</>}
             {bulkAction === 'TAGS' && <><select value={bulkTagMode} onChange={(event) => setBulkTagMode(event.target.value as typeof bulkTagMode)} aria-label="标签变更方式"><option value="ADD">添加标签</option><option value="REMOVE">移除标签</option><option value="REPLACE">替换标签</option></select><input value={bulkTagsText} onChange={(event) => setBulkTagsText(event.target.value)} placeholder="标签，多个用逗号分隔" aria-label="批量标签" /></>}
-            <button disabled={busy} onClick={runBatch}>{bulkAction === 'STATUS' ? '查看状态' : '执行批量动作'}</button>
+            <button className="button button-primary button-sm" disabled={busy} onClick={runBatch}>{bulkAction === 'STATUS' ? '查看状态' : '执行批量动作'}</button>
             <button className="bulk-close" onClick={() => { setSelected([]); setShowStatusSummary(false) }}><X size={15} /></button>
           </div>}
           {showStatusSummary && selected.length > 0 && <div className="bulk-status-summary"><strong>所选候选人状态</strong>{rows.filter((candidate) => selected.includes(candidate.id)).map((candidate) => <span key={candidate.id}>{candidate.name} · {stageMeta[candidate.stage]?.label ?? candidate.stage} · {candidate.lockedState === 'INOPERABLE' ? '不可操作' : '可操作'}</span>)}</div>}
 
           {view === 'list' ? <div className="candidate-table-wrap">
-            <table className="candidate-table">
+            <table className="candidate-table candidates-list-table">
               <thead><tr><th className="check-column"><input type="checkbox" checked={visible.length > 0 && visible.every((candidate) => selected.includes(candidate.id))} onChange={selectAll} /></th><th>候选人</th><th>应聘职位</th><th>当前阶段</th><th>简历来源</th><th>评分</th><th>最近动态</th><th>锁定</th><th>操作</th></tr></thead>
               <tbody>{visible.map((candidate) => <CandidateRow key={candidate.id} candidate={candidate} selected={selected.includes(candidate.id)} onSelect={() => toggleSelect(candidate.id)} onOpen={() => onOpenCandidate(candidate.id)} onAssign={() => assignCandidate(candidate)} />)}</tbody>
             </table>

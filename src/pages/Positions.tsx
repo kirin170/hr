@@ -188,27 +188,29 @@ export function Positions() {
         <label className="filter-select"><span>渠道</span><select value={jobChannel} onChange={(event) => setJobChannel(event.target.value)}><option value="">全部</option><option value="BOSS">BOSS直聘</option><option value="猎聘">猎聘</option><option value="内推">内推</option><option value="校招">校招</option></select><ChevronDown size={13} /></label>
       </div>
       {jobsError && <Notice tone="error">{jobsError}</Notice>}
-      <table className="candidate-table">
-        <thead><tr><th>编号</th><th>职位</th><th>部门</th><th>招聘负责人</th><th>渠道</th><th>HC（入职/招聘）</th><th>状态</th><th>操作</th></tr></thead>
-        <tbody>
-          {jobs.map((job) => <tr key={job.id}>
-            <td><span className="mono-cell">{job.code}</span></td>
-            <td><strong>{job.title}</strong>{job.isVirtual && <span className="pill-tag">虚拟职位</span>}</td>
-            <td>{departmentName(job.departmentId)}</td>
-            <td>{userName(job.recruiterId)}</td>
-            <td>{job.channel ?? '—'}</td>
-            <td>
-              <span>{job.hiredCount}/{job.headcount}</span>
-              {job.headcountHint && <span className="pill-tag pill-warn" title={job.headcountHint}>HC 已满</span>}
-            </td>
-            <td><span className={cn('status-chip', job.status === 'ACTIVE' ? 'status-on' : 'status-off')}>{statusLabel[job.status]}</span></td>
-            <td className="row-actions">
-              <button className="text-button" onClick={() => setJobForm(job)}>编辑</button>
-              {job.status === 'ACTIVE' && <button className="text-button" onClick={() => void handleCloseJob(job)}>关闭</button>}
-            </td>
-          </tr>)}
-        </tbody>
-      </table>
+      <div className="candidate-table-wrap">
+        <table className="candidate-table">
+          <thead><tr><th>编号</th><th>职位</th><th>部门</th><th>招聘负责人</th><th>渠道</th><th>HC（入职/招聘）</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            {jobs.map((job) => <tr key={job.id}>
+              <td><span className="mono-cell">{job.code}</span></td>
+              <td><strong>{job.title}</strong>{job.isVirtual && <span className="pill-tag">虚拟职位</span>}</td>
+              <td>{departmentName(job.departmentId)}</td>
+              <td>{userName(job.recruiterId)}</td>
+              <td>{job.channel ?? '—'}</td>
+              <td>
+                <span>{job.hiredCount}/{job.headcount}</span>
+                {job.headcountHint && <span className="pill-tag pill-warn" title={job.headcountHint}>HC 已满</span>}
+              </td>
+              <td><span className={cn('status-chip', job.status === 'ACTIVE' ? 'status-on' : 'status-off')}>{statusLabel[job.status]}</span></td>
+              <td className="row-actions">
+                <button className="text-button" onClick={() => setJobForm(job)}>编辑</button>
+                {job.status === 'ACTIVE' && <button className="text-button" onClick={() => void handleCloseJob(job)}>关闭</button>}
+              </td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
       <div className="table-footer"><span>{jobsLoading ? '加载中…' : `共 ${jobs.length} 个职位（默认不含虚拟职位）`}</span></div>
     </section>}
 
@@ -226,31 +228,33 @@ export function Positions() {
         <div><span>已关闭需求</span><strong>{closedCount}</strong></div>
         <div><span>周期口径</span><strong>自然日</strong><small>同日计 1 天</small></div>
       </div>
-      <table className="candidate-table">
-        <thead><tr><th>OA 编号</th><th>需求</th><th>部门</th><th>状态</th><th>提报时间</th><th>开始招聘时间</th><th>关闭时间</th><th>招聘周期</th><th>操作</th></tr></thead>
-        <tbody>
-          {requisitions.map((requisition) => <tr key={requisition.id}>
-            <td><span className="mono-cell">{requisition.oaBusinessId ?? requisition.oaApprovalId}</span>{requisition.oaBusinessId && <small className="cell-sub">实例 {requisition.oaApprovalId}</small>}</td>
-            <td><strong>{requisition.title}</strong><small className="cell-sub">{requisition.headcount} HC · {userName(requisition.recruiterId)}</small></td>
-            <td>{departmentName(requisition.departmentId)}</td>
-            <td><span className={cn('status-chip', requisition.status === 'ACTIVE' ? 'status-on' : 'status-off')}>{statusLabel[requisition.status]}</span></td>
-            <td>{requisition.submittedAt ?? '—'}<small className="cell-sub">仅记录</small></td>
-            <td>{requisition.recruitmentStartDate ?? '—'}</td>
-            <td>{requisition.closedAt ?? '—'}</td>
-            <td>{requisition.status === 'ACTIVE'
-              ? <span className="cycle-live">{requisition.inProgressLabel ?? '—'}</span>
-              : requisition.cycleDays === null
-                ? <span className="cell-sub">存量未补录，不纳入统计</span>
-                : <strong>{requisition.cycleDays} 天</strong>}</td>
-            <td className="row-actions">
-              <button className="text-button" onClick={() => setRequisitionForm(requisition)}>编辑</button>
-              {requisition.status === 'ACTIVE' && <button className="text-button" onClick={() => setStartDateTarget(requisition)}>改开始时间</button>}
-              {requisition.status === 'ACTIVE' && <button className="text-button" onClick={() => setClosingRequisition(requisition)}>关闭</button>}
-              {requisition.status === 'CLOSED' && requisition.cycleEligible && <button className="text-button" onClick={() => void handleRevert(requisition)}>回退</button>}
-            </td>
-          </tr>)}
-        </tbody>
-      </table>
+      <div className="candidate-table-wrap">
+        <table className="candidate-table">
+          <thead><tr><th>OA 编号</th><th>需求</th><th>部门</th><th>状态</th><th>提报时间</th><th>开始招聘时间</th><th>关闭时间</th><th>招聘周期</th><th>操作</th></tr></thead>
+          <tbody>
+            {requisitions.map((requisition) => <tr key={requisition.id}>
+              <td><span className="mono-cell">{requisition.oaBusinessId ?? requisition.oaApprovalId}</span>{requisition.oaBusinessId && <small className="cell-sub">实例 {requisition.oaApprovalId}</small>}</td>
+              <td><strong>{requisition.title}</strong><small className="cell-sub">{requisition.headcount} HC · {userName(requisition.recruiterId)}</small></td>
+              <td>{departmentName(requisition.departmentId)}</td>
+              <td><span className={cn('status-chip', requisition.status === 'ACTIVE' ? 'status-on' : 'status-off')}>{statusLabel[requisition.status]}</span></td>
+              <td>{requisition.submittedAt ?? '—'}<small className="cell-sub">仅记录</small></td>
+              <td>{requisition.recruitmentStartDate ?? '—'}</td>
+              <td>{requisition.closedAt ?? '—'}</td>
+              <td>{requisition.status === 'ACTIVE'
+                ? <span className="cycle-live">{requisition.inProgressLabel ?? '—'}</span>
+                : requisition.cycleDays === null
+                  ? <span className="cell-sub">存量未补录，不纳入统计</span>
+                  : <strong>{requisition.cycleDays} 天</strong>}</td>
+              <td className="row-actions">
+                <button className="text-button" onClick={() => setRequisitionForm(requisition)}>编辑</button>
+                {requisition.status === 'ACTIVE' && <button className="text-button" onClick={() => setStartDateTarget(requisition)}>改开始时间</button>}
+                {requisition.status === 'ACTIVE' && <button className="text-button" onClick={() => setClosingRequisition(requisition)}>关闭</button>}
+                {requisition.status === 'CLOSED' && requisition.cycleEligible && <button className="text-button" onClick={() => void handleRevert(requisition)}>回退</button>}
+              </td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div>
       <div className="table-footer"><span>{requisitionLoading ? '加载中…' : `共 ${requisitionTotal} 条需求；周期筛选与排序均在招聘需求列表内`}</span></div>
     </section>}
 
@@ -266,9 +270,9 @@ function Notice({ tone, children }: { tone: 'error' | 'info'; children: ReactNod
   return <div className={cn('form-notice', tone === 'error' && 'form-notice-error')}><AlertCircle size={15} /><span>{children}</span></div>
 }
 
-function Modal({ title, subtitle, onClose, children, footer }: { title: string; subtitle: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
+function Modal({ title, subtitle, onClose, children, footer, wide }: { title: string; subtitle: string; onClose: () => void; children: ReactNode; footer: ReactNode; wide?: boolean }) {
   return <div className="modal-backdrop" onMouseDown={onClose}>
-    <div className="modal" onMouseDown={(event) => event.stopPropagation()}>
+    <div className={cn('modal', wide && 'modal-wide')} onMouseDown={(event) => event.stopPropagation()}>
       <div className="modal-header">
         <div><span className="modal-icon"><BriefcaseBusiness size={18} /></span><div><h3>{title}</h3><p>{subtitle}</p></div></div>
         <button className="icon-button" onClick={onClose}><X size={18} /></button>
@@ -479,6 +483,7 @@ function OaEventsModal({ onClose }: { onClose: () => void }) {
   return <Modal
     title="OA 同步记录"
     subtitle="只展示招聘需求审批事件；失败项可重试，OA 原单不会被修改"
+    wide
     onClose={onClose}
     footer={<><button className="button button-secondary" onClick={onClose}>关闭</button><button className="button button-primary" disabled={loading} onClick={() => void load()}><RefreshCw size={15} />刷新</button></>}
   >
@@ -487,7 +492,7 @@ function OaEventsModal({ onClose }: { onClose: () => void }) {
       ? <p>加载中…</p>
       : events.length === 0
         ? <p className="cell-sub">暂无 OA 同步事件</p>
-        : <table className="candidate-table">
+        : <div className="intake-table-wrap"><table className="intake-table" style={{ minWidth: 680 }}>
           <thead><tr><th>实例 ID</th><th>类型</th><th>状态</th><th>尝试</th><th>接收时间</th><th>最近错误</th><th>操作</th></tr></thead>
           <tbody>
             {events.map((event) => <tr key={event.id}>
@@ -500,7 +505,7 @@ function OaEventsModal({ onClose }: { onClose: () => void }) {
               <td>{event.status === 'FAILED' ? <button className="text-button" disabled={busyId === event.id} onClick={() => void retry(event.id)}>{busyId === event.id ? '重试中…' : '重试'}</button> : '—'}</td>
             </tr>)}
           </tbody>
-        </table>}
+        </table></div>}
   </Modal>
 }
 

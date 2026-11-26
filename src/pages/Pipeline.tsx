@@ -71,18 +71,18 @@ export function Pipeline({ onOpenCandidate, onAddCandidate }: PipelineProps) {
               const job = getCandidateJob(candidate)
               const department = getCandidateDepartment(candidate)
               return <button className="kanban-card" key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}>
-                <div className="kanban-card-top"><span className="avatar avatar-sm" style={{background: `${candidate.avatarColor}18`, color: candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span className="kanban-name">{candidate.name}</span><span className="kanban-salary">{candidate.experience}</span></div>
-                <p>{candidate.currentTitle} · {candidate.currentCompany}</p>
-                <div className="kanban-job"><span className="department-dot" style={{background: department?.color}} />{job?.title}</div>
+                <div className="kanban-card-top"><span className="avatar avatar-sm" style={{background: `${candidate.avatarColor}18`, color: candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span className="kanban-name"><strong>{candidate.name}</strong></span><span className="kanban-salary">{candidate.experience || '—'}</span></div>
+                <p>{[candidate.currentTitle, candidate.currentCompany].filter(Boolean).join(' · ') || '候选人档案'}</p>
+                <div className="kanban-job"><span className="department-dot" style={{background: department?.color ?? '#8f9bef'}} />{candidate.jobTitle || job?.title || '待分配职位'}</div>
                 <div className="kanban-tags">{candidate.tags.slice(0,2).map(tag => <span key={tag}>{tag}</span>)}</div>
-                <div className="kanban-footer"><span className={cn('kanban-source', candidate.source === '内部推荐' && 'referral')}>{candidate.source}</span><span className="kanban-user"><span className="avatar avatar-xs avatar-warm">{candidate.owner.slice(-1)}</span>{candidate.owner}</span></div>
+                <div className="kanban-footer"><span className={cn('kanban-source', candidate.source === '内部推荐' && 'referral')}>{candidate.source}</span><span className="kanban-user"><span className="avatar avatar-xs avatar-warm">{(candidate.owner || '未').slice(-1)}</span>{candidate.owner || '未指定'}</span></div>
               </button>
             })}
             {items.length === 0 && <div className="kanban-empty">暂无候选人</div>}
           </div>
         </section>
       })}
-    </div> : <div className="panel pipeline-table-panel"><table className="candidate-table"><thead><tr><th>候选人</th><th>应聘职位</th><th>当前阶段</th><th>负责人</th><th>最近动态</th></tr></thead><tbody>{filtered.map(candidate => { const job = getCandidateJob(candidate); return <tr key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}><td><span className="candidate-cell"><span className="avatar avatar-sm" style={{background:`${candidate.avatarColor}18`,color:candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany}</small></span></span></td><td>{job?.title || '待分配'}</td><td><StageBadge stage={candidate.stage} /></td><td>{candidate.owner}</td><td>{candidate.lastActivity}</td></tr> })}</tbody></table></div>}
+    </div> : <div className="panel pipeline-table-panel"><div className="candidate-table-wrap"><table className="candidate-table"><thead><tr><th>候选人</th><th>应聘职位</th><th>当前阶段</th><th>负责人</th><th>最近动态</th></tr></thead><tbody>{filtered.map(candidate => { const job = getCandidateJob(candidate); return <tr key={candidate.id} onClick={() => onOpenCandidate(candidate.id)}><td><span className="candidate-cell"><span className="avatar avatar-sm" style={{background:`${candidate.avatarColor}18`,color:candidate.avatarColor}}>{candidate.name.slice(-2)}</span><span><strong>{candidate.name}</strong><small>{candidate.currentCompany || '—'}</small></span></span></td><td>{candidate.jobTitle || job?.title || '待分配职位'}</td><td><StageBadge stage={candidate.stage} /></td><td>{candidate.owner || '未指定'}</td><td>{candidate.lastActivity}</td></tr> })}</tbody></table></div></div>}
   </div>
 }
 

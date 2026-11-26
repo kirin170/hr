@@ -148,7 +148,7 @@ export function Reports() {
 
       <section className="panel">
         <div className="panel-header"><div><h3>筛选条件</h3><p>部门 / 招聘负责人 / 时间段 / 需求类型可自由组合，作用于全部报表</p></div></div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+        <div className="reports-filter-grid">
           <label className="date-range">
             <select
               value={filters.departmentId ?? ''}
@@ -213,18 +213,21 @@ export function Reports() {
               ))}
             </div>
             <div className="funnel-bars">
-              {(funnel?.stages ?? []).map((stage) => (
-                <div className="funnel-bar-row" key={stage.key}>
-                  <button
-                    className="funnel-bar"
-                    style={{ width: `${maxFunnel ? Math.max((stage.reached / maxFunnel) * 100, 18) : 18}%`, border: 'none', cursor: 'pointer' }}
-                    onClick={() => openFunnelDrill(stage.key, stage.label)}
-                    title={`${stage.label}：${stage.reached} 人，当前环节 ${stage.inStage} 人`}
-                  >
-                    {stage.conversionFromPrevious != null && <span className="funnel-conversion">{stage.conversionFromPrevious}%</span>}
-                  </button>
-                </div>
-              ))}
+              {(funnel?.stages ?? []).map((stage, index) => {
+                const tones = ['funnel-new', 'funnel-screening', 'funnel-interview', 'funnel-offer', 'funnel-hired']
+                return (
+                  <div className="funnel-bar-row" key={stage.key}>
+                    <button
+                      className={cn('funnel-bar', tones[index % tones.length])}
+                      style={{ width: `${maxFunnel ? Math.max((stage.reached / maxFunnel) * 82, 14) : 14}%` }}
+                      onClick={() => openFunnelDrill(stage.key, stage.label)}
+                      title={`${stage.label}：${stage.reached} 人，当前环节 ${stage.inStage} 人`}
+                    >
+                      {stage.conversionFromPrevious != null && <span className="funnel-conversion">{stage.conversionFromPrevious}%</span>}
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           </div>
           <div className="panel-footer-link">
@@ -236,7 +239,7 @@ export function Reports() {
 
         <section className="panel source-panel">
           <div className="panel-header"><div><h3>渠道分布</h3><p>{channels?.denominator ?? '正在加载'}</p></div></div>
-          <div className="source-legend" style={{ display: 'grid', gap: 8 }}>
+          <div className="reports-section-body">
             {(channels?.rows ?? []).map((row) => (
               <button
                 key={row.key}
@@ -259,11 +262,11 @@ export function Reports() {
       <section className="panel">
         <div className="panel-header">
           <div><h3>三类原因</h3><p>{reasons?.denominator ?? '正在加载'}；“未填写”单列统计</p></div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {REASON_TABS.map((tab) => (
               <button
                 key={tab.key}
-                className={cn('button', reasonType === tab.key ? 'button-primary' : 'button-secondary')}
+                className={cn('button button-sm', reasonType === tab.key ? 'button-primary' : 'button-secondary')}
                 onClick={() => setReasonType(tab.key)}
               >
                 {tab.label}
@@ -271,7 +274,7 @@ export function Reports() {
             ))}
           </div>
         </div>
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div className="reports-section-body">
           {(reasons?.rows ?? []).map((row) => (
             <button key={row.key} className="today-item" onClick={() => openReasonDrill(row.key, row.label)}>
               <span className="today-item-copy">
@@ -299,7 +302,7 @@ export function Reports() {
             </div>
           ))}
           {!probation?.rows.length && <div className="empty-hint">暂无试用期结论记录</div>}
-          <div className="report-metric" style={{ marginTop: 12 }}>
+          <div className="report-metric" style={{ margin: '12px 15px 15px' }}>
             <span>整体转正率</span>
             <strong>{probation?.rate != null ? `${probation.rate}%` : '—'}</strong>
             <small>已转正 {probation?.converted ?? 0} / 已记录结论 {probation?.total ?? 0}</small>
@@ -311,13 +314,13 @@ export function Reports() {
             <div><h3>招聘周期</h3><p>{cycles?.accessible ? cycles.denominator : cycles?.note ?? '正在加载'}</p></div>
             {cycles?.accessible && <span className="count-pill">符合口径 {cycles.eligible.count} 条</span>}
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div className="reports-dimensions">
             {(options?.dimensions ?? []).map((dimension) => {
               const active = dimensions.includes(dimension.key)
               return (
                 <button
                   key={dimension.key}
-                  className={cn('button', active ? 'button-primary' : 'button-secondary')}
+                  className={cn('button button-sm', active ? 'button-primary' : 'button-secondary')}
                   onClick={() =>
                     setDimensions((current) =>
                       current.includes(dimension.key)
@@ -333,11 +336,11 @@ export function Reports() {
           </div>
           {cycles?.accessible ? (
             <>
-              <div className="efficiency-head">
+              <div className="cycle-efficiency-head">
                 <span>维度组合</span><span>需求数</span><span>均值</span><span>中位数</span><span>最长/最短</span><span>下钻</span>
               </div>
               {cycles.rows.map((row) => (
-                <div className="efficiency-row" key={row.key}>
+                <div className="cycle-efficiency-row" key={row.key}>
                   <span>{row.labels.join(' / ')}</span>
                   <span>{row.summary.count}</span>
                   <span>{row.summary.average ?? '—'}</span>
@@ -347,7 +350,7 @@ export function Reports() {
                 </div>
               ))}
               {!cycles.rows.length && <div className="empty-hint">该口径下暂无已关闭需求</div>}
-              <div className="efficiency-row" style={{ marginTop: 8 }}>
+              <div className="cycle-efficiency-row" style={{ marginTop: 8 }}>
                 <span>全部符合口径</span>
                 <span>{cycles.eligible.count}</span>
                 <span>{cycles.eligible.average ?? '—'}</span>
@@ -355,7 +358,7 @@ export function Reports() {
                 <span>{cycles.eligible.max ?? '—'} / {cycles.eligible.min ?? '—'}</span>
                 <span />
               </div>
-              <div className="reports-note" style={{ marginTop: 10 }}>
+              <div className="reports-note" style={{ margin: '10px 15px 14px' }}>
                 计算口径：{cycles.formula}；排除进行中 {cycles.excluded?.active ?? 0} 条、本期不补录存量 {cycles.excluded?.ineligible ?? 0} 条、缺日期 {cycles.excluded?.missingDate ?? 0} 条、关闭早于开始 {cycles.excluded?.closedBeforeStart ?? 0} 条、时间段外 {cycles.excluded?.outOfPeriod ?? 0} 条
               </div>
             </>

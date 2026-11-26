@@ -130,28 +130,30 @@ export function IntakeMonitor() {
         {error && <div className="empty-inline">加载失败：{error}</div>}
 
         {totals && (
-          <section className="metric-grid">
-            <article className="metric-card metric-card-featured">
-              <div className="metric-top"><span>入场记录</span><span className="metric-icon blue"><Inbox size={17} /></span></div>
-              <div className="metric-value-row"><strong>{totals.total}</strong></div>
-              <div className="metric-foot"><span>进入 {totals.entered} · 未进入 {totals.notEntered}</span></div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top"><span>进入率</span><span className="metric-icon green"><Users size={17} /></span></div>
-              <div className="metric-value-row"><strong>{(totals.enteredRate * 100).toFixed(1)}<span className="unit">%</span></strong></div>
-              <div className="metric-foot"><span>按建档成功计算</span></div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top"><span>待分配池</span><span className="metric-icon orange"><TriangleAlert size={17} /></span></div>
-              <div className="metric-value-row"><strong>{totals.pool}</strong></div>
-              <div className="metric-foot"><span>已分配 {totals.assigned}</span></div>
-            </article>
-            <article className="metric-card">
-              <div className="metric-top"><span>平均接收时延</span><span className="metric-icon violet"><Clock size={17} /></span></div>
-              <div className="metric-value-row"><strong>{formatDuration(totals.averageLatencySeconds)}</strong></div>
-              <div className="metric-foot"><span>P90 {formatDuration(totals.p90LatencySeconds)} · 样本 {totals.latencySamples}</span></div>
-            </article>
-          </section>
+          <div className="intake-monitor-metrics">
+            <section className="metric-grid">
+              <article className="metric-card metric-card-featured">
+                <div className="metric-top"><span>入场记录</span><span className="metric-icon blue"><Inbox size={17} /></span></div>
+                <div className="metric-value-row"><strong>{totals.total}</strong></div>
+                <div className="metric-foot"><span>进入 {totals.entered} · 未进入 {totals.notEntered}</span></div>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top"><span>进入率</span><span className="metric-icon green"><Users size={17} /></span></div>
+                <div className="metric-value-row"><strong>{(totals.enteredRate * 100).toFixed(1)}<span className="unit">%</span></strong></div>
+                <div className="metric-foot"><span>按建档成功计算</span></div>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top"><span>待分配池</span><span className="metric-icon orange"><TriangleAlert size={17} /></span></div>
+                <div className="metric-value-row"><strong>{totals.pool}</strong></div>
+                <div className="metric-foot"><span>已分配 {totals.assigned}</span></div>
+              </article>
+              <article className="metric-card">
+                <div className="metric-top"><span>平均接收时延</span><span className="metric-icon violet"><Clock size={17} /></span></div>
+                <div className="metric-value-row"><strong>{formatDuration(totals.averageLatencySeconds)}</strong></div>
+                <div className="metric-foot"><span>P90 {formatDuration(totals.p90LatencySeconds)} · 样本 {totals.latencySamples}</span></div>
+              </article>
+            </section>
+          </div>
         )}
       </div>
 
