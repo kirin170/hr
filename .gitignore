@@ -44,6 +44,15 @@ backend/.storage/
 # 本地 TLS 根证书（公司代理环境）
 backend/.certs/
 
+# Certificates, private keys, and local secret files
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+.envrc
+
 .awr-native/
 .awr-native.tgz
 .awr-review-draft.json

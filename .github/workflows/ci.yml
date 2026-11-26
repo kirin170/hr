@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, dev]
   pull_request:
 
 permissions:
@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   quality:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     services:
       mysql:
